@@ -918,13 +918,6 @@ moves_loop: // When in check, search starts here
     value = bestValue;
     moveCountPruning = singularQuietLMR = false;
 
-    // Indicate PvNodes that will probably fail low if the node was searched
-    // at a depth equal or greater than the current depth, and the result of this search was a fail low.
-    bool likelyFailLow =    PvNode
-                         && ttMove
-                         && (tte->bound() & BOUND_UPPER)
-                         && tte->depth() >= depth;
-
     // Step 13. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
     while ((move = mp.next_move(moveCountPruning)) != MOVE_NONE)
@@ -1131,32 +1124,6 @@ moves_loop: // When in check, search starts here
       // Step 16. Make the move
       pos.do_move(move, st, givesCheck);
 
-      // Decrease reduction if position is or has been on the PV
-      // and node is not likely to fail low. (~3 Elo)
-      // Decrease further on cutNodes. (~1 Elo)
-      if (   ss->ttPv
-          && !likelyFailLow)
-          r -= cutNode && tte->depth() >= depth + 3 ? 3 : 2;
-
-      // Increase reduction for cut nodes (~3 Elo)
-      if (cutNode)
-          r += 2;
-
-      // Decrease reduction for PvNodes based on depth (~2 Elo)
-      if (PvNode)
-          r -= 1 + 11 / (3 + depth);
-
-      // Decrease reduction if ttMove has been singularly extended (~1 Elo)
-      if (singularQuietLMR)
-          r -= 2;
-
-      // Increase reduction if next ply has a lot of fail high (~5 Elo)
-      if ((ss+1)->cutoffCnt > 3)
-          r++;
-
-      else if (move == ttMove)
-          r--;
-
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
                      + (*contHist[1])[movedPiece][to_sq(move)]
@@ -1164,7 +1131,7 @@ moves_loop: // When in check, search starts here
                      - 3755;
 
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
-      r -= ss->statScore / (10445 + 4762 * (depth > 6 && depth < 21));
+      r -= (ss->statScore+10445) / (10445 + 4762 * (depth > 6 && depth < 21));
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
@@ -1210,11 +1177,7 @@ moves_loop: // When in check, search starts here
       // Step 18. Full depth search when LMR is skipped. If expected reduction is high, reduce its depth by 1.
       else if (!PvNode || moveCount > 1)
       {
-          // Increase reduction for cut nodes and not ttMove (~1 Elo)
-          if (!ttMove && cutNode)
-              r += 2;
-
-          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth - (r > 3), !cutNode);
+          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth, !cutNode);
       }
 
       // For PV nodes only, do a full PV search on the first move or after a fail
