@@ -82,8 +82,8 @@ public:
   static void init();
 
   Position() = default;
-  Position(const Position&) = delete;
-  Position& operator=(const Position&) = delete;
+  //Position(const Position&) = delete;
+  //Position& operator=(const Position&) = delete;
 
   // FEN string input/output
   Position& set(const std::string& fenStr, bool isChess960, StateInfo* si, Thread* th);

@@ -21,6 +21,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <fstream>
 
 #include "benchmark.h"
 #include "evaluate.h"
@@ -38,6 +39,8 @@ using namespace std;
 
 namespace Stockfish {
 
+using Eval::evaluate;
+
 namespace {
 
   // FEN string for the initial position in standard chess
@@ -50,46 +53,72 @@ namespace {
   // move list ("moves").
 
   void position(Position& pos, istringstream& is, StateListPtr& states) {
+  }
 
-    Move m;
-    string token, fen;
+  void trace_eval(Position& pos, istream& args, StateListPtr& states) {
+  }
 
-    is >> token;
-
-    if (token == "startpos")
-    {
-        fen = StartFEN;
-        is >> token; // Consume the "moves" token, if any
-    }
-    else if (token == "fen")
-        while (is >> token && token != "moves")
-            fen += token + " ";
-    else
-        return;
+  void position(Position& pos, string fen, StateListPtr& states) {
 
     states = StateListPtr(new std::deque<StateInfo>(1)); // Drop the old state and create a new one
     pos.set(fen, Options["UCI_Chess960"], &states->back(), Threads.main());
 
-    // Parse the move list, if any
-    while (is >> token && (m = UCI::to_move(pos, token)) != MOVE_NONE)
-    {
-        states->emplace_back();
-        pos.do_move(m, states->back());
-    }
   }
 
   // trace_eval() prints the evaluation of the current position, consistent with
   // the UCI options set so far.
 
-  void trace_eval(Position& pos) {
+  double sig(double x) {
+      return 1.0 / (1.0 + std::exp(-x));
+  }
+
+  double trace_eval(Position& pos) {
 
     StateListPtr states(new std::deque<StateInfo>(1));
     Position p;
     p.set(pos.fen(), Options["UCI_Chess960"], &states->back(), Threads.main());
 
-    Eval::NNUE::verify();
+    return sig(0.5 * static_cast<double>(evaluate(pos)) / 100.0);
+  }
 
-    sync_cout << "\n" << Eval::trace(p) << sync_endl;
+  vector<Position> SaveMultiplePositions(istream& args) {
+
+      vector<Position> fens;
+      string row; string fen; string token;
+      string fenFile = (args >> token) ? token : "";
+      ifstream file(fenFile);
+
+      while (getline(file, row)) {
+          if (!row.empty()) {
+              stringstream rowStream(row);
+              char comma = ',';
+              getline(rowStream, fen, comma);
+
+              Position pos;
+              StateListPtr states(new std::deque<StateInfo>(1));
+              pos.set(StartFEN, false, &states->back(), Threads.main());
+              position(pos, fen, states);
+              fens.push_back(pos);
+          }
+      }
+
+      file.close();
+      return fens;
+
+  }
+
+  void EvalMultiplePositions(vector<Position> fens) {
+
+      double totalSE = 0;
+      double expectedScore;
+
+      for (int i = 0; i < (int)fens.size(); i++) {
+          expectedScore = trace_eval(fens.at(i));
+          totalSE += std::pow(static_cast<double>(1 - expectedScore), 2);
+      }
+
+      double MSE = totalSE / static_cast<double>(fens.size());
+      sync_cout << MSE << sync_endl;
   }
 
 
@@ -234,6 +263,7 @@ namespace {
 
 void UCI::loop(int argc, char* argv[]) {
 
+  vector<Position> fens;
   Position pos;
   string token, cmd;
   StateListPtr states(new std::deque<StateInfo>(1));
@@ -270,7 +300,7 @@ void UCI::loop(int argc, char* argv[]) {
 
       else if (token == "setoption")  setoption(is);
       else if (token == "go")         go(pos, is, states);
-      else if (token == "position")   position(pos, is, states);
+      else if (token == "position")   fens = SaveMultiplePositions(is);
       else if (token == "ucinewgame") Search::clear();
       else if (token == "isready")    sync_cout << "readyok" << sync_endl;
 
@@ -279,7 +309,7 @@ void UCI::loop(int argc, char* argv[]) {
       else if (token == "flip")     pos.flip();
       else if (token == "bench")    bench(pos, is, states);
       else if (token == "d")        sync_cout << pos << sync_endl;
-      else if (token == "eval")     trace_eval(pos);
+      else if (token == "eval")     EvalMultiplePositions(fens);
       else if (token == "compiler") sync_cout << compiler_info() << sync_endl;
       else if (token == "export_net")
       {
