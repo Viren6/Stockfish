@@ -160,7 +160,6 @@ void Position::init() {
 Position& Position::resetstate(StateInfo* si) {
     std::memset(si, 0, sizeof(StateInfo));
     st = si;
-    set_state();
     return *this;
 }
 
