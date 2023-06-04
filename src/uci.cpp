@@ -39,8 +39,6 @@ using namespace std;
 
 namespace Stockfish {
 
-using Eval::evaluate;
-
 namespace {
 
   // FEN string for the initial position in standard chess
@@ -78,7 +76,7 @@ namespace {
     Position p;
     p.set(pos.fen(), Options["UCI_Chess960"], &states->back(), Threads.main());
 
-    return sig(0.5 * static_cast<double>(evaluate(pos)) / 100.0);
+    return sig(0.5 * static_cast<double>(Eval::NNUE::evaluate(pos, false)) / 100.0);
   }
 
   vector<Position> SaveMultiplePositions(istream& args) {
