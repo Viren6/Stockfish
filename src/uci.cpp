@@ -22,6 +22,7 @@
 #include <sstream>
 #include <string>
 #include <fstream>
+#include <iomanip>
 
 #include "benchmark.h"
 #include "evaluate.h"
@@ -77,12 +78,17 @@ namespace {
     return sig(0.5 * static_cast<double>(Eval::NNUE::evaluate(pos, false)) / 100.0);
   }
 
-  vector<Position> SaveMultiplePositions(istream& args) {
+  struct Data {
+      Position position;
+      float result;
+  };
 
-      vector<Position> fens;
-      string row; string fen; string token;
+  vector<Data> SaveMultiplePositions(istream& args) {
+
+      vector<Data> entries;
+      string row; string fen; string token; string result;
       string fenFile = (args >> token) ? token : "";
-      ifstream file(fenFile);
+      ifstream file(fenFile); Data entry;
 
       while (getline(file, row)) {
           if (!row.empty()) {
@@ -93,26 +99,30 @@ namespace {
               Position pos;
               StateListPtr states(new std::deque<StateInfo>(1));
               position(pos, fen, states);
-              fens.push_back(pos);
+
+
+              getline(rowStream, result, comma);
+              entry = (Data){ pos, stof(result) };
+              entries.push_back(entry);
           }
       }
 
       file.close();
-      return fens;
+      return entries;
 
   }
 
-  void EvalMultiplePositions(vector<Position> fens) {
+  void EvalMultiplePositions(vector<Data> entries) {
 
       double totalSE = 0;
       double expectedScore;
 
-      for (int i = 0; i < (int)fens.size(); i++) {
-          expectedScore = trace_eval(fens.at(i));
-          totalSE += std::pow(static_cast<double>(1 - expectedScore), 2);
+      for (int i = 0; i < (int)entries.size(); i++) {
+          expectedScore = trace_eval(entries.at(i).position);
+          totalSE += std::pow(static_cast<double>(entries.at(i).result - expectedScore), 2);
       }
 
-      double MSE = totalSE / static_cast<double>(fens.size());
+      double MSE = totalSE / static_cast<double>(entries.size());
       sync_cout << MSE << sync_endl;
   }
 
@@ -258,7 +268,8 @@ namespace {
 
 void UCI::loop(int argc, char* argv[]) {
 
-  vector<Position> fens;
+  cout << setprecision(14);
+  vector<Data> fens;
   Position pos;
   string token, cmd;
   StateListPtr states(new std::deque<StateInfo>(1));
