@@ -71,11 +71,8 @@ namespace {
   }
 
   StateListPtr states(new std::deque<StateInfo>(1));
+
   double trace_eval(Position& pos) {
-
-    //Position p;
-    //p.set(pos.fen(), Options["UCI_Chess960"], &states->back(), Threads.main());
-
     pos.resetstate(&states->back());
     return sig(0.5 * static_cast<double>(Eval::NNUE::evaluate(pos, false)) / 100.0);
   }
@@ -95,7 +92,6 @@ namespace {
 
               Position pos;
               StateListPtr states(new std::deque<StateInfo>(1));
-              pos.set(StartFEN, false, &states->back(), Threads.main());
               position(pos, fen, states);
               fens.push_back(pos);
           }
