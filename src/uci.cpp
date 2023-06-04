@@ -70,9 +70,9 @@ namespace {
       return 1.0 / (1.0 + std::exp(-x));
   }
 
+  StateListPtr states(new std::deque<StateInfo>(1));
   double trace_eval(Position& pos) {
 
-    StateListPtr states(new std::deque<StateInfo>(1));
     //Position p;
     //p.set(pos.fen(), Options["UCI_Chess960"], &states->back(), Threads.main());
 
