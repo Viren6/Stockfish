@@ -73,9 +73,10 @@ namespace {
   double trace_eval(Position& pos) {
 
     StateListPtr states(new std::deque<StateInfo>(1));
-    Position p;
-    p.set(pos.fen(), Options["UCI_Chess960"], &states->back(), Threads.main());
+    //Position p;
+    //p.set(pos.fen(), Options["UCI_Chess960"], &states->back(), Threads.main());
 
+    pos.resetstate(&states->back());
     return sig(0.5 * static_cast<double>(Eval::NNUE::evaluate(pos, false)) / 100.0);
   }
 
