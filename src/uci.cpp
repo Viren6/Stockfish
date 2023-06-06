@@ -75,7 +75,7 @@ namespace {
 
   double trace_eval(Position& pos) {
     pos.resetstate(&states->back());
-    return sig(0.5 * static_cast<double>(Eval::NNUE::evaluate(pos, false)) / 100.0);
+    return sig(5 * static_cast<double>(Eval::NNUE::evaluate(pos, false)) / 100.0);
   }
 
   struct Data {
@@ -112,7 +112,7 @@ namespace {
 
   }
 
-  void EvalMultiplePositions(vector<Data> entries) {
+  void EvalMultiplePositions(vector<Data>& entries) {
 
       double totalSE = 0;
       double expectedScore;
