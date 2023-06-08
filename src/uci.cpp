@@ -75,7 +75,7 @@ namespace {
 
   double trace_eval(Position& pos) {
     pos.resetstate(&states->back());
-    return sig(5 * static_cast<double>(Eval::NNUE::evaluate(pos, false)) / 100.0);
+    return sig(0.5 * static_cast<double>(Eval::NNUE::evaluate(pos, false)) / 100.0);
   }
 
   struct Data {
@@ -83,7 +83,7 @@ namespace {
       float result;
   };
 
-  vector<Data> SaveMultiplePositions(istream& args) {
+  vector<Data> SavePositions(istream& args) {
 
       vector<Data> entries;
       string row; string fen; string token; string result;
@@ -100,8 +100,8 @@ namespace {
               StateListPtr states(new std::deque<StateInfo>(1));
               position(pos, fen, states);
 
-
               getline(rowStream, result, comma);
+              if (result.empty()) result = "-1";
               entry = (Data){ pos, stof(result) };
               entries.push_back(entry);
           }
@@ -109,10 +109,27 @@ namespace {
 
       file.close();
       return entries;
+  }
+
+  void IntialiseRegPositions(vector<Data>& entries, istream& args) {
+      
+      string eval; string fen; string token;
+      string fenFile = (args >> token) ? token : "";
+      ofstream file(fenFile); Data entry; Position pos;
+
+      for (int i = 0; i < (int)entries.size(); i++) {
+          pos = entries.at(i).position;
+          pos.resetstate(&states->back());
+          eval = to_string(static_cast<double>(Eval::NNUE::evaluate(pos, false)));
+          fen = pos.fen();
+          file << (fen + "," + eval + "\n");
+      }
+
+      file.close();
 
   }
 
-  void EvalMultiplePositions(vector<Data>& entries) {
+  void EvalTrainPositions(vector<Data>& entries) {
 
       double totalSE = 0;
       double expectedScore;
@@ -120,6 +137,22 @@ namespace {
       for (int i = 0; i < (int)entries.size(); i++) {
           expectedScore = trace_eval(entries.at(i).position);
           totalSE += std::pow(static_cast<double>(entries.at(i).result - expectedScore), 2);
+      }
+
+      double MSE = totalSE / static_cast<double>(entries.size());
+      sync_cout << MSE << sync_endl;
+  }
+
+  void EvalRegPositions(vector<Data>& entries) {
+
+      double totalSE = 0;
+      double expectedScore;
+      double convertedResult;
+
+      for (int i = 0; i < (int)entries.size(); i++) {
+          expectedScore = trace_eval(entries.at(i).position);
+          convertedResult = sig(0.5 * static_cast<double>(entries.at(i).result) / 100.0);
+          totalSE += std::pow(convertedResult - expectedScore, 2);
       }
 
       double MSE = totalSE / static_cast<double>(entries.size());
@@ -269,7 +302,8 @@ namespace {
 void UCI::loop(int argc, char* argv[]) {
 
   cout << setprecision(14);
-  vector<Data> fens;
+  vector<Data> train;
+  vector<Data> reg;
   Position pos;
   string token, cmd;
   StateListPtr states(new std::deque<StateInfo>(1));
@@ -306,7 +340,8 @@ void UCI::loop(int argc, char* argv[]) {
 
       else if (token == "setoption")  setoption(is);
       else if (token == "go")         go(pos, is, states);
-      else if (token == "position")   fens = SaveMultiplePositions(is);
+      else if (token == "settrain")   train = SavePositions(is);
+      else if (token == "setreg")     reg = SavePositions(is);
       else if (token == "ucinewgame") Search::clear();
       else if (token == "isready")    sync_cout << "readyok" << sync_endl;
 
@@ -315,7 +350,9 @@ void UCI::loop(int argc, char* argv[]) {
       else if (token == "flip")     pos.flip();
       else if (token == "bench")    bench(pos, is, states);
       else if (token == "d")        sync_cout << pos << sync_endl;
-      else if (token == "eval")     EvalMultiplePositions(fens);
+      else if (token == "initreg")     IntialiseRegPositions(reg, is);
+      else if (token == "evaltrain")     EvalTrainPositions(train);
+      else if (token == "evalreg")     EvalRegPositions(reg);
       else if (token == "compiler") sync_cout << compiler_info() << sync_endl;
       else if (token == "export_net")
       {
