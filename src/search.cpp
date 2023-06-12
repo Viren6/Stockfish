@@ -706,7 +706,7 @@ namespace {
     if (ss->inCheck)
     {
         // Skip early pruning when in check
-        ss->staticEval = eval = evaluate(pos);
+        ss->staticEval = eval = VALUE_NONE;
         improving = false;
         improvement = 0;
         goto moves_loop;
@@ -1464,7 +1464,6 @@ moves_loop: // When in check, search starts here
     // Step 4. Static evaluation of the position
     if (ss->inCheck)
     {
-        ss->staticEval = VALUE_NONE;
         bestValue = futilityBase = -VALUE_INFINITE;
     }
     else
