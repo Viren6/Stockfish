@@ -710,7 +710,7 @@ namespace {
     {
         // Skip early pruning when in check
         if ((ss - 1)->staticEval == VALUE_NONE)
-            ss->staticEval = eval = VALUE_NONE;
+            ss->staticEval = eval = staticAdjustment;
         else
             ss->staticEval = eval =  ((ss - 1)->staticEval * staticScale) / 1000 + staticAdjustment;
         improving = false;
