@@ -707,9 +707,9 @@ namespace {
     {
         // Skip early pruning when in check
         if ((ss - 1)->staticEval == VALUE_NONE)
-            ss->staticEval = eval = (Value)-175;
+            ss->staticEval = eval = (Value)-171;
         else
-            ss->staticEval = eval = ((ss - 1)->staticEval * 964)/1000 - 175;
+            ss->staticEval = eval = ((ss - 1)->staticEval * 969)/1000 - 171;
         improving = false;
         improvement = 0;
         goto moves_loop;
