@@ -710,9 +710,9 @@ namespace {
     {
         // Skip early pruning when in check
         if ((ss - 1)->staticEval == VALUE_NONE)
-            ss->staticEval = eval = (Value)staticAdjustment;
+            ss->staticEval = eval = Value(staticAdjustment);
         else
-            ss->staticEval = eval =  -(ss - 1)->staticEval + staticAdjustment;
+            ss->staticEval = eval = Value(std::min(31802, int(-(ss - 1)->staticEval) + staticAdjustment));
         improving = false;
         improvement = 0;
         goto moves_loop;
