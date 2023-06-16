@@ -706,10 +706,10 @@ namespace {
     if (ss->inCheck)
     {
         // Skip early pruning when in check
-        if ((ss - 1)->staticEval == VALUE_NONE)
-            ss->staticEval = eval = (Value)-182;
+        if ((ss-1)->staticEval == VALUE_NONE)
+            ss->staticEval = eval = Value(-182);
         else
-            ss->staticEval = eval = Value(std::max(VALUE_TB_LOSS_IN_MAX_PLY + 1, -(ss - 1)->staticEval - 182));
+            ss->staticEval = eval = std::max(VALUE_TB_LOSS_IN_MAX_PLY + 1, -(ss-1)->staticEval - 182);
         improving = false;
         improvement = 0;
         goto moves_loop;
