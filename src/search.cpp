@@ -507,8 +507,8 @@ void Thread::search() {
 
 namespace {
 
-    int staticScale = 1000; int staticAdjustment = -200;
-    TUNE(SetRange(-3000, 3000), staticScale, SetRange(-1000, 1000), staticAdjustment);
+    int staticAdjustment = 200;
+    TUNE(SetRange(-1000, 1000), staticAdjustment);
 
   // search<>() is the main search function for both PV and non-PV nodes
 
@@ -712,7 +712,7 @@ namespace {
         if ((ss - 1)->staticEval == VALUE_NONE)
             ss->staticEval = eval = (Value)staticAdjustment;
         else
-            ss->staticEval = eval =  ((ss - 1)->staticEval * staticScale) / 1000 + staticAdjustment;
+            ss->staticEval = eval =  -(ss - 1)->staticEval + staticAdjustment;
         improving = false;
         improvement = 0;
         goto moves_loop;
