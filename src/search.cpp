@@ -720,8 +720,6 @@ namespace {
                     ss->staticEval = eval = Value(-182);
                 else
                     ss->staticEval = eval = std::max(VALUE_TB_LOSS_IN_MAX_PLY + 1, -(ss - 1)->staticEval - 182);
-                improving = false;
-                improvement = 0;
             }
             else  
                 ss->staticEval = eval = evaluate(pos);
@@ -742,8 +740,6 @@ namespace {
         else
             ss->staticEval = eval = std::max(VALUE_TB_LOSS_IN_MAX_PLY + 1, -(ss - 1)->staticEval - 182);
         tte->save(posKey, VALUE_NONE, ss->ttPv, BOUND_NONE, DEPTH_NONE, MOVE_NONE, eval);
-        improving = false;
-        improvement = 0;
     } 
     else
     {
@@ -778,6 +774,11 @@ namespace {
                     : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval - (ss-4)->staticEval
                     : 173;
         improving = improvement > 0;
+    }
+    else 
+    {
+        improvement = 0;
+        improving = false;
     }
 
     // Step 8. Futility pruning: child node (~40 Elo).
