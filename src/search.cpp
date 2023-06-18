@@ -720,6 +720,8 @@ namespace {
                     ss->staticEval = eval = Value(-182);
                 else
                     ss->staticEval = eval = std::max(VALUE_TB_LOSS_IN_MAX_PLY + 1, -(ss - 1)->staticEval - 182);
+                improving = false;
+                improvement = 0;
             }
             else  
                 ss->staticEval = eval = evaluate(pos);
@@ -751,7 +753,7 @@ namespace {
     }
 
     // Use static evaluation difference to improve quiet move ordering (~4 Elo)
-    if (is_ok((ss - 1)->currentMove) && !(ss - 1)->inCheck && !priorCapture)
+    if (is_ok((ss-1)->currentMove) && !(ss-1)->inCheck && !priorCapture)
     {
         int bonus = std::clamp(-18 * int((ss-1)->staticEval + ss->staticEval), -1817, 1817);
         thisThread->mainHistory[~us][from_to((ss-1)->currentMove)] << bonus;
