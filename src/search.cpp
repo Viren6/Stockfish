@@ -717,7 +717,7 @@ namespace {
             if (ss->inCheck)
             {
                 if ((ss - 1)->staticEval == VALUE_NONE)
-                    ss->staticEval = eval = Value(-182);
+                    ss->staticEval = eval = evaluate(pos) - 182;
                 else
                     ss->staticEval = eval = std::max(VALUE_TB_LOSS_IN_MAX_PLY + 1, -(ss - 1)->staticEval - 182);
             }
@@ -736,9 +736,10 @@ namespace {
     {
         // Skip early pruning when in check
         if ((ss - 1)->staticEval == VALUE_NONE)
-            ss->staticEval = eval = Value(-182);
+            ss->staticEval = eval = evaluate(pos) - 182;
         else
             ss->staticEval = eval = std::max(VALUE_TB_LOSS_IN_MAX_PLY + 1, -(ss - 1)->staticEval - 182);
+        tte->save(posKey, VALUE_NONE, ss->ttPv, BOUND_NONE, DEPTH_NONE, MOVE_NONE, eval);
     } 
     else
     {
