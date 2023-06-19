@@ -292,6 +292,7 @@ namespace {
     explicit Evaluation(const Position& p) : pos(p) {}
     Evaluation& operator=(const Evaluation&) = delete;
     Value value();
+    Value valueCheck();
 
   private:
     template<Color Us> void initialize();
@@ -1040,6 +1041,22 @@ make_v:
     return v;
   }
 
+  template<Tracing T>
+  Value Evaluation<T>::valueCheck() {
+
+      pe = Pawns::probe(pos);
+
+      initialize<WHITE>();
+      initialize<BLACK>();
+
+      // More complex interactions that require fully populated attack bitboards
+      Score score = king<WHITE>() - king<BLACK>();
+
+      Value v = mg_value(score);
+
+      return v;
+  }
+
 } // namespace Eval
 
 
@@ -1082,6 +1099,23 @@ Value Eval::evaluate(const Position& pos) {
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
 
   return v;
+}
+
+Value Eval::evaluateCheck(const Position& pos, Value& previousStaticEval) {
+
+    if (previousStaticEval == Value::VALUE_NONE) {
+        previousStaticEval = -evaluate(pos);
+    }
+
+    Value ve = Evaluation<NO_TRACE>(pos).valueCheck() * 2;
+
+    // Side to move point of view
+    Value v = -previousStaticEval + (pos.side_to_move() == WHITE ? ve : -ve);
+
+    // Guarantee evaluation does not hit the tablebase range
+    v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
+
+    return v;
 }
 
 /// trace() is like evaluate(), but instead of returning a value, it returns

@@ -55,6 +55,7 @@ namespace TB = Tablebases;
 
 using std::string;
 using Eval::evaluate;
+using Eval::evaluateCheck;
 using namespace Search;
 
 namespace {
@@ -544,7 +545,7 @@ namespace {
     Key posKey;
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth;
-    Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
+    Value bestValue, value, ttValue, eval, maxValue, probCutBeta, previousStaticEval;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
@@ -703,6 +704,7 @@ namespace {
     CapturePieceToHistory& captureHistory = thisThread->captureHistory;
 
     // Step 6. Static evaluation of the position
+    previousStaticEval = (ss - 1)->staticEval;
     if (excludedMove)
     {
         // Providing the hint that this node's accumulator will be used often brings significant Elo gain (13 Elo)
@@ -716,10 +718,7 @@ namespace {
         if (eval == VALUE_NONE) {
             if (ss->inCheck)
             {
-                if ((ss - 1)->staticEval == VALUE_NONE)
-                    ss->staticEval = eval = evaluate(pos) - 182;
-                else
-                    ss->staticEval = eval = std::max(VALUE_TB_LOSS_IN_MAX_PLY + 1, -(ss - 1)->staticEval - 182);
+                ss->staticEval = eval = evaluateCheck(pos, previousStaticEval);
             }
             else  
                 ss->staticEval = eval = evaluate(pos);
@@ -734,11 +733,7 @@ namespace {
     }
     else if (ss->inCheck)
     {
-        // Skip early pruning when in check
-        if ((ss - 1)->staticEval == VALUE_NONE)
-            ss->staticEval = eval = evaluate(pos) - 182;
-        else
-            ss->staticEval = eval = std::max(VALUE_TB_LOSS_IN_MAX_PLY + 1, -(ss - 1)->staticEval - 182);
+        ss->staticEval = eval = Eval::evaluateCheck(pos, previousStaticEval);
         tte->save(posKey, VALUE_NONE, ss->ttPv, BOUND_NONE, DEPTH_NONE, MOVE_NONE, eval);
     } 
     else
