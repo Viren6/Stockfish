@@ -1049,6 +1049,11 @@ make_v:
       initialize<WHITE>();
       initialize<BLACK>();
 
+      Score temp = pieces<WHITE, KNIGHT>() - pieces<BLACK, KNIGHT>()
+          + pieces<WHITE, BISHOP>() - pieces<BLACK, BISHOP>()
+          + pieces<WHITE, ROOK  >() - pieces<BLACK, ROOK  >()
+          + pieces<WHITE, QUEEN >() - pieces<BLACK, QUEEN >();
+
       // More complex interactions that require fully populated attack bitboards
       Score score = king<WHITE>() - king<BLACK>();
 
