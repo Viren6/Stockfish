@@ -1476,9 +1476,7 @@ namespace {
 
     // Step 4. Static evaluation of the position
     if (ss->inCheck)
-    {
         bestValue = futilityBase = -VALUE_INFINITE;
-    }
     else
     {
         if (ss->ttHit)
@@ -1493,11 +1491,9 @@ namespace {
                 bestValue = ttValue;
         }
         else
-        {
             // In case of null move search use previous static eval with a different sign
             ss->staticEval = bestValue = (ss-1)->currentMove != MOVE_NULL ? evaluate(pos)
                                                                           : -(ss-1)->staticEval;
-        }
 
         // Stand pat. Return immediately if static value is at least beta
         if (bestValue >= beta)
