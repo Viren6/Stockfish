@@ -983,14 +983,16 @@ moves_loop: // When in check, search starts here
               || givesCheck)
           {
               // Futility pruning for captures (~2 Elo)
-              if (!givesCheck
-                  && lmrDepth < 7) {
+              if (  !givesCheck
+                  && lmrDepth < 7)
+              {
                   Value adjustedEval = ss->staticEval;
 
-                  if (ss->inCheck && !(ss-1)->inCheck)
+                  if (   ss->inCheck
+                      && !(ss-1)->inCheck)
                       adjustedEval = -(ss-1)->staticEval;
 
-                  if (adjustedEval + 197 + 248 * lmrDepth + PieceValue[EG][pos.piece_on(to_sq(move))]
+                  if (  adjustedEval + 197 + 248 * lmrDepth + PieceValue[EG][pos.piece_on(to_sq(move))]
                       + captureHistory[movedPiece][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] / 7 < alpha)
                       continue;
               }
