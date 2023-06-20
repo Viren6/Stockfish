@@ -989,7 +989,7 @@ moves_loop: // When in check, search starts here
                   Value adjustedEval = ss->staticEval;
 
                   if (   ss->inCheck
-                      && !(ss-1)->inCheck)
+                      && (ss-1)->staticEval != VALUE_NONE)
                       adjustedEval = -(ss-1)->staticEval;
 
                   if (  adjustedEval + 197 + 248 * lmrDepth + PieceValue[EG][pos.piece_on(to_sq(move))]
