@@ -1046,16 +1046,20 @@ make_v:
 
       pe = Pawns::probe(pos);
 
+      
       initialize<WHITE>();
       initialize<BLACK>();
 
-      Score temp = pieces<WHITE, KNIGHT>() - pieces<BLACK, KNIGHT>()
+      Score score = pieces<WHITE, KNIGHT>() - pieces<BLACK, KNIGHT>()
           + pieces<WHITE, BISHOP>() - pieces<BLACK, BISHOP>()
           + pieces<WHITE, ROOK  >() - pieces<BLACK, ROOK  >()
           + pieces<WHITE, QUEEN >() - pieces<BLACK, QUEEN >();
 
       // More complex interactions that require fully populated attack bitboards
-      Score score = king<WHITE>() - king<BLACK>();
+      if (pos.side_to_move() == WHITE)
+          score = king<WHITE>();
+      else  
+          score = king<BLACK>();
 
       Value v = mg_value(score);
 
@@ -1112,10 +1116,10 @@ Value Eval::evaluateCheck(const Position& pos, Value& previousStaticEval) {
         previousStaticEval = -evaluate(pos);
     }
 
-    Value ve = Evaluation<NO_TRACE>(pos).valueCheck() * 2;
+    Value ve = Evaluation<NO_TRACE>(pos).valueCheck();
 
     // Side to move point of view
-    Value v = -previousStaticEval + (pos.side_to_move() == WHITE ? ve : -ve);
+    Value v = -previousStaticEval + ve;
 
     // Guarantee evaluation does not hit the tablebase range
     v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
