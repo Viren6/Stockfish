@@ -722,7 +722,7 @@ namespace {
         // Never assume anything about values stored in TT
         ss->staticEval = eval = tte->eval();
         if (eval == VALUE_NONE)
-            ss->staticEval = eval = evaluate(pos, (ss-1)->staticEval);
+            ss->staticEval = eval = evaluate(pos, VALUE_NONE);
         else if (PvNode)
             Eval::NNUE::hint_common_parent_position(pos);
 
@@ -733,7 +733,7 @@ namespace {
     }
     else
     {
-        ss->staticEval = eval = evaluate(pos, (ss-1)->staticEval);
+        ss->staticEval = eval = evaluate(pos, VALUE_NONE);
         // Save static evaluation into transposition table
         tte->save(posKey, VALUE_NONE, ss->ttPv, BOUND_NONE, DEPTH_NONE, MOVE_NONE, eval);
     }
@@ -1470,7 +1470,7 @@ moves_loop: // When in check, search starts here
         {
             // Never assume anything about values stored in TT
             if ((ss->staticEval = bestValue = tte->eval()) == VALUE_NONE)
-                ss->staticEval = bestValue = evaluate(pos, (ss-1)->staticEval);
+                ss->staticEval = bestValue = evaluate(pos, (ss - 1)->staticEval);
 
             // ttValue can be used as a better position evaluation (~13 Elo)
             if (    ttValue != VALUE_NONE
@@ -1479,7 +1479,7 @@ moves_loop: // When in check, search starts here
         }
         else
             // In case of null move search use previous static eval with a different sign
-            ss->staticEval = bestValue = (ss-1)->currentMove != MOVE_NULL ? evaluate(pos, (ss-1)->staticEval)
+            ss->staticEval = bestValue = (ss-1)->currentMove != MOVE_NULL ? evaluate(pos, (ss - 1)->staticEval)
                                                                           : -(ss-1)->staticEval;
 
         // Stand pat. Return immediately if static value is at least beta
