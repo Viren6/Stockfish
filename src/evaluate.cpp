@@ -1058,10 +1058,10 @@ Value Eval::evaluate(const Position& pos, const Value& previousStaticEval) {
   // PSQ advantage is decisive. (~4 Elo at STC, 1 Elo at LTC)
   bool useClassical = !useNNUE || abs(psq) > 2048;
 
-  if (useClassical)
+  if (useClassical) 
+  {
       v = Evaluation<NO_TRACE>(pos).value();
-  else if (abs(previousStaticEval) != VALUE_NONE && abs(previousStaticEval) > 2048)
-      v = -previousStaticEval;
+  }
   else
   {
       int nnueComplexity;
@@ -1082,6 +1082,9 @@ Value Eval::evaluate(const Position& pos, const Value& previousStaticEval) {
 
   // Guarantee evaluation does not hit the tablebase range
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
+
+  if (previousStaticEval != VALUE_NONE)
+      v = v * 9/10 - previousStaticEval * 1/10;
 
   return v;
 }
