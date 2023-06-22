@@ -573,7 +573,7 @@ namespace {
         if (   Threads.stop.load(std::memory_order_relaxed)
             || pos.is_draw(ss->ply)
             || ss->ply >= MAX_PLY)
-            return (ss->ply >= MAX_PLY && !ss->inCheck) ? evaluate(pos, (ss-1)->staticEval)
+            return (ss->ply >= MAX_PLY && !ss->inCheck) ? evaluate(pos, VALUE_NONE)
                                                         : value_draw(pos.this_thread());
 
         // Step 3. Mate distance pruning. Even if we mate at the next move our score
@@ -1437,7 +1437,7 @@ moves_loop: // When in check, search starts here
     // Step 2. Check for an immediate draw or maximum ply reached
     if (   pos.is_draw(ss->ply)
         || ss->ply >= MAX_PLY)
-        return (ss->ply >= MAX_PLY && !ss->inCheck) ? evaluate(pos, (ss-1)->staticEval) : VALUE_DRAW;
+        return (ss->ply >= MAX_PLY && !ss->inCheck) ? evaluate(pos, VALUE_NONE) : VALUE_DRAW;
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 

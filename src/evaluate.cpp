@@ -1056,10 +1056,13 @@ Value Eval::evaluate(const Position& pos, const Value& previousStaticEval) {
   // We use the much less accurate but faster Classical eval when the NNUE
   // option is set to false. Otherwise we use the NNUE eval unless the
   // PSQ advantage is decisive. (~4 Elo at STC, 1 Elo at LTC)
-  bool useClassical = !useNNUE || (abs(previousStaticEval) != VALUE_NONE && ((abs(previousStaticEval) + abs(psq)) > 3072)) || abs(psq) > 2048;
+  bool useClassical = !useNNUE;
 
-  if (useClassical)
+  if (useClassical || abs(psq) > 2048)
       v = Evaluation<NO_TRACE>(pos).value();
+  else if (abs(previousStaticEval) != VALUE_NONE && abs(previousStaticEval) > 2048) {
+      v = -previousStaticEval;
+  }
   else
   {
       int nnueComplexity;
