@@ -1046,7 +1046,7 @@ make_v:
 /// evaluate() is the evaluator for the outer world. It returns a static
 /// evaluation of the position from the point of view of the side to move.
 
-Value Eval::evaluate(const Position& pos) {
+Value Eval::evaluate(const Position& pos, Value& nnueStaticEval) {
 
   assert(!pos.checkers());
 
@@ -1081,7 +1081,50 @@ Value Eval::evaluate(const Position& pos) {
   // Guarantee evaluation does not hit the tablebase range
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
 
+  if (!useClassical)
+      nnueStaticEval = v;
+  else if(abs(nnueStaticEval) != VALUE_NONE)
+      v = v * 9/10 + nnueStaticEval + 1/10;
+
   return v;
+}
+
+Value Eval::evaluate(const Position& pos) {
+
+    assert(!pos.checkers());
+
+    Value v;
+    Value psq = pos.psq_eg_stm();
+
+    // We use the much less accurate but faster Classical eval when the NNUE
+    // option is set to false. Otherwise we use the NNUE eval unless the
+    // PSQ advantage is decisive. (~4 Elo at STC, 1 Elo at LTC)
+    bool useClassical = !useNNUE || abs(psq) > 2048;
+
+    if (useClassical)
+        v = Evaluation<NO_TRACE>(pos).value();
+    else
+    {
+        int nnueComplexity;
+        int npm = pos.non_pawn_material() / 64;
+
+        Color stm = pos.side_to_move();
+        Value optimism = pos.this_thread()->optimism[stm];
+
+        Value nnue = NNUE::evaluate(pos, true, &nnueComplexity);
+
+        // Blend optimism with nnue complexity and (semi)classical complexity
+        optimism += optimism * (nnueComplexity + abs(psq - nnue)) / 512;
+        v = (nnue * (945 + npm) + optimism * (150 + npm)) / 1024;
+    }
+
+    // Damp down the evaluation linearly when shuffling
+    v = v * (200 - pos.rule50_count()) / 214;
+
+    // Guarantee evaluation does not hit the tablebase range
+    v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
+
+    return v;
 }
 
 /// trace() is like evaluate(), but instead of returning a value, it returns
