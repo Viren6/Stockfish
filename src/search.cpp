@@ -759,10 +759,20 @@ namespace {
     // static evaluation and the previous static evaluation at our turn (if we were
     // in check at our previous move we look at the move prior to it). The improvement
     // margin and the improving flag are used in various pruning heuristics.
-    improvement = (ss - 2)->staticEval != VALUE_NONE ? ss->staticEval - (ss - 2)->staticEval
-                : (ss - 4)->staticEval != VALUE_NONE ? ss->staticEval - (ss - 4)->staticEval
-                : 173;
+    improvement =   (ss-2)->staticEval != VALUE_NONE ? ss->staticEval - (ss-2)->staticEval
+                  : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval - (ss-4)->staticEval
+                  : 173;
     improving = improvement > 0;
+
+    // Step 7. Razoring (~1 Elo).
+    // If eval is really low check with qsearch if it can exceed alpha, if it can't,
+    // return a fail low.
+    if (eval < alpha - 456 - 252 * depth * depth)
+    {
+        value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
+        if (value < alpha)
+            return value;
+    }
 
     // Step 8. Futility pruning: child node (~40 Elo).
     // The depth condition is important for mate finding.
