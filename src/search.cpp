@@ -826,8 +826,7 @@ namespace {
     // (or by 4 if the TT entry for the current position was hit and the stored depth is greater than or equal to the current depth).
     // Use qsearch if depth is equal or below zero (~9 Elo)
     if (    PvNode
-        && !ttMove 
-        && !ss->inCheck)
+        && !ttMove)
         depth -= 2 + 2 * (ss->ttHit && tte->depth() >= depth);
 
     if (depth <= 0)
@@ -835,7 +834,8 @@ namespace {
 
     if (    cutNode
         &&  depth >= 8
-        && !ttMove)
+        && !ttMove
+        && !ss->inCheck)
         depth -= 2;
 
     probCutBeta = beta + 168 - 61 * improving;
