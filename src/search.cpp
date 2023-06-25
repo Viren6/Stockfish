@@ -700,8 +700,6 @@ namespace {
         }
     }
 
-    CapturePieceToHistory& captureHistory = thisThread->captureHistory;
-
     // Step 6. Static evaluation of the position
     if (ss->inCheck)
     {
@@ -709,7 +707,6 @@ namespace {
         ss->staticEval = eval = VALUE_NONE;
         improving = false;
         improvement = 0;
-        goto moves_loop;
     }
     else if (excludedMove)
     {
@@ -739,20 +736,11 @@ namespace {
     }
 
     // Use static evaluation difference to improve quiet move ordering (~4 Elo)
-    if (is_ok((ss-1)->currentMove) && !(ss-1)->inCheck && !priorCapture)
+    if (is_ok((ss-1)->currentMove) && !(ss-1)->inCheck && !priorCapture && !ss->inCheck)
     {
         int bonus = std::clamp(-18 * int((ss-1)->staticEval + ss->staticEval), -1817, 1817);
         thisThread->mainHistory[~us][from_to((ss-1)->currentMove)] << bonus;
     }
-
-    // Set up the improvement variable, which is the difference between the current
-    // static evaluation and the previous static evaluation at our turn (if we were
-    // in check at our previous move we look at the move prior to it). The improvement
-    // margin and the improving flag are used in various pruning heuristics.
-    improvement =   (ss-2)->staticEval != VALUE_NONE ? ss->staticEval - (ss-2)->staticEval
-                  : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval - (ss-4)->staticEval
-                  :                                    173;
-    improving = improvement > 0;
 
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
@@ -764,9 +752,19 @@ namespace {
             return value;
     }
 
+    // Set up the improvement variable, which is the difference between the current
+    // static evaluation and the previous static evaluation at our turn (if we were
+    // in check at our previous move we look at the move prior to it). The improvement
+    // margin and the improving flag are used in various pruning heuristics.
+    improvement =   (ss-2)->staticEval != VALUE_NONE ? ss->staticEval - (ss-2)->staticEval
+                  : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval - (ss-4)->staticEval
+                  :                                    173;
+    improving = improvement > 0;
+
     // Step 8. Futility pruning: child node (~40 Elo).
     // The depth condition is important for mate finding.
     if (   !ss->ttPv
+        && !ss->inCheck
         &&  depth < 9
         &&  eval - futility_margin(depth, improving) - (ss-1)->statScore / 306 >= beta
         &&  eval >= beta
@@ -775,6 +773,7 @@ namespace {
 
     // Step 9. Null move search with verification search (~35 Elo)
     if (   !PvNode
+        && !ss->inCheck
         && (ss-1)->currentMove != MOVE_NULL
         && (ss-1)->statScore < 17329
         &&  eval >= beta
@@ -838,10 +837,13 @@ namespace {
 
     probCutBeta = beta + 168 - 61 * improving;
 
+    CapturePieceToHistory& captureHistory = thisThread->captureHistory;
+
     // Step 11. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
     // much above beta, we can (almost) safely prune the previous move.
     if (   !PvNode
+        && !ss->inCheck
         &&  depth > 3
         &&  abs(beta) < VALUE_TB_WIN_IN_MAX_PLY
         // if value from transposition table is lower than probCutBeta, don't attempt probCut
@@ -888,8 +890,6 @@ namespace {
 
         Eval::NNUE::hint_common_parent_position(pos);
     }
-
-moves_loop: // When in check, search starts here
 
     // Step 12. A small Probcut idea, when we are in check (~4 Elo)
     probCutBeta = beta + 413;
