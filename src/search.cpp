@@ -514,6 +514,10 @@ namespace {
 
     constexpr bool PvNode = nodeType != NonPV;
     constexpr bool rootNode = nodeType == Root;
+    Value rootPSQ;
+
+    if (rootNode)
+        rootPSQ = pos.psq_eg_stm();
 
     // Check if we have an upcoming move which draws by repetition, or
     // if the opponent had an alternative move earlier to this position.
@@ -1171,7 +1175,7 @@ moves_loop: // When in check, search starts here
           r--;
 
       // Increase reduction based on PSQ
-      r += std::max(0, int(pos.psq_eg_stm()) / 1024);
+      r += std::max(0, int(rootPSQ + pos.psq_eg_stm()) / 1536);
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
