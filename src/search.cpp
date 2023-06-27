@@ -1168,7 +1168,7 @@ moves_loop: // When in check, search starts here
           r++;
 
       // Increase reduction if PSQ advantage is decisive
-      if (pos.psq_eg_stm() > 2048)
+      if (abs(pos.psq_eg_stm()) > 2048)
           r += 3;
 
       else if (move == ttMove)
