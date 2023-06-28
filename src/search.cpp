@@ -1170,9 +1170,9 @@ moves_loop: // When in check, search starts here
       else if (move == ttMove)
           r--;
 
-      // Increase reduction based on static eval
+      // Increase reduction based on static eval compared to root eval
       if (ss->staticEval != VALUE_NONE)
-          r += std::max(0, int(-ss->staticEval) / 2048);
+          r += std::max(0,int((alpha + beta)/2 - ss->staticEval) / 2048);
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
