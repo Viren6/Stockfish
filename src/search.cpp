@@ -1170,9 +1170,10 @@ moves_loop: // When in check, search starts here
       else if (move == ttMove)
           r--;
 
-      // Increase reduction based on static eval compared to root eval
+      // Increase reduction based on static eval compared to previous eval
+      // Upper limit of 3 is important for mate finding
       if (ss->staticEval != VALUE_NONE)
-          r += std::max(0,int((alpha + beta)/2 - ss->staticEval) / 512);
+          r += std::clamp(int((alpha + beta)/2 - ss->staticEval) / 896, 0, 3);
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
