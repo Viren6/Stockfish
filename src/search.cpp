@@ -546,7 +546,7 @@ namespace {
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
-    bool capture, moveCountPruning, ttCapture;
+    bool capture, moveCountPruning, ttCapture, razor;
     Piece movedPiece;
     int moveCount, captureCount, quietCount, improvement;
 
@@ -701,6 +701,7 @@ namespace {
     }
 
     CapturePieceToHistory& captureHistory = thisThread->captureHistory;
+    razor = false;
 
     // Step 6. Static evaluation of the position
     if (ss->inCheck)
@@ -762,6 +763,7 @@ namespace {
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
             return value;
+        razor = true;
     }
 
     // Step 8. Futility pruning: child node (~40 Elo).
@@ -1170,8 +1172,8 @@ moves_loop: // When in check, search starts here
       else if (move == ttMove)
           r--;
 
-      if (eval < alpha - 456 - 252 * depth * depth)
-          r -= 2;
+      if (razor)
+          r += 2;
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
