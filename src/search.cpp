@@ -767,7 +767,7 @@ namespace {
     }
 
 
-    if (eval > beta + 456 + 252 * depth * depth && !(ss-1)->razor)
+    if (eval > beta + 456 + 252 * (depth-1) * (depth-1) && !(ss-1)->razor)
     {
         value = qsearch<NonPV>(pos, ss, beta, beta + 1);
         if (value > beta)
