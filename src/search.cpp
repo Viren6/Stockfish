@@ -558,7 +558,6 @@ namespace {
     moveCount          = captureCount = quietCount = ss->moveCount = 0;
     bestValue          = -VALUE_INFINITE;
     maxValue           = VALUE_INFINITE;
-    ss->razor          = false;
 
     // Check for the available remaining time
     if (thisThread == Threads.main())
@@ -758,21 +757,19 @@ namespace {
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
-    if (eval < alpha - 456 - 252 * depth * depth && !(ss-1)->razor)
+
+    if (eval < alpha - 456 - 252 * depth * depth)
     {
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
             return value;
-        ss->razor = true;
     }
 
-
-    if (eval > beta + 456 + 252 * depth * depth && !(ss-1)->razor)
+    if (eval > beta + 456 + 252 * (depth-1) * (depth-1))
     {
         value = qsearch<NonPV>(pos, ss, beta, beta + 1);
         if (value > beta)
             return value;
-        ss->razor = true;
     }
 
     // Step 8. Futility pruning: child node (~40 Elo).
