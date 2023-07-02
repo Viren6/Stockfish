@@ -1174,9 +1174,6 @@ moves_loop: // When in check, search starts here
       if ((ss+1)->cutoffCnt >= 4)
           r++;
 
-      if ((ss+1)->cutoffCnt >= 16)
-          r++;
-
       if (move == ttMove && (ss+1)->cutoffCnt < 4)
           r--;
 
