@@ -1166,9 +1166,10 @@ moves_loop: // When in check, search starts here
       if (singularQuietLMR)
           r--;
 
-      r += std::clamp(((ss+1)->cutoffCnt * cutoffCntScale - (ss-1)->moveCount) / reductionScale, -1, 1);
+      int adjustR = std::clamp(((ss+1)->cutoffCnt * cutoffCntScale - (ss-1)->moveCount) / reductionScale, -1, 1);
+      r += adjustR;
 
-      if (move == ttMove && (ss+1)->cutoffCnt < 4)
+      if (move == ttMove && adjustR != 1)
           r--;
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
