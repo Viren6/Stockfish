@@ -1151,9 +1151,6 @@ moves_loop: // When in check, search starts here
       if ((ss-1)->moveCount >= 9)
           r--;
 
-      if ((ss-1)->moveCount >= 36)
-          r--;
-
       // Increase reduction for cut nodes (~3 Elo)
       if (cutNode)
           r += 2;
@@ -1172,6 +1169,9 @@ moves_loop: // When in check, search starts here
 
       // Increase reduction if next ply has a lot of fail high (~5 Elo)
       if ((ss+1)->cutoffCnt >= 4)
+          r++;
+
+      if ((ss+1)->cutoffCnt >= 16)
           r++;
 
       if (move == ttMove && (ss+1)->cutoffCnt < 4)
