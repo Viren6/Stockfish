@@ -1174,7 +1174,7 @@ moves_loop: // When in check, search starts here
       else if (move == ttMove)
           r--;
 
-      if ((ss)->moveCount > 8)
+      if (movedPiece == W_QUEEN || movedPiece == B_QUEEN)
           r++;
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
