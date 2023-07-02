@@ -1147,9 +1147,7 @@ moves_loop: // When in check, search starts here
           && !likelyFailLow)
           r -= cutNode && tte->depth() >= depth + 3 ? 3 : 2;
 
-      // Decrease reduction if opponent's move count is high (~1 Elo)
-      if ((ss-1)->moveCount > 8)
-          r--;
+      r += ss->moveCount / 8 - (ss-1)->moveCount / 8;
 
       // Increase reduction for cut nodes (~3 Elo)
       if (cutNode)
@@ -1172,9 +1170,6 @@ moves_loop: // When in check, search starts here
           r++;
 
       else if (move == ttMove)
-          r--;
-
-      if (movedPiece == W_PAWN || movedPiece == B_PAWN)
           r--;
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
