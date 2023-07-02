@@ -1168,7 +1168,7 @@ moves_loop: // When in check, search starts here
           r--;
 
       // Increase reduction if next ply has a lot of fail high (~5 Elo)
-      r += (ss+1)->cutoffCnt / 4;
+      r += int(sqrt((ss+1)->cutoffCnt)) / 2;
 
       if (move == ttMove && (ss+1)->cutoffCnt < 4)
           r--;
