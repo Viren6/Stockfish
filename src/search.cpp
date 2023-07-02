@@ -1163,7 +1163,7 @@ moves_loop: // When in check, search starts here
       if (singularQuietLMR)
           r--;
 
-      int adjustR = std::clamp(((ss+1)->cutoffCnt * 5 - (ss-1)->moveCount) / 8, -1, 1);
+      int adjustR = std::clamp(((ss+1)->cutoffCnt * 4 - (ss-1)->moveCount) / 8, -1, 1);
       r += adjustR;
 
       if (move == ttMove && adjustR != 1)
