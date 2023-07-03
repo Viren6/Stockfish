@@ -507,8 +507,8 @@ void Thread::search() {
 
 namespace {
 
-    int cutoffCntScale = 368; int reductionScale = 770; int depthScale = 0;
-    TUNE(SetRange(200, 500), cutoffCntScale, SetRange(500, 1000), reductionScale, SetRange(-8, 20), depthScale);
+    int cutoffCntScale = 500; int moveCountScale = 137; int ttMoveScale = 1000; int singularQuietLMRScale = 1000;
+    TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale, SetRange(400, 2000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale);
 
   // search<>() is the main search function for both PV and non-PV nodes
 
@@ -1162,15 +1162,7 @@ moves_loop: // When in check, search starts here
       if (PvNode)
           r -= 1 + 12 / (3 + depth);
 
-      // Decrease reduction if ttMove has been singularly extended (~1 Elo)
-      if (singularQuietLMR)
-          r--;
-
-      int adjustR = std::clamp(((ss+1)->cutoffCnt * cutoffCntScale - (ss-1)->moveCount * 100) / (reductionScale + depth * depthScale), -1, 1);
-      r += adjustR;
-
-      if (move == ttMove && adjustR != 1)
-          r--;
+      r += ((ss+1)->cutoffCnt * cutoffCntScale - (ss-1)->moveCount * moveCountScale - move==ttMove * ttMoveScale - singularQuietLMR * singularQuietLMRScale) / 1000;
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
