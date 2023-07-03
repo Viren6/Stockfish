@@ -1163,7 +1163,7 @@ moves_loop: // When in check, search starts here
       if (PvNode)
           r -= 1 + 12 / (3 + depth);
 
-      r += ((ss+1)->cutoffCnt * cutoffCntScale - (ss-1)->moveCount * moveCountScale - move==ttMove * ttMoveScale - singularQuietLMR * singularQuietLMRScale) / 1000;
+      r += ((ss+1)->cutoffCnt * cutoffCntScale - (ss-1)->moveCount * moveCountScale - move==ttMove * ttMoveScale - singularQuietLMR * singularQuietLMRScale) / 1000; 
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
