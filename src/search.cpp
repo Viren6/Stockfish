@@ -508,7 +508,11 @@ void Thread::search() {
 namespace {
 
     int cutoffCntScale = 500; int moveCountScale = 137; int ttMoveScale = 1000; int singularQuietLMRScale = 1000;
-    TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale, SetRange(400, 2000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale);
+    int ttCaptureScale = 1000; int clampLower = -1000; int clampUpper = 1000; int cutNodeScale = 2000;
+    TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale, 
+         SetRange(400, 2000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
+         SetRange(400, 2000), ttCaptureScale, SetRange(-3000, -500), clampLower, SetRange(500, 3000), clampUpper,
+         SetRange(800, 4000), cutNodeScale);
 
   // search<>() is the main search function for both PV and non-PV nodes
 
@@ -1151,19 +1155,14 @@ moves_loop: // When in check, search starts here
           && !likelyFailLow)
           r -= cutNode && tte->depth() >= depth + 3 ? 3 : 2;
 
-      // Increase reduction for cut nodes (~3 Elo)
-      if (cutNode)
-          r += 2;
-
-      // Increase reduction if ttMove is a capture (~3 Elo)
-      if (ttCapture)
-          r++;
-
       // Decrease reduction for PvNodes based on depth (~2 Elo)
       if (PvNode)
           r -= 1 + 12 / (3 + depth);
 
-      r += ((ss+1)->cutoffCnt * cutoffCntScale - (ss-1)->moveCount * moveCountScale - move==ttMove * ttMoveScale - singularQuietLMR * singularQuietLMRScale) / 1000; 
+     r +=  (cutNode * cutNodeScale + ttCapture * ttCaptureScale
+         + std::clamp((ss+1)->cutoffCnt * cutoffCntScale - (ss-1)->moveCount * moveCountScale, clampLower, clampUpper)
+         - (move==ttMove) * ttMoveScale - singularQuietLMR * singularQuietLMRScale) 
+         / 1000; 
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
