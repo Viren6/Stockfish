@@ -508,7 +508,7 @@ void Thread::search() {
 namespace {
 
     int cutoffCntScale = 370; int reductionScale = 729;
-    TUNE(SetRange(1, 10), cutoffCntScale, SetRange(2, 25), reductionScale);
+    TUNE(SetRange(100, 1000), cutoffCntScale, SetRange(200, 2500), reductionScale);
 
   // search<>() is the main search function for both PV and non-PV nodes
 
