@@ -507,7 +507,7 @@ void Thread::search() {
 
 namespace {
 
-    int cutoffCntScale = 4; int reductionScale = 8;
+    int cutoffCntScale = 370; int reductionScale = 729;
     TUNE(SetRange(1, 10), cutoffCntScale, SetRange(2, 25), reductionScale);
 
   // search<>() is the main search function for both PV and non-PV nodes
@@ -1166,7 +1166,7 @@ moves_loop: // When in check, search starts here
       if (singularQuietLMR)
           r--;
 
-      int adjustR = std::clamp(((ss+1)->cutoffCnt * cutoffCntScale - (ss-1)->moveCount) / reductionScale, -1, 1);
+      int adjustR = std::clamp(((ss+1)->cutoffCnt * cutoffCntScale - (ss-1)->moveCount * 100) / reductionScale, -1, 1);
       r += adjustR;
 
       if (move == ttMove && adjustR != 1)
