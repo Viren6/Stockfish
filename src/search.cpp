@@ -1148,19 +1148,14 @@ moves_loop: // When in check, search starts here
           && !likelyFailLow)
           r -= cutNode && tte->depth() >= depth + 3 ? 3 : 2;
 
-      // Increase reduction for cut nodes (~3 Elo)
-      if (cutNode)
-          r += 2;
-
-      // Increase reduction if ttMove is a capture (~3 Elo)
-      if (ttCapture)
-          r++;
-
       // Decrease reduction for PvNodes based on depth (~2 Elo)
       if (PvNode)
           r -= 1 + 12 / (3 + depth);
 
-      r += ((ss+1)->cutoffCnt * 370 - (ss-1)->moveCount * 100 - move==ttMove * 729 - singularQuietLMR * 729) / 729;
+     r +=  (cutNode * 2000 + ttCapture * 1000
+         + std::clamp((ss+1)->cutoffCnt * 500 - (ss-1)->moveCount * 137, -1000, 1000)
+         - (move==ttMove) * 1000 - singularQuietLMR * 1000)
+         / 1000;
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
