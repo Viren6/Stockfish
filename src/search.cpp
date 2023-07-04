@@ -507,15 +507,16 @@ void Thread::search() {
 
 namespace {
 
-    int cutoffCntScale = 500; int moveCountScale = 114; int ttMoveScale = 887; int singularQuietLMRScale = 962;
-    int ttCaptureScale = 1012; int clampLower = 1194; int clampUpper = 1338; int cutNodeScale = 2168;
-    int statScoreScale = 1000; int ttPvScale = 1000; int depthScale = 1000;
+    int cutoffCntScale = 491; int moveCountScale = 123; int ttMoveScale = 491; int singularQuietLMRScale = 923;
+    int ttCaptureScale = 1058; int clampLower = 1269; int clampUpper = 1301; int cutNodeScale = 2211;
+    int statScoreScale = 970; int ttPvScale = 1083; int depthScale = 966; int reductionAdjustment = 0;
+    int ttClamp = 1000;
 
     TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale, 
-         SetRange(400, 2000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
+         SetRange(400, 2000), ttMoveScale, SetRange(100, 1000), singularQuietLMRScale,
          SetRange(400, 2000), ttCaptureScale, SetRange(500, 3000), clampLower, SetRange(500, 3000), clampUpper,
          SetRange(800, 4000), cutNodeScale, SetRange(400, 2000), statScoreScale, SetRange(400, 2000), ttPvScale,
-         SetRange(400, 2000), depthScale);
+         SetRange(400, 2000), depthScale, SetRange(-1000, 1000), reductionAdjustment, SetRange(500, 3000), ttClamp);
 
   // search<>() is the main search function for both PV and non-PV nodes
 
@@ -1160,8 +1161,9 @@ moves_loop: // When in check, search starts here
       r +=  (cutNode * cutNodeScale 
           + ttCapture * ttCaptureScale
           + std::min((ss + 1)->cutoffCnt * cutoffCntScale, clampUpper)
+          + reductionAdjustment
           - std::min((ss - 1)->moveCount * moveCountScale, clampLower)
-          - (move == ttMove) * ttMoveScale 
+          - (move == ttMove) * std::min((ss+1)->cutoffCnt * ttMoveScale, ttClamp)
           - singularQuietLMR * singularQuietLMRScale
           - (ss->statScore * statScoreScale) / (11124 + 4740 * (depth > 5 && depth < 22))
           - (ss->ttPv && !likelyFailLow) * ttPvScale * (cutNode && tte->depth() >= depth + 3 ? 3 : 2)
