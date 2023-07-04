@@ -508,7 +508,7 @@ void Thread::search() {
 namespace {
 
     int cutoffCntScale = 500; int moveCountScale = 114; int ttMoveScale = 887; int singularQuietLMRScale = 962;
-    int ttCaptureScale = 1012; int clampLower = -1194; int clampUpper = 1338; int cutNodeScale = 2168;
+    int ttCaptureScale = 1012; int clampLower = 1194; int clampUpper = 1338; int cutNodeScale = 2168;
     int statScoreScale = 1000; int ttPvScale = 1000; int depthScale = 1000;
 
     TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale, 
@@ -1160,7 +1160,7 @@ moves_loop: // When in check, search starts here
       r +=  (cutNode * cutNodeScale 
           + ttCapture * ttCaptureScale
           + std::min((ss + 1)->cutoffCnt * cutoffCntScale, clampUpper)
-          - std::max((ss - 1)->moveCount * moveCountScale, clampLower)
+          - std::min((ss - 1)->moveCount * moveCountScale, clampLower)
           - (move == ttMove) * ttMoveScale 
           - singularQuietLMR * singularQuietLMRScale
           - (ss->statScore * statScoreScale) / (11124 + 4740 * (depth > 5 && depth < 22))
