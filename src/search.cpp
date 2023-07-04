@@ -507,12 +507,15 @@ void Thread::search() {
 
 namespace {
 
-    int cutoffCntScale = 500; int moveCountScale = 137; int ttMoveScale = 1000; int singularQuietLMRScale = 1000;
-    int ttCaptureScale = 1000; int clampLower = -1000; int clampUpper = 1000; int cutNodeScale = 2000;
+    int cutoffCntScale = 500; int moveCountScale = 114; int ttMoveScale = 887; int singularQuietLMRScale = 962;
+    int ttCaptureScale = 1012; int clampLower = -1194; int clampUpper = 1338; int cutNodeScale = 2168;
+    int statScoreScale = 1000; int ttPvScale = 1000; int depthScale = 1000;
+
     TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale, 
          SetRange(400, 2000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
          SetRange(400, 2000), ttCaptureScale, SetRange(-3000, -500), clampLower, SetRange(500, 3000), clampUpper,
-         SetRange(800, 4000), cutNodeScale);
+         SetRange(800, 4000), cutNodeScale, SetRange(400, 2000), statScoreScale, SetRange(400, 2000), ttPvScale,
+         SetRange(400, 2000), depthScale);
 
   // search<>() is the main search function for both PV and non-PV nodes
 
@@ -1148,30 +1151,22 @@ moves_loop: // When in check, search starts here
       // Step 16. Make the move
       pos.do_move(move, st, givesCheck);
 
-      // Decrease reduction if position is or has been on the PV
-      // and node is not likely to fail low. (~3 Elo)
-      // Decrease further on cutNodes. (~1 Elo)
-      if (   ss->ttPv
-          && !likelyFailLow)
-          r -= cutNode && tte->depth() >= depth + 3 ? 3 : 2;
-
-      // Decrease reduction for PvNodes based on depth (~2 Elo)
-      if (PvNode)
-          r -= 1 + 12 / (3 + depth);
-
-     r +=  (cutNode * cutNodeScale + ttCapture * ttCaptureScale
-         + std::clamp((ss+1)->cutoffCnt * cutoffCntScale - (ss-1)->moveCount * moveCountScale, clampLower, clampUpper)
-         - (move==ttMove) * ttMoveScale - singularQuietLMR * singularQuietLMRScale) 
-         / 1000; 
-
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
                      + (*contHist[1])[movedPiece][to_sq(move)]
                      + (*contHist[3])[movedPiece][to_sq(move)]
                      - 4006;
 
-      // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
-      r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
+      r +=  (cutNode * cutNodeScale 
+          + ttCapture * ttCaptureScale
+          + std::min((ss + 1)->cutoffCnt * cutoffCntScale, clampUpper)
+          - std::max((ss - 1)->moveCount * moveCountScale, clampLower)
+          - (move == ttMove) * ttMoveScale 
+          - singularQuietLMR * singularQuietLMRScale
+          - (ss->statScore * statScoreScale) / (11124 + 4740 * (depth > 5 && depth < 22))
+          - (ss->ttPv && !likelyFailLow) * ttPvScale * (cutNode && tte->depth() >= depth + 3 ? 3 : 2)
+          - PvNode * ((1 * depthScale)  + (12 * depthScale) / (3 + depth)))
+          / 1000;
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
