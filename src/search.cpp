@@ -513,7 +513,7 @@ namespace {
 
     TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale, 
          SetRange(400, 2000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
-         SetRange(400, 2000), ttCaptureScale, SetRange(-3000, -500), clampLower, SetRange(500, 3000), clampUpper,
+         SetRange(400, 2000), ttCaptureScale, SetRange(500, 3000), clampLower, SetRange(500, 3000), clampUpper,
          SetRange(800, 4000), cutNodeScale, SetRange(400, 2000), statScoreScale, SetRange(400, 2000), ttPvScale,
          SetRange(400, 2000), depthScale);
 
