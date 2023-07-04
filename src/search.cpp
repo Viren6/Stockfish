@@ -1141,30 +1141,22 @@ moves_loop: // When in check, search starts here
       // Step 16. Make the move
       pos.do_move(move, st, givesCheck);
 
-      // Decrease reduction if position is or has been on the PV
-      // and node is not likely to fail low. (~3 Elo)
-      // Decrease further on cutNodes. (~1 Elo)
-      if (   ss->ttPv
-          && !likelyFailLow)
-          r -= cutNode && tte->depth() >= depth + 3 ? 3 : 2;
-
-      // Decrease reduction for PvNodes based on depth (~2 Elo)
-      if (PvNode)
-          r -= 1 + 12 / (3 + depth);
-
-      r += (cutNode * 2044 + ttCapture * 1076
-          + std::clamp((ss+1)->cutoffCnt * 490 - (ss-1)->moveCount * 122, -1167, 1327)
-          - (move == ttMove) * 882 - singularQuietLMR * 934)
-          / 1000;
-
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
                      + (*contHist[1])[movedPiece][to_sq(move)]
                      + (*contHist[3])[movedPiece][to_sq(move)]
                      - 4006;
 
-      // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
-      r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
+      r += (cutNode * 2168
+          + ttCapture * 1012
+          + std::min((ss + 1)->cutoffCnt * 500, 1338)
+          - std::min((ss - 1)->moveCount * 114, 1194)
+          - (move == ttMove) * 887
+          - singularQuietLMR * 962
+          - (ss->statScore * 1000) / (11124 + 4740 * (depth > 5 && depth < 22))
+          - (ss->ttPv && !likelyFailLow) * 1000 * (cutNode && tte->depth() >= depth + 3 ? 3 : 2)
+          - PvNode * ((1 * 1000) + (12 * 1000) / (3 + depth)))
+          / 1000;
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
