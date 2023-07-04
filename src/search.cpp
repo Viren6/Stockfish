@@ -1152,9 +1152,9 @@ moves_loop: // When in check, search starts here
       if (PvNode)
           r -= 1 + 12 / (3 + depth);
 
-      r += (cutNode * 1913 + ttCapture * 961
-          + std::clamp((ss+1)->cutoffCnt * 467 - (ss-1)->moveCount * 132, -1020, 1219)
-          - (move == ttMove) * 962 - singularQuietLMR * 947)
+      r += (cutNode * 2044 + ttCapture * 1076
+          + std::clamp((ss+1)->cutoffCnt * 490 - (ss-1)->moveCount * 122, -1167, 1327)
+          - (move == ttMove) * 882 - singularQuietLMR * 934)
           / 1000;
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
