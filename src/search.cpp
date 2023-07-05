@@ -1147,7 +1147,7 @@ moves_loop: // When in check, search starts here
                      + (*contHist[3])[movedPiece][to_sq(move)]
                      - 4006;
 
-      r +=  (cutNode * 2263
+      r +=  (cutNode * 2463
           + ttCapture * 1053
           + std::min((ss + 1)->cutoffCnt * 460, 1424)
           + 73
