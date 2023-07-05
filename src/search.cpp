@@ -1147,15 +1147,16 @@ moves_loop: // When in check, search starts here
                      + (*contHist[3])[movedPiece][to_sq(move)]
                      - 4006;
 
-      r += (cutNode * 2168
-          + ttCapture * 1012
-          + std::min((ss + 1)->cutoffCnt * 500, 1338)
-          - std::min((ss - 1)->moveCount * 114, 1194)
-          - (move == ttMove) * 887
-          - singularQuietLMR * 962
-          - (ss->statScore * 1000) / (11124 + 4740 * (depth > 5 && depth < 22))
-          - (ss->ttPv && !likelyFailLow) * 1000 * (cutNode && tte->depth() >= depth + 3 ? 3 : 2)
-          - PvNode * ((1 * 1000) + (12 * 1000) / (3 + depth)))
+      r += (cutNode * 2265
+          + ttCapture * 1070
+          + std::min((ss + 1)->cutoffCnt * 499, 1296)
+          + -7
+          - std::min((ss - 1)->moveCount * 124, 1275)
+          - (move == ttMove) * (1028 - std::min((ss + 1)->cutoffCnt * 300, 1028))
+          - singularQuietLMR * 899
+          - (ss->statScore * 972) / (11124 + 4740 * (depth > 5 && depth < 22))
+          - (ss->ttPv && !likelyFailLow) * 1089 * (cutNode && tte->depth() >= depth + 3 ? 3 : 2)
+          - PvNode * ((1 * 967) + (12 * 967) / (3 + depth)))
           / 1000;
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
