@@ -72,7 +72,10 @@ namespace {
 
   Depth reduction(bool i, Depth d, int mn, Value delta, Value rootDelta) {
     int r = Reductions[d] * Reductions[mn];
-    return (r + 1372 - int(delta) * 1073 / int(rootDelta)) + (!i && r > 936) * 1024;
+    int reduction = r + 1372 - int(delta) * 1073 / int(rootDelta);
+    if (!i)
+        reduction += r;
+    return reduction;
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
@@ -1148,16 +1151,16 @@ moves_loop: // When in check, search starts here
                      - 4006;
 
       //Scale tune values by 1024/1000
-      r += (cutNode * 2463
-          + ttCapture * 1053
-          + std::min((ss + 1)->cutoffCnt * 460, 1424)
-          + 73
-          - std::min((ss - 1)->moveCount * 138, 1324)
-          - (move == ttMove) * (1010 - std::min((ss + 1)->cutoffCnt * 273, 1010))
-          - singularQuietLMR * 969
-          - (ss->statScore * 1004) / (11124 + 4740 * (depth > 5 && depth < 22))
-          - (ss->ttPv && !likelyFailLow) * 1177 * (cutNode && tte->depth() >= depth + 3 ? 3 : 2)
-          - PvNode * ((1 * 930) + (12 * 930) / (3 + depth)));
+      r += (cutNode * 2534
+          + ttCapture * 1039
+          + std::min((ss + 1)->cutoffCnt * 386, 1446)
+          + 132
+          - std::min((ss - 1)->moveCount * 112, 1355)
+          - (move == ttMove) * (1118 - std::min((ss + 1)->cutoffCnt * 252, 1118))
+          - singularQuietLMR * 1199
+          - (ss->statScore * 953) / (11124 + 4740 * (depth > 5 && depth < 22))
+          - (ss->ttPv && !likelyFailLow) * 1194 * (cutNode && tte->depth() >= depth + 3 ? 3 : 2)
+          - PvNode * ((1 * 1079) + (12 * 1079) / (3 + depth)));
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
