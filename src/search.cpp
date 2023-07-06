@@ -72,7 +72,7 @@ namespace {
 
   Depth reduction(bool i, Depth d, int mn, Value delta, Value rootDelta) {
     int r = Reductions[d] * Reductions[mn];
-    return (r + 1372 - int(delta) * 1073 / int(rootDelta)) / 1024 + (!i && r > 936);
+    return (r + 1372 - int(delta) * 1073 / int(rootDelta)) + (!i && r > 936) * 1024;
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
@@ -977,7 +977,7 @@ moves_loop: // When in check, search starts here
           moveCountPruning = moveCount >= futility_move_count(improving, depth);
 
           // Reduced depth of the next LMR search
-          int lmrDepth = newDepth - r;
+          int lmrDepth = newDepth - (r / 1024);
 
           if (   capture
               || givesCheck)
@@ -1147,7 +1147,8 @@ moves_loop: // When in check, search starts here
                      + (*contHist[3])[movedPiece][to_sq(move)]
                      - 4006;
 
-      r +=  (cutNode * 2463
+      //Scale tune values by 1024/1000
+      r += (cutNode * 2463
           + ttCapture * 1053
           + std::min((ss + 1)->cutoffCnt * 460, 1424)
           + 73
@@ -1156,8 +1157,7 @@ moves_loop: // When in check, search starts here
           - singularQuietLMR * 969
           - (ss->statScore * 1004) / (11124 + 4740 * (depth > 5 && depth < 22))
           - (ss->ttPv && !likelyFailLow) * 1177 * (cutNode && tte->depth() >= depth + 3 ? 3 : 2)
-          - PvNode * ((1 * 930) + (12 * 930) / (3 + depth)))
-          / 1000;
+          - PvNode * ((1 * 930) + (12 * 930) / (3 + depth)));
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
@@ -1172,7 +1172,7 @@ moves_loop: // When in check, search starts here
           // In general we want to cap the LMR depth search at newDepth, but when
           // reduction is negative, we allow this move a limited search extension
           // beyond the first move depth. This may lead to hidden double extensions.
-          Depth d = std::clamp(newDepth - r, 1, newDepth + 1);
+          Depth d = std::clamp(newDepth - (r / 1024), 1, newDepth + 1);
 
           value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, d, true);
 
@@ -1205,9 +1205,9 @@ moves_loop: // When in check, search starts here
       {
           // Increase reduction for cut nodes and not ttMove (~1 Elo)
           if (!ttMove && cutNode)
-              r += 2;
+              r += 2048;
 
-          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth - (r > 3), !cutNode);
+          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth - (r >= 4096), !cutNode);
       }
 
       // For PV nodes only, do a full PV search on the first move or after a fail
