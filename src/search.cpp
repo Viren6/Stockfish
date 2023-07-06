@@ -59,6 +59,20 @@ using namespace Search;
 
 namespace {
 
+    int cutoffCntScale = 386; int moveCountScale = 112; int ttMoveScale = 252; int singularQuietLMRScale = 1199;
+    int ttCaptureScale = 1039; int clampLower = 1355; int clampUpper = 1446; int cutNodeScale = 2534;
+    int statScoreScale = 953; int ttPvScale = 1194; int pvScale = 1079; int reductionAdjustment = 132;
+    int ttClamp = 1118; int baseReductionScale = 1024; int baseImprovingReductionScale = 1024;
+    int lmrDepthScale = 1024; int lmrDepthScaleTwo = 1024; int ttMoveCutNodeScale = 2048; int depthReductionScale = 4096;
+
+    TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
+        SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
+        SetRange(400, 2000), ttCaptureScale, SetRange(500, 3000), clampLower, SetRange(500, 3000), clampUpper,
+        SetRange(800, 4000), cutNodeScale, SetRange(400, 2000), statScoreScale, SetRange(400, 2000), ttPvScale,
+        SetRange(400, 2000), pvScale, SetRange(-1000, 1000), reductionAdjustment, SetRange(500, 3000), ttClamp,
+        SetRange(400, 2000), baseReductionScale, baseImprovingReductionScale, lmrDepthScale, lmrDepthScaleTwo,
+        SetRange(800, 4000), ttMoveCutNodeScale, SetRange(1600, 8000), depthReductionScale);
+
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
 
@@ -72,7 +86,10 @@ namespace {
 
   Depth reduction(bool i, Depth d, int mn, Value delta, Value rootDelta) {
     int r = Reductions[d] * Reductions[mn];
-    return (r + 1372 - int(delta) * 1073 / int(rootDelta)) / 1024 + (!i && r > 936);
+    int reduction = (r + 1372 - int(delta) * 1073 / int(rootDelta)) * baseReductionScale / 1024;
+    if (!i)
+        reduction += r * baseImprovingReductionScale / 1024;
+    return reduction;
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
@@ -506,17 +523,6 @@ void Thread::search() {
 
 
 namespace {
-
-    int cutoffCntScale = 491; int moveCountScale = 123; int ttMoveScale = 300; int singularQuietLMRScale = 923;
-    int ttCaptureScale = 1058; int clampLower = 1269; int clampUpper = 1301; int cutNodeScale = 2211;
-    int statScoreScale = 970; int ttPvScale = 1083; int depthScale = 966; int reductionAdjustment = 0;
-    int ttClamp = 1000;
-
-    TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale, 
-         SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
-         SetRange(400, 2000), ttCaptureScale, SetRange(500, 3000), clampLower, SetRange(500, 3000), clampUpper,
-         SetRange(800, 4000), cutNodeScale, SetRange(400, 2000), statScoreScale, SetRange(400, 2000), ttPvScale,
-         SetRange(400, 2000), depthScale, SetRange(-1000, 1000), reductionAdjustment, SetRange(500, 3000), ttClamp);
 
   // search<>() is the main search function for both PV and non-PV nodes
 
@@ -988,7 +994,7 @@ moves_loop: // When in check, search starts here
           moveCountPruning = moveCount >= futility_move_count(improving, depth);
 
           // Reduced depth of the next LMR search
-          int lmrDepth = newDepth - r;
+          int lmrDepth = newDepth - (r * lmrDepthScale / 1024 / 1024);
 
           if (   capture
               || givesCheck)
@@ -1158,17 +1164,16 @@ moves_loop: // When in check, search starts here
                      + (*contHist[3])[movedPiece][to_sq(move)]
                      - 4006;
 
-      r +=  (cutNode * cutNodeScale 
+      r += (cutNode * cutNodeScale
           + ttCapture * ttCaptureScale
           + std::min((ss + 1)->cutoffCnt * cutoffCntScale, clampUpper)
           + reductionAdjustment
           - std::min((ss - 1)->moveCount * moveCountScale, clampLower)
-          - (move == ttMove) * (ttClamp - std::min((ss+1)->cutoffCnt * ttMoveScale, ttClamp))
+          - (move == ttMove) * (ttClamp - std::min((ss + 1)->cutoffCnt * ttMoveScale, ttClamp))
           - singularQuietLMR * singularQuietLMRScale
           - (ss->statScore * statScoreScale) / (11124 + 4740 * (depth > 5 && depth < 22))
           - (ss->ttPv && !likelyFailLow) * ttPvScale * (cutNode && tte->depth() >= depth + 3 ? 3 : 2)
-          - PvNode * ((1 * depthScale)  + (12 * depthScale) / (3 + depth)))
-          / 1000;
+          - PvNode * ((1 * pvScale) + (12 * pvScale) / (3 + depth)));
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
@@ -1183,7 +1188,7 @@ moves_loop: // When in check, search starts here
           // In general we want to cap the LMR depth search at newDepth, but when
           // reduction is negative, we allow this move a limited search extension
           // beyond the first move depth. This may lead to hidden double extensions.
-          Depth d = std::clamp(newDepth - r, 1, newDepth + 1);
+          Depth d = std::clamp(newDepth - (r * lmrDepthScaleTwo / 1024 / 1024), 1, newDepth + 1);
 
           value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, d, true);
 
@@ -1216,9 +1221,9 @@ moves_loop: // When in check, search starts here
       {
           // Increase reduction for cut nodes and not ttMove (~1 Elo)
           if (!ttMove && cutNode)
-              r += 2;
+              r += ttMoveCutNodeScale;
 
-          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth - (r > 3), !cutNode);
+          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth - (r >= depthReductionScale), !cutNode);
       }
 
       // For PV nodes only, do a full PV search on the first move or after a fail
