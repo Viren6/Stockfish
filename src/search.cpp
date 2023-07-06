@@ -64,12 +64,13 @@ namespace {
     int statScoreScale = 953; int ttPvScale = 1194; int pvScale = 1079; int reductionAdjustment = 132;
     int ttClamp = 1118; int baseReductionScale = 1024; int baseImprovingReductionScale = 1024;
     int lmrDepthScale = 1024; int lmrDepthScaleTwo = 1024; int ttMoveCutNodeScale = 2048; int depthReductionScale = 4096;
+    int baseReductionAdjustment = 0;
 
     TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
         SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
         SetRange(400, 2000), ttCaptureScale, SetRange(500, 3000), clampLower, SetRange(500, 3000), clampUpper,
         SetRange(800, 4000), cutNodeScale, SetRange(400, 2000), statScoreScale, SetRange(400, 2000), ttPvScale,
-        SetRange(400, 2000), pvScale, SetRange(-1000, 1000), reductionAdjustment, SetRange(500, 3000), ttClamp,
+        SetRange(400, 2000), pvScale, SetRange(-1000, 1000), reductionAdjustment, baseReductionAdjustment, SetRange(500, 3000), ttClamp,
         SetRange(400, 2000), baseReductionScale, baseImprovingReductionScale, lmrDepthScale, lmrDepthScaleTwo,
         SetRange(800, 4000), ttMoveCutNodeScale, SetRange(1600, 8000), depthReductionScale);
 
@@ -86,7 +87,7 @@ namespace {
 
   Depth reduction(bool i, Depth d, int mn, Value delta, Value rootDelta) {
     int r = Reductions[d] * Reductions[mn];
-    int reduction = (r + 1372 - int(delta) * 1073 / int(rootDelta)) * baseReductionScale / 1024;
+    int reduction = (r + 1372 - int(delta) * 1073 / int(rootDelta)) * baseReductionScale / 1024 + baseReductionAdjustment;
     if (!i)
         reduction += r * baseImprovingReductionScale / 1024;
     return reduction;
