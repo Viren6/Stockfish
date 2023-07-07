@@ -60,20 +60,12 @@ using namespace Search;
 namespace {
 
     //Tune 4 23k game values
-    int cutoffCntScale = 338; int moveCountScale = 117; int ttMoveScale = 228; int singularQuietLMRScale = 1075;
-    int ttCaptureScale = 997; int clampLower = 1436; int clampUpper = 1665; int cutNodeScale = 2602;
-    int statScoreScale = 984; int ttPvScale = 1045; int pvScale = 1045; int reductionAdjustment = 137; 
-    int baseReductionAdjustment = -79; int baseImprovingReductionAdjustment = 0; int ttClamp = 1194; int baseReductionScale = 957;
-    int baseImprovingReductionScale = 911; int lmrDepthScale = 896; int lmrDepthScaleTwo = 911; int ttMoveCutNodeScale = 2438;
-    int depthReductionScale = 3880; int improvingReductionMax = 2048; 
-
-    TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
-        SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
-        SetRange(400, 2000), ttCaptureScale, SetRange(500, 3000), clampLower, SetRange(500, 3000), clampUpper,
-        SetRange(800, 4000), cutNodeScale, SetRange(400, 2000), statScoreScale, SetRange(400, 2000), ttPvScale,
-        SetRange(400, 2000), pvScale, SetRange(-1000, 1000), reductionAdjustment, baseReductionAdjustment, baseImprovingReductionAdjustment,
-        SetRange(500, 3000), ttClamp, SetRange(400, 2000), baseReductionScale, baseImprovingReductionScale, lmrDepthScale, lmrDepthScaleTwo,
-        SetRange(800, 4000), ttMoveCutNodeScale, SetRange(1600, 8000), depthReductionScale, SetRange(800, 4000), improvingReductionMax);
+    const int cutoffCntScale = 338; const int moveCountScale = 117; const int ttMoveScale = 228; const int singularQuietLMRScale = 1075;
+    const int ttCaptureScale = 997; const int clampLower = 1436; const int clampUpper = 1665; const int cutNodeScale = 2602;
+    const int statScoreScale = 984; const int ttPvScale = 1045; const int pvScale = 1045; const int reductionAdjustment = 137; 
+    const int baseReductionAdjustment = -79; const int baseImprovingReductionAdjustment = 0; const int ttClamp = 1194; const int baseReductionScale = 957;
+    const int baseImprovingReductionScale = 911; const int lmrDepthScale = 896; const int lmrDepthScaleTwo = 911; const int ttMoveCutNodeScale = 2438;
+    const int depthReductionScale = 3880; const int improvingReductionMax = 2048; 
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
