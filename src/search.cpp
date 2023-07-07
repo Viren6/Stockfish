@@ -59,12 +59,13 @@ using namespace Search;
 
 namespace {
 
-    int cutoffCntScale = 386; int moveCountScale = 112; int ttMoveScale = 252; int singularQuietLMRScale = 1199;
-    int ttCaptureScale = 1039; int clampLower = 1355; int clampUpper = 1446; int cutNodeScale = 2534;
-    int statScoreScale = 953; int ttPvScale = 1194; int pvScale = 1079; int reductionAdjustment = 132; 
-    int baseReductionAdjustment = 0; int baseImprovingReductionAdjustment = 0; int ttClamp = 1118; int baseReductionScale = 1024;
-    int baseImprovingReductionScale = 1024; int lmrDepthScale = 1024; int lmrDepthScaleTwo = 1024; int ttMoveCutNodeScale = 2048;
-    int depthReductionScale = 4096; int improvingReductionMax = 2048; 
+    //Tune 4 23k game values
+    int cutoffCntScale = 338; int moveCountScale = 117; int ttMoveScale = 228; int singularQuietLMRScale = 1075;
+    int ttCaptureScale = 997; int clampLower = 1436; int clampUpper = 1665; int cutNodeScale = 2602;
+    int statScoreScale = 984; int ttPvScale = 1045; int pvScale = 1045; int reductionAdjustment = 137; 
+    int baseReductionAdjustment = -79; int baseImprovingReductionAdjustment = 0; int ttClamp = 1194; int baseReductionScale = 957;
+    int baseImprovingReductionScale = 911; int lmrDepthScale = 896; int lmrDepthScaleTwo = 911; int ttMoveCutNodeScale = 2438;
+    int depthReductionScale = 3880; int improvingReductionMax = 2048; 
 
     TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
         SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
