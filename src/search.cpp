@@ -59,20 +59,12 @@ using namespace Search;
 
 namespace {
 
-    int cutoffCntScale = 386; int moveCountScale = 112; int ttMoveScale = 252; int singularQuietLMRScale = 1199;
-    int ttCaptureScale = 1039; int clampLower = 1355; int clampUpper = 1446; int cutNodeScale = 2534;
-    int statScoreScale = 953; int ttPvScale = 1194; int pvScale = 1079; int reductionAdjustment = 132;
-    int ttClamp = 1118; int baseReductionScale = 1024; int baseImprovingReductionScale = 1024;
-    int lmrDepthScale = 1024; int lmrDepthScaleTwo = 1024; int ttMoveCutNodeScale = 2048; int depthReductionScale = 4096;
-    int baseReductionAdjustment = 0;
-
-    TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
-        SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
-        SetRange(400, 2000), ttCaptureScale, SetRange(500, 3000), clampLower, SetRange(500, 3000), clampUpper,
-        SetRange(800, 4000), cutNodeScale, SetRange(400, 2000), statScoreScale, SetRange(400, 2000), ttPvScale,
-        SetRange(400, 2000), pvScale, SetRange(-1000, 1000), reductionAdjustment, baseReductionAdjustment, SetRange(500, 3000), ttClamp,
-        SetRange(400, 2000), baseReductionScale, baseImprovingReductionScale, lmrDepthScale, lmrDepthScaleTwo,
-        SetRange(800, 4000), ttMoveCutNodeScale, SetRange(1600, 8000), depthReductionScale);
+    const int cutoffCntScale = 339; const int moveCountScale = 111; const int ttMoveScale = 253; const int singularQuietLMRScale = 1085;
+    const int ttCaptureScale = 1075; const int clampLower = 1428; const int clampUpper = 1635; const int cutNodeScale = 2492;
+    const int statScoreScale = 985; const int ttPvScale = 1190; const int pvScale = 1106; const int reductionAdjustment = 117;
+    const int ttClamp = 1187; const int baseReductionScale = 944; const int baseImprovingReductionScale = 923;
+    const int lmrDepthScale = 926; const int lmrDepthScaleTwo = 949; const int ttMoveCutNodeScale = 2279; const int depthReductionScale = 4272;
+    const int baseReductionAdjustment = -47;
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
