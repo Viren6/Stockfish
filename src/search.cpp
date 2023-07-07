@@ -1174,7 +1174,7 @@ moves_loop: // When in check, search starts here
           - singularQuietLMR * singularQuietLMRScale
           - (ss->statScore * statScoreScale) / (11124 + 4740 * (depth > 5 && depth < 22))
           - (ss->ttPv && !likelyFailLow) * ttPvScale * (cutNode && tte->depth() >= depth + 3 ? 3 : 2)
-          - PvNode * ((1 * pvScale) + (12 * pvScale) / (3 + depth)));
+          - PvNode * (pvScale + pvScale * (depth < 6)));
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
