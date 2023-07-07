@@ -64,7 +64,7 @@ namespace {
     const int statScoreScale = 985; const int ttPvScale = 1190; const int pvScale = 1106; const int reductionAdjustment = 117;
     const int ttClamp = 1187; const int baseReductionScale = 944; const int baseImprovingReductionScale = 923;
     const int lmrDepthScale = 926; const int lmrDepthScaleTwo = 949; const int ttMoveCutNodeScale = 2279; const int depthReductionScale = 4272;
-    const int baseReductionAdjustment = -47;
+    const int baseReductionAdjustment = -47; 
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
