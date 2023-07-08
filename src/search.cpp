@@ -59,13 +59,13 @@ using namespace Search;
 
 namespace {
 
-    //Tune 5 50k game values
-    const int cutoffCntScale = 271; const int moveCountScale = 84; const int ttMoveScale = 262; const int singularQuietLMRScale = 961;
-    const int ttCaptureScale = 1047; const int clampLower = 1332; const int clampUpper = 1768; const int cutNodeScale = 2393;
-    const int statScoreScale = 984; const int ttPvScale = 1005; const int pvScale = 1151; const int reductionAdjustment = 129; 
-    const int baseReductionAdjustment = -79; const int baseImprovingReductionAdjustment = -29; const int ttClamp = 1223; const int baseReductionScale = 879;
-    const int baseImprovingReductionScale = 895; const int lmrDepthScale = 786; const int lmrDepthScaleTwo = 853; const int ttMoveCutNodeScale = 2754;
-    const int depthReductionScale = 3457; const int improvingReductionMax = 1731; 
+    //Tune 5 80k game values
+    const int cutoffCntScale = 338; const int moveCountScale = 93; const int ttMoveScale = 279; const int singularQuietLMRScale = 884;
+    const int ttCaptureScale = 1038; const int clampLower = 1355; const int clampUpper = 1958; const int cutNodeScale = 2351;
+    const int statScoreScale = 993; const int ttPvScale = 1134; const int pvScale = 1365; const int reductionAdjustment = 105; 
+    const int baseReductionAdjustment = -52; const int baseImprovingReductionAdjustment = -50; const int ttClamp = 1412; const int baseReductionScale = 927;
+    const int baseImprovingReductionScale = 830; const int lmrDepthScale = 756; const int lmrDepthScaleTwo = 852; const int ttMoveCutNodeScale = 2676;
+    const int depthReductionScale = 3306; const int improvingReductionMax = 1682; 
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
