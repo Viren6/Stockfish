@@ -59,7 +59,7 @@ using namespace Search;
 
 namespace {
 
-    //Tune 5 25k game values
+    //Tune 5 50k game values
     const int cutoffCntScale = 271; const int moveCountScale = 84; const int ttMoveScale = 262; const int singularQuietLMRScale = 961;
     const int ttCaptureScale = 1047; const int clampLower = 1332; const int clampUpper = 1768; const int cutNodeScale = 2393;
     const int statScoreScale = 984; const int ttPvScale = 1005; const int pvScale = 1151; const int reductionAdjustment = 129; 
