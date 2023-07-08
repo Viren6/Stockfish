@@ -1151,16 +1151,37 @@ moves_loop: // When in check, search starts here
                      + (*contHist[3])[movedPiece][to_sq(move)]
                      - 4006;
 
-      r += (cutNode * 2351 
-          + ttCapture * 1038 
-          + std::min((ss + 1)->cutoffCnt * 338, 1958)
-          + 105
-          - std::min((ss - 1)->moveCount * 93, 1355)
-          - (move == ttMove) * (1412 - std::min((ss + 1)->cutoffCnt * 279, 1412))
-          - singularQuietLMR * 884
-          - ss->statScore / (11202 + 4773 * (depth > 5 && depth < 22))
-          - (ss->ttPv && !likelyFailLow) * (cutNode && tte->depth() >= depth + 3 ? 3402 : 2268)
-          - PvNode * (1365 + 1365 * (depth < 6)));
+      //Reduction adjustment for all nodes
+      r += 105;
+
+      // Decrease reduction if opponent's move count is high (~1 Elo)
+      r -= std::min((ss - 1)->moveCount * 93, 1355);
+
+      // Decrease reduction if ttMove has been singularly extended (~1 Elo)
+      r -= -singularQuietLMR * 884;
+
+      // Decrease reduction if move is ttMove based on next ply fail high count (~2 Elo)
+      r -= (move == ttMove) * (1412 - std::min((ss + 1)->cutoffCnt * 279, 1412));
+
+      // Decrease reduction for PvNodes based on depth (~3 Elo)
+      r -= PvNode * (1365 + 1365 * (depth < 6));
+
+      // Increase reduction for cut nodes (~3 Elo)
+      r += cutNode * 2351;
+
+      // Increase reduction if ttMove is a capture (~3 Elo)
+      r += ttCapture * 1038;
+
+      // Decrease reduction if position is or has been on the PV
+      // and node is not likely to fail low. (~3 Elo)
+      // Decrease further on cutNodes. (~1 Elo)
+      r -= (ss->ttPv && !likelyFailLow) * (cutNode && tte->depth() >= depth + 3 ? 3402 : 2268);
+
+      // Increase reduction if next ply has a lot of fail high (~5 Elo)
+      r += std::min((ss + 1)->cutoffCnt * 338, 1958);
+
+      // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
+      r -= ss->statScore / (11202 + 4773 * (depth > 5 && depth < 22));
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
