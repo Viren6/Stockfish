@@ -59,21 +59,27 @@ using namespace Search;
 
 namespace {
 
-    //Tune 4 23k game values
-    int cutoffCntScale = 338; int moveCountScale = 117; int ttMoveScale = 228; int singularQuietLMRScale = 1075;
-    int ttCaptureScale = 997; int clampLower = 1436; int clampUpper = 1665; int cutNodeScale = 2602;
-    int statScoreScale = 984; int ttPvScale = 1045; int pvScale = 1045; int reductionAdjustment = 137; 
-    int baseReductionAdjustment = -79; int baseImprovingReductionAdjustment = 0; int ttClamp = 1194; int baseReductionScale = 957;
-    int baseImprovingReductionScale = 911; int lmrDepthScale = 896; int lmrDepthScaleTwo = 911; int ttMoveCutNodeScale = 2438;
-    int depthReductionScale = 3880; int improvingReductionMax = 2048; 
+    //Tune 5 50k game values
+    int cutoffCntScale = 271; int moveCountScale = 84; int ttMoveScale = 262; int singularQuietLMRScale = 961;
+    int ttCaptureScale = 1047; int clampLower = 1332; int clampUpper = 1768; int cutNodeScale = 2393;
+    int statScoreScale = 984; int ttPvScale = 1005; int pvScale = 1151; int reductionAdjustment = 129;
+    int baseImprovingReductionAdjustment = -29696; int ttClamp = 1223; int baseReductionScale = 879;
+    int baseImprovingReductionScale = 895; int lmrDepthScale = 786; int lmrDepthScaleTwo = 853; int ttMoveCutNodeScale = 2754;
+    int depthReductionScale = 3457; int improvingReductionMax = 1772544;
+    
+    //New values
+    int baseReductionAdjustment = 1125092; int baseReductionDeltaScale = 943167; int reductionTableScale = 21064;
+    int reductionTableAdjustment = 0; int improvementAdjustment = 800; int improvementScale = 102; int improvementUpper = 1200;
 
     TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
         SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
-        SetRange(400, 2000), ttCaptureScale, SetRange(500, 3000), clampLower, SetRange(500, 3000), clampUpper,
+        SetRange(400, 2000), ttCaptureScale, SetRange(500, 4000), clampLower, SetRange(500, 4000), clampUpper,
         SetRange(800, 4000), cutNodeScale, SetRange(400, 2000), statScoreScale, SetRange(400, 2000), ttPvScale,
-        SetRange(400, 2000), pvScale, SetRange(-1000, 1000), reductionAdjustment, baseReductionAdjustment, baseImprovingReductionAdjustment,
+        SetRange(400, 2000), pvScale, SetRange(-1000, 1000), reductionAdjustment, SetRange(-1000000, 1000000), baseImprovingReductionAdjustment,
         SetRange(500, 3000), ttClamp, SetRange(400, 2000), baseReductionScale, baseImprovingReductionScale, lmrDepthScale, lmrDepthScaleTwo,
-        SetRange(800, 4000), ttMoveCutNodeScale, SetRange(1600, 8000), depthReductionScale, SetRange(800, 4000), improvingReductionMax);
+        SetRange(800, 4000), ttMoveCutNodeScale, SetRange(1600, 8000), depthReductionScale, SetRange(400000, 2500000), improvingReductionMax,
+        baseReductionAdjustment, baseReductionDeltaScale, SetRange(5000, 50000), reductionTableAdjustment, SetRange(-1000000, 1000000), reductionTableAdjustment,
+        SetRange(400, 2000), improvementAdjustment, SetRange(-100, 500), improvementScale, SetRange(400, 3000), improvementUpper);
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
@@ -86,12 +92,13 @@ namespace {
   // Reductions lookup table initialized at startup
   int Reductions[MAX_MOVES]; // [depth or moveNumber]
 
-  Depth reduction(bool i, Depth d, int mn, Value delta, Value rootDelta) {
-    int r = Reductions[d] * Reductions[mn];
-    int reduction = (r + 1372 - int(delta) * 1073 / int(rootDelta)) * baseReductionScale / 1024 + baseReductionAdjustment;
-    if (!i)
-        reduction += std::min(r * baseImprovingReductionScale / 1024 + baseImprovingReductionAdjustment, improvingReductionMax);
-    return reduction;
+  Depth reduction(int improvement, Depth d, int mn, Value delta, Value rootDelta) {
+    int r = (Reductions[d] * Reductions[mn]) / 1024 / 1024;
+    int reduction = baseReductionScale * r + baseReductionAdjustment - int(delta) * baseReductionDeltaScale / int(rootDelta);
+    if (improvement <= 0)
+        reduction += std::min(r * baseImprovingReductionScale + baseImprovingReductionAdjustment, improvingReductionMax) *
+        std::min(improvementAdjustment - improvement * improvementScale / 1024, improvementUpper) / 1024;
+    return reduction / 1024;
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
@@ -181,7 +188,7 @@ namespace {
 void Search::init() {
 
   for (int i = 1; i < MAX_MOVES; ++i)
-      Reductions[i] = int((20.57 + std::log(Threads.size()) / 2) * std::log(i));
+      Reductions[i] = int((reductionTableScale + std::log(Threads.size()) * 512) * std::log(i) + reductionTableAdjustment);
 }
 
 
@@ -985,7 +992,7 @@ moves_loop: // When in check, search starts here
 
       Value delta = beta - alpha;
 
-      Depth r = reduction(improving, depth, moveCount, delta, thisThread->rootDelta);
+      Depth r = reduction(improvement, depth, moveCount, delta, thisThread->rootDelta);
 
       // Step 14. Pruning at shallow depth (~120 Elo). Depth conditions are important for mate finding.
       if (  !rootNode
@@ -1166,16 +1173,37 @@ moves_loop: // When in check, search starts here
                      + (*contHist[3])[movedPiece][to_sq(move)]
                      - 4006;
 
-      r += (cutNode * cutNodeScale
-          + ttCapture * ttCaptureScale
-          + std::min((ss + 1)->cutoffCnt * cutoffCntScale, clampUpper)
-          + reductionAdjustment
-          - std::min((ss - 1)->moveCount * moveCountScale, clampLower)
-          - (move == ttMove) * (ttClamp - std::min((ss + 1)->cutoffCnt * ttMoveScale, ttClamp))
-          - singularQuietLMR * singularQuietLMRScale
-          - (ss->statScore * statScoreScale) / (11124 + 4740 * (depth > 5 && depth < 22))
-          - (ss->ttPv && !likelyFailLow) * ttPvScale * (cutNode && tte->depth() >= depth + 3 ? 3 : 2)
-          - PvNode * (pvScale + pvScale * (depth < 6)));
+      //Reduction adjustment for all nodes
+      r += reductionAdjustment;
+      
+      // Decrease reduction if opponent's move count is high (~1 Elo)
+      r -= std::min((ss - 1)->moveCount * moveCountScale, clampLower);
+
+      // Decrease reduction if ttMove has been singularly extended (~1 Elo)
+      r -= singularQuietLMR * singularQuietLMRScale;
+
+      // Decrease reduction if move is ttMove based on next ply fail high count (~2 Elo)
+      r -= (move == ttMove) * (ttClamp - std::min((ss + 1)->cutoffCnt * ttMoveScale, ttClamp));
+
+      // Decrease reduction for PvNodes based on depth (~3 Elo)
+      r -= PvNode * (pvScale + pvScale * (depth < 6));
+
+      // Increase reduction for cut nodes (~3 Elo)
+      r += cutNode * cutNodeScale;
+
+      // Increase reduction if ttMove is a capture (~3 Elo)
+      r += ttCapture * ttCaptureScale;
+
+      // Decrease reduction if position is or has been on the PV
+      // and node is not likely to fail low. (~3 Elo)
+      // Decrease further on cutNodes. (~1 Elo)
+      r -= -(ss->ttPv && !likelyFailLow) * ttPvScale * (cutNode && tte->depth() >= depth + 3 ? 3 : 2);
+
+      // Increase reduction if next ply has a lot of fail high (~5 Elo)
+      r += +std::min((ss + 1)->cutoffCnt * cutoffCntScale, clampUpper);
+
+      // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
+      r -= (ss->statScore * statScoreScale) / (11124 + 4740 * (depth > 5 && depth < 22));
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
