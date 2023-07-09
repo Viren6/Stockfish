@@ -62,24 +62,33 @@ namespace {
     //Tune 5 50k game values
     int cutoffCntScale = 271; int moveCountScale = 84; int ttMoveScale = 262; int singularQuietLMRScale = 961;
     int ttCaptureScale = 1047; int clampLower = 1332; int clampUpper = 1768; int cutNodeScale = 2393;
-    int statScoreScale = 984; int ttPvScale = 1005; int pvScale = 1151; int reductionAdjustment = 129;
-    int baseImprovingReductionAdjustment = -29696; int ttClamp = 1223; int baseReductionScale = 879;
+    int reductionAdjustment = 129; int baseImprovingReductionAdjustment = -29696; int ttClamp = 1223; int baseReductionScale = 879;
     int baseImprovingReductionScale = 895; int lmrDepthScale = 786; int lmrDepthScaleTwo = 853; int ttMoveCutNodeScale = 2754;
     int depthReductionScale = 3457; int improvingReductionMax = 1772544;
     
     //New values
     int baseReductionAdjustment = 1125092; int baseReductionDeltaScale = 943167; int reductionTableScale = 21064;
     int reductionTableAdjustment = 0; int improvementAdjustment = 800; int improvementScale = 102; int improvementUpper = 1200;
+    int pvAdjustment = 2500; int pvClamp = 1151; int pvScale = 250; int ttPvAdjustment = 2010; int ttPvScale = 300;
+    int cutNodettPvAdjustment = -300; int ttPvClamp = 1200; int statScoreScale = 11576; int statScoreDepthScale = 4933;
+    int statScoreDepthLower = 5; int statScoreDepthUpper = 22; int statScoreAdjustment = -4102144; int statScoreMainHistoryScale = 2048;
+    int statScoreContHistoryZero = 1024; int statScoreContHistoryOne = 1024; int statScoreContHistoryThree = 1024;
+    int statScoreContHistoryFive = 128;
 
     TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
         SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
         SetRange(400, 2000), ttCaptureScale, SetRange(500, 4000), clampLower, SetRange(500, 4000), clampUpper,
-        SetRange(800, 4000), cutNodeScale, SetRange(400, 2000), statScoreScale, SetRange(400, 2000), ttPvScale,
-        SetRange(400, 2000), pvScale, SetRange(-1000, 1000), reductionAdjustment, SetRange(-1000000, 1000000), baseImprovingReductionAdjustment,
-        SetRange(500, 3000), ttClamp, SetRange(400, 2000), baseReductionScale, baseImprovingReductionScale, lmrDepthScale, lmrDepthScaleTwo,
+        SetRange(800, 4000), cutNodeScale, SetRange(-1000, 1000), reductionAdjustment, 
+        SetRange(-1000000, 1000000), baseImprovingReductionAdjustment, SetRange(500, 3000), ttClamp, 
+        SetRange(400, 2000), baseReductionScale, baseImprovingReductionScale, lmrDepthScale, lmrDepthScaleTwo,
         SetRange(800, 4000), ttMoveCutNodeScale, SetRange(1600, 8000), depthReductionScale, SetRange(400000, 2500000), improvingReductionMax,
-        baseReductionAdjustment, baseReductionDeltaScale, SetRange(5000, 50000), reductionTableAdjustment, SetRange(-1000000, 1000000), reductionTableAdjustment,
-        SetRange(400, 2000), improvementAdjustment, SetRange(-100, 500), improvementScale, SetRange(400, 3000), improvementUpper);
+        baseReductionAdjustment, baseReductionDeltaScale, SetRange(5000, 50000), reductionTableAdjustment, SetRange(-1000000, 1000000), 
+        reductionTableAdjustment, SetRange(400, 2000), improvementAdjustment, SetRange(-100, 500), improvementScale, SetRange(400, 3000), 
+        improvementUpper, SetRange(400, 2048), pvAdjustment, SetRange(500, 4000), pvClamp, SetRange(50, 1000), pvScale, SetRange(400, 4000), ttPvAdjustment,
+        SetRange(100, 1000), ttPvScale, SetRange(-2000, 2000), cutNodettPvAdjustment, SetRange(400, 3000), ttPvClamp, SetRange(1000, 100000), statScoreScale,
+        SetRange(1000, 10000), statScoreDepthScale, SetRange(1, 10), statScoreDepthLower, SetRange(10, 30), statScoreDepthUpper, SetRange(-10000000, 10000000),
+        statScoreAdjustment, SetRange(400, 4000), statScoreMainHistoryScale, 
+        SetRange(0, 4000), statScoreContHistoryZero, statScoreContHistoryOne, statScoreContHistoryThree, statScoreContHistoryFive);
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
@@ -794,7 +803,7 @@ namespace {
     // The depth condition is important for mate finding.
     if (   !ss->ttPv
         &&  depth < 9
-        &&  eval - futility_margin(depth, improving) - (ss-1)->statScore / 306 >= beta
+        &&  eval - futility_margin(depth, improving) - (ss-1)->statScore / 313344 >= beta
         &&  eval >= beta
         &&  eval < 24923) // larger than VALUE_KNOWN_WIN, but smaller than TB wins
         return eval;
@@ -802,7 +811,7 @@ namespace {
     // Step 9. Null move search with verification search (~35 Elo)
     if (   !PvNode
         && (ss-1)->currentMove != MOVE_NULL
-        && (ss-1)->statScore < 17329
+        && (ss-1)->statScore < (17329 * 1024)
         &&  eval >= beta
         &&  eval >= ss->staticEval
         &&  ss->staticEval >= beta - 21 * depth + 258
@@ -1167,26 +1176,27 @@ moves_loop: // When in check, search starts here
       // Step 16. Make the move
       pos.do_move(move, st, givesCheck);
 
-      ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
-                     + (*contHist[0])[movedPiece][to_sq(move)]
-                     + (*contHist[1])[movedPiece][to_sq(move)]
-                     + (*contHist[3])[movedPiece][to_sq(move)]
-                     - 4006;
+      ss->statScore =  (statScoreMainHistoryScale * thisThread->mainHistory[us][from_to(move)]
+                     + statScoreContHistoryZero * (*contHist[0])[movedPiece][to_sq(move)]
+                     + statScoreContHistoryOne * (*contHist[1])[movedPiece][to_sq(move)]
+                     + statScoreContHistoryThree * (*contHist[3])[movedPiece][to_sq(move)]
+                     + statScoreContHistoryFive * (*contHist[5])[movedPiece][to_sq(move)]
+                     + statScoreAdjustment);
 
-      //Reduction adjustment for all nodes
+      // Reduction adjustment for all nodes
       r += reductionAdjustment;
       
       // Decrease reduction if opponent's move count is high (~1 Elo)
-      r -= std::min((ss - 1)->moveCount * moveCountScale, clampLower);
+      r -= std::min((ss-1)->moveCount * moveCountScale, clampLower);
 
       // Decrease reduction if ttMove has been singularly extended (~1 Elo)
       r -= singularQuietLMR * singularQuietLMRScale;
 
       // Decrease reduction if move is ttMove based on next ply fail high count (~2 Elo)
-      r -= (move == ttMove) * (ttClamp - std::min((ss + 1)->cutoffCnt * ttMoveScale, ttClamp));
+      r -= (move == ttMove) * (ttClamp - std::min((ss+1)->cutoffCnt * ttMoveScale, ttClamp));
 
       // Decrease reduction for PvNodes based on depth (~3 Elo)
-      r -= PvNode * (pvScale + pvScale * (depth < 6));
+      r -= PvNode * (pvAdjustment - (pvClamp - std::min(depth * pvScale, pvClamp)));
 
       // Increase reduction for cut nodes (~3 Elo)
       r += cutNode * cutNodeScale;
@@ -1197,13 +1207,14 @@ moves_loop: // When in check, search starts here
       // Decrease reduction if position is or has been on the PV
       // and node is not likely to fail low. (~3 Elo)
       // Decrease further on cutNodes. (~1 Elo)
-      r -= -(ss->ttPv && !likelyFailLow) * ttPvScale * (cutNode && tte->depth() >= depth + 3 ? 3 : 2);
+      r -= (ss->ttPv && !likelyFailLow) * 
+           (ttPvAdjustment + cutNode * (cutNodettPvAdjustment + std::min((tte->depth() - depth) * ttPvScale, ttPvClamp)));
 
       // Increase reduction if next ply has a lot of fail high (~5 Elo)
-      r += +std::min((ss + 1)->cutoffCnt * cutoffCntScale, clampUpper);
+      r += std::min((ss + 1)->cutoffCnt * cutoffCntScale, clampUpper);
 
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
-      r -= (ss->statScore * statScoreScale) / (11124 + 4740 * (depth > 5 && depth < 22));
+      r -= ss->statScore / (statScoreScale + statScoreDepthScale * (depth > statScoreDepthLower && depth < statScoreDepthUpper));
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
