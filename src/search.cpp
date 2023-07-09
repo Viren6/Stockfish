@@ -67,8 +67,8 @@ namespace {
     int depthReductionScale = 3398; int improvingReductionMax = 1775226;
     
     //New values
-    int baseReductionAdjustment = 1154477; int baseReductionDeltaScale = 942127; int reductionTableScale = 20772;
-    int reductionTableAdjustment = 23067; int improvementAdjustment = 769; int improvementScale = 104; int improvementUpper = 1180;
+    int baseReductionAdjustment = 1154477; int baseReductionDeltaScale = 942127; int reductionTableScale = 1250;
+    int reductionTableAdjustment = 0; int improvementAdjustment = 769; int improvementScale = 104; int improvementUpper = 1180;
     int pvAdjustment = 2451; int pvClamp = 1145; int pvScale = 245; int ttPvAdjustment = 1955; int ttPvScale = 300;
     int cutNodettPvAdjustment = -302; int ttPvClamp = 1187; int statScoreScale = 11266; int statScoreDepthScale = 4797;
     int statScoreDepthLower = 5; int statScoreDepthUpper = 22; int statScoreAdjustment = -4206953; int statScoreMainHistoryScale = 2060;
@@ -102,7 +102,7 @@ namespace {
   int Reductions[MAX_MOVES]; // [depth or moveNumber]
 
   Depth reduction(int improvement, Depth d, int mn, Value delta, Value rootDelta) {
-    int r = (Reductions[d] * Reductions[mn]) / 1024 / 1024;
+    int r = (Reductions[d] * Reductions[mn]) / 64 / 64;
     int reduction = baseReductionScale * r + baseReductionAdjustment - int(delta) * baseReductionDeltaScale / int(rootDelta);
     if (improvement <= 0)
         reduction += std::min(r * baseImprovingReductionScale + baseImprovingReductionAdjustment, improvingReductionMax) *
@@ -197,7 +197,7 @@ namespace {
 void Search::init() {
 
   for (int i = 1; i < MAX_MOVES; ++i)
-      Reductions[i] = int((reductionTableScale + std::log(Threads.size()) * 512) * std::log(i) + reductionTableAdjustment);
+      Reductions[i] = int((reductionTableScale + std::log(Threads.size()) * 32) * std::log(i) + reductionTableAdjustment);
 }
 
 
