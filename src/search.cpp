@@ -59,21 +59,19 @@ using namespace Search;
 
 namespace {
 
-    //Tune 5 50k game values
-    int cutoffCntScale = 264; int moveCountScale = 77; int ttMoveScale = 256; int singularQuietLMRScale = 978;
-    int ttCaptureScale = 1054; int clampLower = 1275; int clampUpper = 1890; int cutNodeScale = 2460;
-    int reductionAdjustment = 161; int baseImprovingReductionAdjustment = -28873; int ttClamp = 1225; int baseReductionScale = 847;
-    int baseImprovingReductionScale = 895; int lmrDepthScale = 809; int lmrDepthScaleTwo = 861; int ttMoveCutNodeScale = 2821;
-    int depthReductionScale = 3398; int improvingReductionMax = 1775226;
-    
-    //New values
-    int baseReductionAdjustment = 1154477; int baseReductionDeltaScale = 942127; int reductionTableScale = 1250;
-    int reductionTableAdjustment = 0; int improvementAdjustment = 769; int improvementScale = 104; int improvementUpper = 1180;
-    int pvAdjustment = 2451; int pvClamp = 1145; int pvScale = 245; int ttPvAdjustment = 1955; int ttPvScale = 300;
-    int cutNodettPvAdjustment = -302; int ttPvClamp = 1187; int statScoreScale = 11266; int statScoreDepthScale = 4797;
-    int statScoreDepthLower = 5; int statScoreDepthUpper = 22; int statScoreAdjustment = -4206953; int statScoreMainHistoryScale = 2060;
-    int statScoreContHistoryZero = 1047; int statScoreContHistoryOne = 1019; int statScoreContHistoryThree = 1058;
-    int statScoreContHistoryFive = 129;
+    //Tune 6 10k game values
+    int cutoffCntScale = 264; int moveCountScale = 78; int ttMoveScale = 265; int singularQuietLMRScale = 1034;
+    int ttCaptureScale = 1022; int clampLower = 1231; int clampUpper = 1904; int cutNodeScale = 2227;
+    int reductionAdjustment = 190; int baseImprovingReductionAdjustment = -20130; int ttClamp = 1285; int baseReductionScale = 859;
+    int baseImprovingReductionScale = 906; int lmrDepthScale = 824; int lmrDepthScaleTwo = 885; int ttMoveCutNodeScale = 2999;
+    int depthReductionScale = 3764; int improvingReductionMax = 1823951;
+    int baseReductionAdjustment = 1134586; int baseReductionDeltaScale = 898946; int reductionTableScale = 1267;
+    int reductionTableAdjustment = 5; int improvementAdjustment = 733; int improvementScale = 95; int improvementUpper = 1175;
+    int pvAdjustment = 2224; int pvClamp = 1131; int pvScale = 257; int ttPvAdjustment = 1974; int ttPvScale = 322;
+    int cutNodettPvAdjustment = -307; int ttPvClampUpper = 950; int statScoreScale = 11379; int statScoreDepthScale = 4729;
+    int statScoreDepthLower = 5; int statScoreDepthUpper = 22; int statScoreAdjustment = -4118296; int statScoreMainHistoryScale = 2086;
+    int statScoreContHistoryZero = 1090; int statScoreContHistoryOne = 1025; int statScoreContHistoryThree = 1089; int ttPvClampLower = 0;
+    int improvementLower = 0;
 
     TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
         SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
@@ -85,10 +83,11 @@ namespace {
         baseReductionAdjustment, baseReductionDeltaScale, SetRange(500, 5000), reductionTableScale, SetRange(-10000, 10000),
         reductionTableAdjustment, SetRange(400, 2000), improvementAdjustment, SetRange(-100, 500), improvementScale, SetRange(400, 3000), 
         improvementUpper, SetRange(400, 5000), pvAdjustment, SetRange(500, 4000), pvClamp, SetRange(50, 1000), pvScale, SetRange(400, 4000), ttPvAdjustment,
-        SetRange(100, 1000), ttPvScale, SetRange(-2000, 2000), cutNodettPvAdjustment, SetRange(400, 3000), ttPvClamp, SetRange(1000, 100000), statScoreScale,
+        SetRange(100, 1000), ttPvScale, SetRange(-2000, 2000), cutNodettPvAdjustment, SetRange(400, 3000), ttPvClampUpper, SetRange(1000, 100000), statScoreScale,
         SetRange(1000, 10000), statScoreDepthScale, SetRange(0, 10), statScoreDepthLower, SetRange(10, 30), statScoreDepthUpper, SetRange(-10000000, 10000000),
         statScoreAdjustment, SetRange(400, 4000), statScoreMainHistoryScale, 
-        SetRange(0, 4000), statScoreContHistoryZero, statScoreContHistoryOne, statScoreContHistoryThree, statScoreContHistoryFive);
+        SetRange(0, 4000), statScoreContHistoryZero, statScoreContHistoryOne, statScoreContHistoryThree, SetRange(-1000, 1000), ttPvClampLower,
+        SetRange(-1000, 1000), improvementLower);
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
@@ -104,7 +103,7 @@ namespace {
   Depth reduction(int improvement, Depth d, int mn, Value delta, Value rootDelta) {
     int r = (Reductions[d] * Reductions[mn]) / 64 / 64;
     int reduction = baseReductionScale * r + baseReductionAdjustment - int(delta) * baseReductionDeltaScale / int(rootDelta);
-    if (improvement <= 0)
+    if(improvement <= improvementLower)
         reduction += std::min(r * baseImprovingReductionScale + baseImprovingReductionAdjustment, improvingReductionMax) *
         std::min(improvementAdjustment - improvement * improvementScale / 1024, improvementUpper) / 1024;
     return reduction / 1024;
@@ -1180,7 +1179,6 @@ moves_loop: // When in check, search starts here
                      + statScoreContHistoryZero * (*contHist[0])[movedPiece][to_sq(move)]
                      + statScoreContHistoryOne * (*contHist[1])[movedPiece][to_sq(move)]
                      + statScoreContHistoryThree * (*contHist[3])[movedPiece][to_sq(move)]
-                     + statScoreContHistoryFive * (*contHist[5])[movedPiece][to_sq(move)]
                      + statScoreAdjustment);
 
       // Reduction adjustment for all nodes
@@ -1208,7 +1206,7 @@ moves_loop: // When in check, search starts here
       // and node is not likely to fail low. (~3 Elo)
       // Decrease further on cutNodes. (~1 Elo)
       r -= (ss->ttPv && !likelyFailLow) * 
-           (ttPvAdjustment + cutNode * (cutNodettPvAdjustment + std::min((tte->depth() - depth) * ttPvScale, ttPvClamp)));
+           (ttPvAdjustment + cutNode * (std::clamp((tte->depth() - depth) * ttPvScale + cutNodettPvAdjustment, ttPvClampLower, ttPvClampUpper)));
 
       // Increase reduction if next ply has a lot of fail high (~5 Elo)
       r += std::min((ss + 1)->cutoffCnt * cutoffCntScale, clampUpper);
