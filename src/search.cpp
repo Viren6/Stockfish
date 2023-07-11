@@ -71,7 +71,7 @@ namespace {
     const int cutNodettPvAdjustment = -290; const int ttPvClampUpper = 984; const int statScoreScale = 12825; const int statScoreDepthScale = 4687;
     const int statScoreDepthLower = 5; const int statScoreDepthUpper = 22; const int statScoreAdjustment = -3904113; const int statScoreMainHistoryScale = 2135;
     const int statScoreContHistoryZero = 1112; const int statScoreContHistoryOne = 1010; const int statScoreContHistoryThree = 1049; const int ttPvClampLower = 119;
-    const int improvementLower = 9;
+    const int improvementLower = 9; 
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
