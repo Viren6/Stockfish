@@ -59,19 +59,35 @@ using namespace Search;
 
 namespace {
 
-    //Tune 7 55k game values
-    const int cutoffCntScale = 249; const int moveCountScale = 81; const int ttMoveScale = 310; const int singularQuietLMRScale = 1049;
-    const int ttCaptureScale = 997; const int clampLower = 1330; const int clampUpper = 1934; const int cutNodeScale = 2156;
-    const int reductionAdjustment = 244; const int baseImprovingReductionAdjustment = -21236; const int ttClamp = 1267; const int baseReductionScale = 987;
-    const int baseImprovingReductionScale = 1009; const int lmrDepthScale = 879; const int lmrDepthScaleTwo = 878; const int ttMoveCutNodeScale = 3224;
-    const int depthReductionScale = 4052; const int improvingReductionMax = 1690059;
-    const int baseReductionAdjustment = 1022795; const int baseReductionDeltaScale = 931575; const int reductionTableScale = 1201;
-    const int reductionTableAdjustment = -1; const int improvementAdjustment = 632; const int improvementScale = 94; const int improvementUpper = 1297;
-    const int pvAdjustment = 1870; const int pvClamp = 941; const int pvScale = 248; const int ttPvAdjustment = 1918; const int ttPvScale = 347;
-    const int cutNodettPvAdjustment = -290; const int ttPvClampUpper = 984; const int statScoreScale = 12825; const int statScoreDepthScale = 4687;
-    const int statScoreDepthLower = 5; const int statScoreDepthUpper = 22; const int statScoreAdjustment = -3904113; const int statScoreMainHistoryScale = 2135;
-    const int statScoreContHistoryZero = 1112; const int statScoreContHistoryOne = 1010; const int statScoreContHistoryThree = 1049; const int ttPvClampLower = 119;
-    const int improvementLower = 9; 
+    //Tune 7 72k game values
+    int cutoffCntScale = 230; int moveCountScale = 85; int ttMoveScale = 333; int singularQuietLMRScale = 972;
+    int ttCaptureScale = 1003; int clampLower = 1390; int clampUpper = 2044; int cutNodeScale = 2106;
+    int reductionAdjustment = 268; int baseImprovingReductionAdjustment = -21466; int ttClamp = 1251; int baseReductionScale = 992;
+    int baseImprovingReductionScale = 1028; int lmrDepthScale = 870; int lmrDepthScaleTwo = 869; int ttMoveCutNodeScale = 3187;
+    int depthReductionScale = 3993; int improvingReductionMax = 1679185;
+    int baseReductionAdjustment = 1053849; int baseReductionDeltaScale = 905534; int reductionTableScale = 1222;
+    int reductionTableAdjustment = 3; int improvementAdjustment = 609; int improvementScale = 90; int improvementUpper = 1315;
+    int pvAdjustment = 1762; int pvClamp = 948; int pvScale = 241; int ttPvAdjustment = 1928; int ttPvScale = 344;
+    int cutNodettPvAdjustment = -310; int ttPvClampUpper = 1038; int statScoreScale = 12686; int statScoreDepthScale = 4760;
+    int statScoreDepthLower = 5; int statScoreDepthUpper = 23; int statScoreAdjustment = -3889609; int statScoreMainHistoryScale = 2115;
+    int statScoreContHistoryZero = 1112; int statScoreContHistoryOne = 1000; int statScoreContHistoryThree = 1057; int ttPvClampLower = 173;
+    int improvementLower = 10;
+
+    TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
+        SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
+        SetRange(400, 2000), ttCaptureScale, SetRange(500, 4000), clampLower, SetRange(500, 4000), clampUpper,
+        SetRange(800, 4000), cutNodeScale, SetRange(-1000, 1000), reductionAdjustment,
+        SetRange(-1000000, 1000000), baseImprovingReductionAdjustment, SetRange(500, 3000), ttClamp,
+        SetRange(400, 2000), baseReductionScale, baseImprovingReductionScale, lmrDepthScale, lmrDepthScaleTwo,
+        SetRange(800, 4000), ttMoveCutNodeScale, SetRange(1600, 8000), depthReductionScale, SetRange(400000, 2500000), improvingReductionMax,
+        baseReductionAdjustment, baseReductionDeltaScale, SetRange(500, 5000), reductionTableScale, SetRange(-10000, 10000),
+        reductionTableAdjustment, SetRange(400, 2000), improvementAdjustment, SetRange(-100, 500), improvementScale, SetRange(400, 3000),
+        improvementUpper, SetRange(400, 5000), pvAdjustment, SetRange(500, 4000), pvClamp, SetRange(50, 1000), pvScale, SetRange(400, 4000), ttPvAdjustment,
+        SetRange(100, 1000), ttPvScale, SetRange(-2000, 2000), cutNodettPvAdjustment, SetRange(400, 3000), ttPvClampUpper, SetRange(1000, 100000), statScoreScale,
+        SetRange(1000, 10000), statScoreDepthScale, SetRange(0, 10), statScoreDepthLower, SetRange(10, 30), statScoreDepthUpper, SetRange(-10000000, 10000000),
+        statScoreAdjustment, SetRange(400, 4000), statScoreMainHistoryScale,
+        SetRange(0, 4000), statScoreContHistoryZero, statScoreContHistoryOne, statScoreContHistoryThree, SetRange(-1000, 1000), ttPvClampLower,
+        SetRange(-1000, 1000), improvementLower);
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
