@@ -59,21 +59,21 @@ using namespace Search;
 
 namespace {
 
-    //Tune 7 72k game values
-    int cutoffCntScale = 230; int moveCountScale = 85; int ttMoveScale = 333; int singularQuietLMRScale = 972;
-    int ttCaptureScale = 1003; int clampLower = 1390; int clampUpper = 2044; int cutNodeScale = 2106;
-    int reductionAdjustment = 268; int baseImprovingReductionAdjustment = -21466; int ttClamp = 1251; int baseReductionScale = 992;
-    int baseImprovingReductionScale = 1028; int lmrDepthScale = 870; int lmrDepthScaleTwo = 869; int ttMoveCutNodeScale = 3187;
-    int depthReductionScale = 3993; int improvingReductionMax = 1679185;
-    int baseReductionAdjustment = 1053849; int baseReductionDeltaScale = 905534; int reductionTableScale = 1222;
-    int reductionTableAdjustment = 3; int improvementAdjustment = 609; int improvementScale = 90; int improvementUpper = 1315;
-    int pvAdjustment = 1762; int pvClamp = 948; int pvScale = 241; int ttPvAdjustment = 1928; int ttPvScale = 344;
-    int cutNodettPvAdjustment = -310; int ttPvClampUpper = 1038; int statScoreScale = 12686; int statScoreDepthScale = 4760;
-    int statScoreDepthLower = 5; int statScoreDepthUpper = 23; int statScoreAdjustment = -3889609; int statScoreMainHistoryScale = 2115;
-    int statScoreContHistoryZero = 1112; int statScoreContHistoryOne = 1000; int statScoreContHistoryThree = 1057; int ttPvClampLower = 173;
-    int improvementLower = 10;
+    //Tune 8 31k game values
+    int cutoffCntScale = 227; int moveCountScale = 101; int ttMoveScale = 317; int singularQuietLMRScale = 860;
+    int ttCaptureScale = 959; int clampLower = 1150; int clampUpper = 2375; int cutNodeScale = 2309;
+    int reductionAdjustment = 381; int baseImprovingReductionAdjustment = -19672; int ttClamp = 1272; int baseReductionScale = 990;
+    int baseImprovingReductionScale = 962; int lmrDepthScale = 879; int lmrDepthScaleTwo = 888; int ttMoveCutNodeScale = 3450;
+    int depthReductionScale = 4412; int improvingReductionMax = 1611014;
+    int baseReductionAdjustment = 991177; int baseReductionDeltaScale = 918721; int reductionTableScale = 1292;
+    int reductionTableAdjustment = 16; int improvementAdjustment = 651; int improvementScale = 94; int improvementUpper = 1274;
+    int pvAdjustment = 1714; int pvClamp = 859; int pvScale = 229; int ttPvAdjustment = 2006; int ttPvScale = 374;
+    int cutNodettPvAdjustment = -289; int ttPvClampUpper = 998; int statScoreScale = 12949; int statScoreDepthScale = 5212;
+    int statScoreDepthLower = 6; int statScoreDepthUpper = 23; int statScoreAdjustment = -4033379; int statScoreMainHistoryScale = 2175;
+    int statScoreContHistoryZero = 1145; int statScoreContHistoryOne = 1043; int statScoreContHistoryThree = 1041; int ttPvClampLower = 70;
+    int improvementLower = 4; int nullMoveStatScoreThreshold = 17744896; int futilityPruningStatScoreDivisor = 313344;
 
-    TUNE(SetRange(200, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
+    TUNE(SetRange(100, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
         SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
         SetRange(400, 2000), ttCaptureScale, SetRange(500, 4000), clampLower, SetRange(500, 4000), clampUpper,
         SetRange(800, 4000), cutNodeScale, SetRange(-1000, 1000), reductionAdjustment,
@@ -87,7 +87,7 @@ namespace {
         SetRange(1000, 10000), statScoreDepthScale, SetRange(0, 10), statScoreDepthLower, SetRange(10, 30), statScoreDepthUpper, SetRange(-10000000, 10000000),
         statScoreAdjustment, SetRange(400, 4000), statScoreMainHistoryScale,
         SetRange(0, 4000), statScoreContHistoryZero, statScoreContHistoryOne, statScoreContHistoryThree, SetRange(-1000, 1000), ttPvClampLower,
-        SetRange(-1000, 1000), improvementLower);
+        SetRange(-1000, 1000), improvementLower, SetRange(7744896, 27744896), nullMoveStatScoreThreshold, SetRange(213344, 413344), futilityPruningStatScoreDivisor);
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
@@ -802,7 +802,7 @@ namespace {
     // The depth condition is important for mate finding.
     if (   !ss->ttPv
         &&  depth < 9
-        &&  eval - futility_margin(depth, improving) - (ss-1)->statScore / 313344 >= beta
+        &&  eval - futility_margin(depth, improving) - (ss-1)->statScore / futilityPruningStatScoreDivisor >= beta
         &&  eval >= beta
         &&  eval < 24923) // larger than VALUE_KNOWN_WIN, but smaller than TB wins
         return eval;
@@ -810,7 +810,7 @@ namespace {
     // Step 9. Null move search with verification search (~35 Elo)
     if (   !PvNode
         && (ss-1)->currentMove != MOVE_NULL
-        && (ss-1)->statScore < (17329 * 1024)
+        && (ss-1)->statScore < nullMoveStatScoreThreshold
         &&  eval >= beta
         &&  eval >= ss->staticEval
         &&  ss->staticEval >= beta - 21 * depth + 258
