@@ -59,19 +59,19 @@ using namespace Search;
 
 namespace {
 
-    //Tune 8 31k game values
-    int cutoffCntScale = 227; int moveCountScale = 101; int ttMoveScale = 317; int singularQuietLMRScale = 860;
-    int ttCaptureScale = 959; int clampLower = 1150; int clampUpper = 2375; int cutNodeScale = 2309;
-    int reductionAdjustment = 381; int baseImprovingReductionAdjustment = -19672; int ttClamp = 1272; int baseReductionScale = 990;
-    int baseImprovingReductionScale = 962; int lmrDepthScale = 879; int lmrDepthScaleTwo = 888; int ttMoveCutNodeScale = 3450;
-    int depthReductionScale = 4412; int improvingReductionMax = 1611014;
-    int baseReductionAdjustment = 991177; int baseReductionDeltaScale = 918721; int reductionTableScale = 1292;
-    int reductionTableAdjustment = 16; int improvementAdjustment = 651; int improvementScale = 94; int improvementUpper = 1274;
-    int pvAdjustment = 1714; int pvClamp = 859; int pvScale = 229; int ttPvAdjustment = 2006; int ttPvScale = 374;
-    int cutNodettPvAdjustment = -289; int ttPvClampUpper = 998; int statScoreScale = 12949; int statScoreDepthScale = 5212;
-    int statScoreDepthLower = 6; int statScoreDepthUpper = 23; int statScoreAdjustment = -4033379; int statScoreMainHistoryScale = 2175;
-    int statScoreContHistoryZero = 1145; int statScoreContHistoryOne = 1043; int statScoreContHistoryThree = 1041; int ttPvClampLower = 70;
-    int improvementLower = 4; int nullMoveStatScoreThreshold = 17744896; int futilityPruningStatScoreDivisor = 313344;
+    //Tune 9 51k game values
+    int cutoffCntScale = 242; int moveCountScale = 111; int ttMoveScale = 326; int singularQuietLMRScale = 802;
+    int ttCaptureScale = 865; int clampLower = 1112; int clampUpper = 2704; int cutNodeScale = 2330;
+    int reductionAdjustment = 367; int baseImprovingReductionAdjustment = -27715; int ttClamp = 1373; int baseReductionScale = 1012;
+    int baseImprovingReductionScale = 953; int lmrDepthScale = 902; int lmrDepthScaleTwo = 836; int ttMoveCutNodeScale = 3711;
+    int depthReductionScale = 4615; int improvingReductionMax = 1712576;
+    int baseReductionAdjustment = 1039070; int baseReductionDeltaScale = 869779; int reductionTableScale = 1268;
+    int reductionTableAdjustment = 57; int improvementAdjustment = 639; int improvementScale = 97; int improvementUpper = 1141;
+    int pvAdjustment = 1580; int pvClamp = 963; int pvScale = 233; int ttPvAdjustment = 2098; int ttPvScale = 359;
+    int cutNodettPvAdjustment = -268; int ttPvClampUpper = 1197; int statScoreScale = 12121; int statScoreDepthScale = 5487;
+    int statScoreDepthLower = 6; int statScoreDepthUpper = 23; int statScoreAdjustment = -4025234; int statScoreMainHistoryScale = 2237;
+    int statScoreContHistoryZero = 1147; int statScoreContHistoryOne = 1053; int statScoreContHistoryThree = 973; int ttPvClampLower = -10;
+    int improvementLower = 14; int nullMoveStatScoreThreshold = 17308135; int futilityPruningStatScoreDivisor = 312665;
 
     TUNE(SetRange(100, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
         SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
