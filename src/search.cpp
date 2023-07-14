@@ -59,19 +59,22 @@ using namespace Search;
 
 namespace {
 
-    //Tune 9 51k game values - Reductions
+    //Tune 9 51k game values
     int cutoffCntScale = 242; int moveCountScale = 111; int ttMoveScale = 326; int singularQuietLMRScale = 802;
     int ttCaptureScale = 865; int clampLower = 1112; int clampUpper = 2704; int cutNodeScale = 2330;
     int reductionAdjustment = 367; int baseImprovingReductionAdjustment = -27715; int ttClamp = 1373; int baseReductionScale = 1012;
     int baseImprovingReductionScale = 953; int lmrDepthScale = 902; int lmrDepthScaleTwo = 836; int ttMoveCutNodeScale = 3711;
-    int depthReductionScale = 4615; int improvingReductionMax = 1712576;
-    int baseReductionAdjustment = 1039070; int baseReductionDeltaScale = 869779; int reductionTableScale = 1268;
+    int depthReductionDecreaseThres = 4615; int improvingReductionMax = 1712576;
+    int baseReductionAdjustment = 1039070; int baseReductionDeltaScale = 869779; int reductionTableScale = 1265;
     int reductionTableAdjustment = 57; int improvementAdjustment = 639; int improvementScale = 97; int improvementUpper = 1141;
     int pvAdjustment = 1580; int pvClamp = 963; int pvScale = 233; int ttPvAdjustment = 2098; int ttPvScale = 359;
     int cutNodettPvAdjustment = -268; int ttPvClampUpper = 1197; int statScoreScale = 12121; int statScoreDepthScale = 5487;
     int statScoreDepthLower = 6; int statScoreDepthUpper = 23; int statScoreAdjustment = -4025234; int statScoreMainHistoryScale = 2237;
     int statScoreContHistoryZero = 1147; int statScoreContHistoryOne = 1053; int statScoreContHistoryThree = 973; int ttPvClampLower = -10;
     int improvementLower = 14; int nullMoveStatScoreThreshold = 17308135; int futilityPruningStatScoreDivisor = 312665;
+
+    //New values
+    int depthReductionIncreaseThres = -4615; int LMRDepthReductionThres = -4615;
 
     //Extension Reduction Adjustments
     int singularExtensionOne = 0; int singularExtensionTwoLowDepth = 0; int singularExtensionTwoHighDepth = 0;
@@ -84,7 +87,7 @@ namespace {
         SetRange(800, 4000), cutNodeScale, SetRange(-1000, 1000), reductionAdjustment,
         SetRange(-1000000, 1000000), baseImprovingReductionAdjustment, SetRange(500, 3000), ttClamp,
         SetRange(400, 2000), baseReductionScale, baseImprovingReductionScale, lmrDepthScale, lmrDepthScaleTwo,
-        SetRange(800, 4000), ttMoveCutNodeScale, SetRange(1600, 8000), depthReductionScale, SetRange(400000, 2500000), improvingReductionMax,
+        SetRange(800, 4000), ttMoveCutNodeScale, SetRange(1600, 10000), depthReductionDecreaseThres, SetRange(400000, 2500000), improvingReductionMax,
         baseReductionAdjustment, baseReductionDeltaScale, SetRange(500, 5000), reductionTableScale, SetRange(-10000, 10000),
         reductionTableAdjustment, SetRange(400, 2000), improvementAdjustment, SetRange(-100, 500), improvementScale, SetRange(400, 3000),
         improvementUpper, SetRange(400, 5000), pvAdjustment, SetRange(500, 4000), pvClamp, SetRange(50, 1000), pvScale, SetRange(400, 4000), ttPvAdjustment,
@@ -94,7 +97,8 @@ namespace {
         SetRange(0, 4000), statScoreContHistoryZero, statScoreContHistoryOne, statScoreContHistoryThree, SetRange(-1000, 1000), ttPvClampLower,
         SetRange(-1000, 1000), improvementLower, SetRange(7744896, 27744896), nullMoveStatScoreThreshold, SetRange(213344, 413344), futilityPruningStatScoreDivisor,
         SetRange(-3072, 3072), singularExtensionOne, singularExtensionTwoLowDepth, singularExtensionTwoHighDepth, ttValueBetaPv, ttValueBetaNonPv, cutNodeMidDepth, 
-        cutNodeOtherDepth, ttValueValue, ttValueAlpha, givesCheckLowDepth, quietTTMove);
+        cutNodeOtherDepth, ttValueValue, ttValueAlpha, givesCheckLowDepth, quietTTMove, SetRange(-12000, -1600), depthReductionIncreaseThres,
+        SetRange(-12000, -1500), LMRDepthReductionThres);
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
@@ -1263,7 +1267,7 @@ moves_loop: // When in check, search starts here
           // In general we want to cap the LMR depth search at newDepth, but when
           // reduction is negative, we allow this move a limited search extension
           // beyond the first move depth. This may lead to hidden double extensions.
-          Depth d = std::clamp(newDepth - (r * lmrDepthScaleTwo / 1024 / 1024), 1, newDepth + 1);
+          Depth d = std::clamp(newDepth - (r * lmrDepthScaleTwo / 1024 / 1024), 1, newDepth + 1 + (r <= LMRDepthReductionThres));
 
           value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, d, true);
 
@@ -1298,9 +1302,7 @@ moves_loop: // When in check, search starts here
           if (!ttMove && cutNode)
               r += ttMoveCutNodeScale;
 
-          //dbg_hit_on(r > 10000, 0);
-          //dbg_hit_on(r < 10000, 0);
-          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth - (r >= depthReductionScale), !cutNode);
+          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth + (r <= depthReductionIncreaseThres) - (r >= depthReductionDecreaseThres), !cutNode);
       }
 
       // For PV nodes only, do a full PV search on the first move or after a fail
