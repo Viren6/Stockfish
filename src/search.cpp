@@ -59,7 +59,7 @@ using namespace Search;
 
 namespace {
 
-    //Tune 9 51k game values
+    //Tune 9 51k game values - Reductions
     int cutoffCntScale = 242; int moveCountScale = 111; int ttMoveScale = 326; int singularQuietLMRScale = 802;
     int ttCaptureScale = 865; int clampLower = 1112; int clampUpper = 2704; int cutNodeScale = 2330;
     int reductionAdjustment = 367; int baseImprovingReductionAdjustment = -27715; int ttClamp = 1373; int baseReductionScale = 1012;
@@ -72,6 +72,11 @@ namespace {
     int statScoreDepthLower = 6; int statScoreDepthUpper = 23; int statScoreAdjustment = -4025234; int statScoreMainHistoryScale = 2237;
     int statScoreContHistoryZero = 1147; int statScoreContHistoryOne = 1053; int statScoreContHistoryThree = 973; int ttPvClampLower = -10;
     int improvementLower = 14; int nullMoveStatScoreThreshold = 17308135; int futilityPruningStatScoreDivisor = 312665;
+
+    //Extension Reduction Adjustments
+    int singularExtensionOne = 0; int singularExtensionTwoLowDepth = 0; int singularExtensionTwoHighDepth = 0;
+    int ttValueBetaPv = 0; int ttValueBetaNonPv = 0; int cutNodeMidDepth = 0; int cutNodeOtherDepth = 0;
+    int ttValueValue = 0; int ttValueAlpha = 0; int givesCheckLowDepth = 0; int quietTTMove = 0;
 
     TUNE(SetRange(100, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
         SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
@@ -87,7 +92,9 @@ namespace {
         SetRange(1000, 10000), statScoreDepthScale, SetRange(0, 10), statScoreDepthLower, SetRange(10, 30), statScoreDepthUpper, SetRange(-10000000, 10000000),
         statScoreAdjustment, SetRange(400, 4000), statScoreMainHistoryScale,
         SetRange(0, 4000), statScoreContHistoryZero, statScoreContHistoryOne, statScoreContHistoryThree, SetRange(-1000, 1000), ttPvClampLower,
-        SetRange(-1000, 1000), improvementLower, SetRange(7744896, 27744896), nullMoveStatScoreThreshold, SetRange(213344, 413344), futilityPruningStatScoreDivisor);
+        SetRange(-1000, 1000), improvementLower, SetRange(7744896, 27744896), nullMoveStatScoreThreshold, SetRange(213344, 413344), futilityPruningStatScoreDivisor,
+        SetRange(-3072, 3072), singularExtensionOne, singularExtensionTwoLowDepth, singularExtensionTwoHighDepth, ttValueBetaPv, ttValueBetaNonPv, cutNodeMidDepth, 
+        cutNodeOtherDepth, ttValueValue, ttValueAlpha, givesCheckLowDepth, quietTTMove);
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
@@ -1109,6 +1116,7 @@ moves_loop: // When in check, search starts here
               {
                   extension = 1;
                   singularQuietLMR = !ttCapture;
+                  r += singularExtensionOne;
 
                   // Avoid search explosion by limiting the number of double extensions
                   if (  !PvNode
@@ -1116,7 +1124,11 @@ moves_loop: // When in check, search starts here
                       && ss->doubleExtensions <= 11)
                   {
                       extension = 2;
-                      depth += depth < 13;
+                      if (depth < 13) {
+                          depth++;
+                          r += singularExtensionTwoLowDepth;
+                      } else
+                          r += singularExtensionTwoHighDepth;
                   }
               }
 
@@ -1129,33 +1141,57 @@ moves_loop: // When in check, search starts here
                   return singularBeta;
 
               // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
-              else if (ttValue >= beta)
-                  extension = -2 - !PvNode;
+              else if (ttValue >= beta) {
+                  if (PvNode) {
+                      extension = -2;
+                      r += ttValueBetaPv;
+                  }
+                  else {
+                      extension = -3;
+                      r += ttValueBetaNonPv;
+                  }
+              }
 
               // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
-              else if (cutNode)
-                  extension = depth > 8 && depth < 17 ? -3 : -1;
+              else if (cutNode) {
+                  if (depth > 8 && depth < 17) {
+                      extension = -3;
+                      r += cutNodeMidDepth;
+                  }
+                  else {
+                      extension = -1;
+                      r += cutNodeOtherDepth;
+                  }
+              }
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= value)
+              else if (ttValue <= value) {
                   extension = -1;
+                  r += ttValueValue;
+              }
 
               // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= alpha)
+              else if (ttValue <= alpha) {
                   extension = -1;
+                  r += ttValueAlpha;
+              }
           }
 
           // Check extensions (~1 Elo)
-          else if (   givesCheck
-                   && depth > 9)
+          else if (givesCheck
+              && depth > 9) {
               extension = 1;
+              r += givesCheckLowDepth;
+          }
 
           // Quiet ttMove extensions (~1 Elo)
-          else if (   PvNode
-                   && move == ttMove
-                   && move == ss->killers[0]
-                   && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
+          else if (PvNode
+              && move == ttMove
+              && move == ss->killers[0]
+              && (*contHist[0])[movedPiece][to_sq(move)] >= 5168) {
               extension = 1;
+              r += quietTTMove;
+          }
       }
 
       // Add extension to new depth
@@ -1262,6 +1298,8 @@ moves_loop: // When in check, search starts here
           if (!ttMove && cutNode)
               r += ttMoveCutNodeScale;
 
+          //dbg_hit_on(r > 10000, 0);
+          //dbg_hit_on(r < 10000, 0);
           value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth - (r >= depthReductionScale), !cutNode);
       }
 
