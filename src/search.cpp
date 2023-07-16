@@ -72,7 +72,7 @@ namespace {
     int statScoreDepthLower = 6; int statScoreDepthUpper = 22; int statScoreAdjustment = -3996439; int statScoreMainHistoryScale = 2304;
     int statScoreContHistoryZero = 1119; int statScoreContHistoryOne = 925; int statScoreContHistoryThree = 831; int ttPvClampLower = -62;
     int improvementLower = 5; int nullMoveStatScoreThreshold = 17450293; int futilityPruningStatScoreDivisor = 324651;
-    int LMRDepthReductionThres = -4296;
+    int LMRDepthReductionThres = -4296; 
 
     //Extension Reduction Adjustments
     int singularExtensionOne = 66; int singularExtensionTwoLowDepth = -40; int singularExtensionTwoHighDepth = -62;
