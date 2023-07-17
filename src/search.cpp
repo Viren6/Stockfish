@@ -83,7 +83,7 @@ namespace {
     const int residualScale = 512; const int residualAdjustment = 0; const int residualBaseline = 0;
 
     //Step 10 Reduction Adjustments
-    const int pvNodeNotTTMove = 0; const int cutNodeNotTTMove = 0;
+    const int pvNodeNotTTMove = 0; const int cutNodeNotTTMove = 0; 
 
 
   // Different node types, used as a template parameter
