@@ -83,7 +83,7 @@ namespace {
     int residualScale = 512; int residualAdjustment = 0; int residualBaseline = 0;
 
     //Step 10 Reduction Adjustments
-    int pvNodeNotTTMove = 0; int cutNodeNotTTMove = 0; 
+    int pvNodeNotTTMove = 0; int cutNodeNotTTMove = 0;
 
     TUNE(SetRange(100, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
         SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
