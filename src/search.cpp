@@ -59,31 +59,31 @@ using namespace Search;
 
 namespace {
 
-    //Tune 11 37k game values
-    int cutoffCntScale = 203; int moveCountScale = 91; int ttMoveScale = 314; int singularQuietLMRScale = 962;
-    int ttCaptureScale = 1014; int clampLower = 1115; int clampUpper = 2675; int cutNodeScale = 2334;
-    int reductionAdjustment = 227; int baseImprovingReductionAdjustment = -11416; int ttClamp = 1685; int baseReductionScale = 909;
-    int baseImprovingReductionScale = 874; int lmrDepthScale = 917; int lmrDepthScaleTwo = 863; int ttMoveCutNodeScale = 3867;
-    int depthReductionDecreaseThres = 4361; int improvingReductionMax = 1846348;
-    int baseReductionAdjustment = 1034052; int baseReductionDeltaScale = 871182; int reductionTableScale = 1316;
-    int reductionTableAdjustment = 70; int improvementAdjustment = 533; int improvementScale = 121; int improvementUpper = 977;
-    int pvAdjustment = 1553; int pvClamp = 875; int pvScale = 271; int ttPvAdjustment = 1840; int ttPvScale = 340;
-    int cutNodettPvAdjustment = -253; int ttPvClampUpper = 1113; int statScoreScale = 11931; int statScoreDepthScale = 5746;
-    int statScoreDepthLower = 7; int statScoreDepthUpper = 22; int statScoreAdjustment = -3984384; int statScoreMainHistoryScale = 2327;
-    int statScoreContHistoryZero = 1198; int statScoreContHistoryOne = 961; int statScoreContHistoryThree = 760; int ttPvClampLower = -174;
-    int improvementLower = 19; int nullMoveStatScoreThreshold = 17172506; int futilityPruningStatScoreDivisor = 330173;
-    int LMRDepthReductionThres = -4005;
+    //Tune 12 70k game values
+    int cutoffCntScale = 260; int moveCountScale = 81; int ttMoveScale = 345; int singularQuietLMRScale = 1081;
+    int ttCaptureScale = 898; int clampLower = 1015; int clampUpper = 2686; int cutNodeScale = 2356;
+    int reductionAdjustment = 286; int baseImprovingReductionAdjustment = -17856; int ttClamp = 1982; int baseReductionScale = 960;
+    int baseImprovingReductionScale = 871; int lmrDepthScale = 912; int lmrDepthScaleTwo = 857; int ttMoveCutNodeScale = 3931;
+    int depthReductionDecreaseThres = 4589; int improvingReductionMax = 1974912;
+    int baseReductionAdjustment = 959368; int baseReductionDeltaScale = 878581; int reductionTableScale = 1294;
+    int reductionTableAdjustment = 103; int improvementAdjustment = 535; int improvementScale = 116; int improvementUpper = 1017;
+    int pvAdjustment = 1597; int pvClamp = 827; int pvScale = 217; int ttPvAdjustment = 2141; int ttPvScale = 300;
+    int cutNodettPvAdjustment = -225; int ttPvClampUpper = 1229; int statScoreScale = 12360; int statScoreDepthScale = 5432;
+    int statScoreDepthLower = 7; int statScoreDepthUpper = 22; int statScoreAdjustment = -3907152; int statScoreMainHistoryScale = 2394;
+    int statScoreContHistoryZero = 1177; int statScoreContHistoryOne = 926; int statScoreContHistoryThree = 837; int ttPvClampLower = -241;
+    int improvementLower = 13; int nullMoveStatScoreThreshold = 17190668; int futilityPruningStatScoreDivisor = 343682;
+    int LMRDepthReductionThres = -3980;
 
     //Extension Reduction Adjustments
-    int singularExtensionOne = 58; int singularExtensionTwoLowDepth = -103; int singularExtensionTwoHighDepth = -158;
-    int ttValueBetaPv = -60; int ttValueBetaNonPv = -56; int cutNodeMidDepth = 31; int cutNodeOtherDepth = 110;
-    int ttValueValue = -158; int ttValueAlpha = 39; int givesCheckLowDepth = -102; int quietTTMove = -72;
+    int singularExtensionOne = 73; int singularExtensionTwoLowDepth = -151; int singularExtensionTwoHighDepth = -289;
+    int ttValueBetaPv = -36; int ttValueBetaNonPv = 77; int cutNodeMidDepth = 20; int cutNodeOtherDepth = 122;
+    int ttValueValue = -78; int ttValueAlpha = 39; int givesCheckLowDepth = -85; int quietTTMove = -12;
 
     //Residuals
-    int residualScale = 512; int residualAdjustment = 0; int residualBaseline = 0;
+    int residualScale = 524; int residualAdjustment = 4; int residualBaseline = 35;
 
     //Step 10 Reduction Adjustments
-    int pvNodeNotTTMove = 0; int cutNodeNotTTMove = 0;
+    int pvNodeNotTTMove = 219; int cutNodeNotTTMove = 75;
 
     TUNE(SetRange(100, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
         SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
