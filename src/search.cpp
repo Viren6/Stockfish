@@ -72,7 +72,7 @@ namespace {
     const int statScoreDepthLower = 7; const int statScoreDepthUpper = 22; const int statScoreAdjustment = -3907152; const int statScoreMainHistoryScale = 2394;
     const int statScoreContHistoryZero = 1177; const int statScoreContHistoryOne = 926; const int statScoreContHistoryThree = 837; const int ttPvClampLower = -241;
     const int improvementLower = 13; const int nullMoveStatScoreThreshold = 17190668; const int futilityPruningStatScoreDivisor = 343682;
-    const int LMRDepthReductionThres = -3980;
+    const int LMRDepthReductionThres = -3980; 
 
     //Extension Reduction Adjustments
     const int singularExtensionOne = 73; const int singularExtensionTwoLowDepth = -151; const int singularExtensionTwoHighDepth = -289;
