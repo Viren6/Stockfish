@@ -62,7 +62,7 @@ namespace {
     //Tune 12 70k game values
     const int cutoffCntScale = 260; const int moveCountScale = 81; const int ttMoveScale = 345; const int singularQuietLMRScale = 1081;
     const int ttCaptureScale = 898; const int clampLower = 1015; const int clampUpper = 2686; const int cutNodeScale = 2356;
-    const int reductionAdjustment = 286; const int baseImprovingReductionAdjustment = -17856; const int ttClamp = 1982; const int baseReductionScale = 960;
+    const int reductionAdjustment = 286; const int baseImprovingReductionAdjustment = -17856; const int ttClamp = 1982; const int baseReductionScale = 860;
     const int baseImprovingReductionScale = 871; const int lmrDepthScale = 912; const int lmrDepthScaleTwo = 857; const int ttMoveCutNodeScale = 3931;
     const int depthReductionDecreaseThres = 4589; const int improvingReductionMax = 1974912;
     const int baseReductionAdjustment = 959368; const int baseReductionDeltaScale = 878581; const int reductionTableScale = 1294;
