@@ -156,8 +156,8 @@ Value Eval::evaluate(const Position& pos) {
   // Blend optimism with nnue complexity and (semi)classical complexity
   optimism += optimism * (nnueComplexity + abs(psq - nnue)) / 512;
 
-  v = (  nnue     * (915 + npm + 9 * pos.count<PAWN>())
-       + optimism * (154 + npm +     pos.count<PAWN>())) / 1024;
+  v = (  nnue     * (790 + npm + 9 * pos.count<PAWN>() + 21 * pos.count<KNIGHT>() + 25 * pos.count<BISHOP>() + 39 * pos.count<ROOK>() + 79 * pos.count<QUEEN>())
+       + optimism * (140 + npm +     pos.count<PAWN>() + 2  * pos.count<KNIGHT>() + 3  * pos.count<BISHOP>() + 4  * pos.count<ROOK>() + 9  * pos.count<QUEEN>())) / 1024;
 
   // Damp down the evaluation linearly when shuffling
   v = v * (200 - pos.rule50_count()) / 214;
