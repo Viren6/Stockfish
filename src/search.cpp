@@ -59,31 +59,31 @@ using namespace Search;
 
 namespace {
 
-    //Tune 12 70k game values
-    const int cutoffCntScale = 260; const int moveCountScale = 81; const int ttMoveScale = 345; const int singularQuietLMRScale = 1081;
-    const int ttCaptureScale = 898; const int clampLower = 1015; const int clampUpper = 2686; const int cutNodeScale = 2356;
-    const int reductionAdjustment = 286; const int baseImprovingReductionAdjustment = -17856; const int ttClamp = 1982; const int baseReductionScale = 860;
-    const int baseImprovingReductionScale = 871; const int lmrDepthScale = 912; const int lmrDepthScaleTwo = 857; const int ttMoveCutNodeScale = 3931;
-    const int depthReductionDecreaseThres = 4589; const int improvingReductionMax = 1974912;
-    const int baseReductionAdjustment = 959368; const int baseReductionDeltaScale = 878581; const int reductionTableScale = 1294;
-    const int reductionTableAdjustment = 103; const int improvementAdjustment = 535; const int improvementScale = 116; const int improvementUpper = 1017;
-    const int pvAdjustment = 1597; const int pvClamp = 827; const int pvScale = 217; const int ttPvAdjustment = 2141; const int ttPvScale = 300;
-    const int cutNodettPvAdjustment = -225; const int ttPvClampUpper = 1229; const int statScoreScale = 12360; const int statScoreDepthScale = 5432;
-    const int statScoreDepthLower = 7; const int statScoreDepthUpper = 22; const int statScoreAdjustment = -3907152; const int statScoreMainHistoryScale = 2394;
-    const int statScoreContHistoryZero = 1177; const int statScoreContHistoryOne = 926; const int statScoreContHistoryThree = 837; const int ttPvClampLower = -241;
-    const int improvementLower = 13; const int nullMoveStatScoreThreshold = 17190668; const int futilityPruningStatScoreDivisor = 343682;
-    const int LMRDepthReductionThres = -3980; 
+    //VLTC Tune 1 30k game values
+    const int cutoffCntScale = 223; const int moveCountScale = 92; const int ttMoveScale = 345; const int singularQuietLMRScale = 1049;
+    const int ttCaptureScale = 813; const int clampLower = 910; const int clampUpper = 2855; const int cutNodeScale = 2246;
+    const int reductionAdjustment = 268; const int baseImprovingReductionAdjustment = -22404; const int ttClamp = 2106; const int baseReductionScale = 933;
+    const int baseImprovingReductionScale = 910; const int lmrDepthScale = 986; const int lmrDepthScaleTwo = 853; const int ttMoveCutNodeScale = 3948;
+    const int depthReductionDecreaseThres = 4674; const int improvingReductionMax = 1930341;
+    const int baseReductionAdjustment = 989489; const int baseReductionDeltaScale = 869616; const int reductionTableScale = 1311;
+    const int reductionTableAdjustment = 107; const int improvementAdjustment = 515; const int improvementScale = 124; const int improvementUpper = 1006;
+    const int pvAdjustment = 1541; const int pvClamp = 865; const int pvScale = 235; const int ttPvAdjustment = 2284; const int ttPvScale = 314;
+    const int cutNodettPvAdjustment = -310; const int ttPvClampUpper = 1226; const int statScoreScale = 12131; const int statScoreDepthScale = 5483;
+    const int statScoreDepthLower = 7; const int statScoreDepthUpper = 23; const int statScoreAdjustment = -3876720; const int statScoreMainHistoryScale = 2391;
+    const int statScoreContHistoryZero = 1195; const int statScoreContHistoryOne = 1011; const int statScoreContHistoryThree = 895; const int ttPvClampLower = -377;
+    const int improvementLower = 7; const int nullMoveStatScoreThreshold = 16907347; const int futilityPruningStatScoreDivisor = 357376;
+    const int LMRDepthReductionThres = -3904;
 
     //Extension Reduction Adjustments
-    const int singularExtensionOne = 73; const int singularExtensionTwoLowDepth = -151; const int singularExtensionTwoHighDepth = -289;
-    const int ttValueBetaPv = -36; const int ttValueBetaNonPv = 77; const int cutNodeMidDepth = 20; const int cutNodeOtherDepth = 122;
-    const int ttValueValue = -78; const int ttValueAlpha = 39; const int givesCheckLowDepth = -85; const int quietTTMove = -12;
+    const int singularExtensionOne = 39; const int singularExtensionTwoLowDepth = -50; const int singularExtensionTwoHighDepth = -289;
+    const int ttValueBetaPv = -59; const int ttValueBetaNonPv = 66; const int cutNodeMidDepth = 78; const int cutNodeOtherDepth = 97;
+    const int ttValueValue = 0; const int ttValueAlpha = -11; const int givesCheckLowDepth = -110; const int quietTTMove = 50;
 
     //Residuals
-    const int residualScale = 524; const int residualAdjustment = 4; const int residualBaseline = 35;
+    const int residualScale = 544; const int residualAdjustment = 19; const int residualBaseline = -111;
 
     //Step 10 Reduction Adjustments
-    const int pvNodeNotTTMove = 219; const int cutNodeNotTTMove = 75;
+    const int pvNodeNotTTMove = 261; const int cutNodeNotTTMove = -6;
 
 
   // Different node types, used as a template parameter
