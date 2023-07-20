@@ -76,16 +76,16 @@ namespace {
   }
 
   int inputScales[10][12][2] = {
-      {{0, 1024} , {0, 1024} , {0, 1024} , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = 1
-      {{0, 1024} , {0, 1024} , {0, 0}    , {0, 1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = 1
-      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = -2
-      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {0, -1024}, {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = -1
-      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = -1 
-      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {0, -1024}, {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = -2 
-      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {-1024, 0}, {0, 0}    , {0, -1024}, {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = -1
-      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {-1024, 0}, {0, 0}    , {-1024, 0}, {0, -1024}, {0, 0}   , {0, 0}   }, //Extension = -1 
-      {{0, 1024} , {1024, 0} , {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 1024}, {0, 0}   }, //Extension = 1
-      {{0, 1024} , {1024, 0} , {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {1024, 0}, {0, 1024}}, //Extension = 1
+      {{0, 1024} , {0, 1024} , {0, 1024} , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, 1024} , {0, 1024} , {0, 0}    , {0, 1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {0, -1024}, {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {0, -1024}, {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {-1024, 0}, {0, 0}    , {0, -1024}, {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {-1024, 0}, {0, 0}    , {-1024, 0}, {0, -1024}, {0, 0}   , {0, 0}   }, 
+      {{0, 1024} , {1024, 0} , {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 1024}, {0, 0}   }, 
+      {{0, 1024} , {1024, 0} , {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {1024, 0}, {0, 1024}}, 
   };
 
   int biases[10] = { -2048, -2048, 3072, 4096, 4096, 5120, 5120, 6144, -2048, -3072 };
@@ -1088,9 +1088,7 @@ moves_loop: // When in check, search starts here
       // Step 15. Extensions (~100 Elo)
 
       if (ss->ply < thisThread->rootDepth * 2)
-      {
           W_IN[0] = true;
-      }
 
       if (!rootNode
           && depth >= 4 - (thisThread->completedDepth > 22) + 2 * (PvNode && tte->is_pv())
@@ -1103,7 +1101,8 @@ moves_loop: // When in check, search starts here
           W_IN[1] = true; //Only if W_IN[0] = 1;
       }
 
-      if (W_IN[1] == true && W_IN[0] == true) {
+      if (W_IN[1] == true && W_IN[0] == true) 
+      {
           Value singularBeta = ttValue - (82 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
           Depth singularDepth = (depth - 1) / 2;
 
@@ -1113,7 +1112,7 @@ moves_loop: // When in check, search starts here
 
           if (value < singularBeta)
           {
-              W_IN[2] = true; //Only if W_IN[1] = 1, W_IN[0] = 1; extension = 1;
+              W_IN[2] = true;
               singularQuietLMR = !ttCapture;
           }
 
@@ -1122,7 +1121,7 @@ moves_loop: // When in check, search starts here
               && value < singularBeta - 21
               && ss->doubleExtensions <= 11)
           {
-              W_IN[3] = true; //Only if W_IN[1] = 1, W_IN[0] = 1; extension = 2;
+              W_IN[3] = true;
               depth += depth < 13;
           }
 
@@ -1137,37 +1136,37 @@ moves_loop: // When in check, search starts here
 
       // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
       if (ttValue >= beta)
-          W_IN[4] = true; //Only if W_IN[2] = 0, W_IN[1] = 1, W_IN[0] = 1; extension = -2 
+          W_IN[4] = true;
 
       if (!PvNode)
-          W_IN[5] = true;//Only if  W_IN[4] = 1, W_IN[2] = 0, W_IN[1] = 1, W_IN[0] = 1; extension = -1 
+          W_IN[5] = true;
 
       // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
       if (cutNode)
-          W_IN[6] = true; //Only if  W_IN[5] = 0, W_IN[2] = 0, W_IN[1] = 1, W_IN[0] = 1; extension = -1 
+          W_IN[6] = true;
 
       if (depth > 8 && depth < 17)
-          W_IN[7] = true; //Only if  W_IN[6] = 1, W_IN[5] = 0, W_IN[2] = 0, W_IN[1] = 1, W_IN[0] = 1; extension = -2 
+          W_IN[7] = true;
 
       // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
       if (ttValue <= value)
-          W_IN[8] = true; //Only if  W_IN[6] = 0, W_IN[5] = 0, W_IN[2] = 0, W_IN[1] = 1, W_IN[0] = 1; extension = -1 
+          W_IN[8] = true;
 
       // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
       if (ttValue <= alpha)
-          W_IN[9] = true; //Only if W_IN[8] = 0, W_IN[6] = 0, W_IN[5] = 0, W_IN[2] = 0, W_IN[1] = 1, W_IN[0] = 1; extension = -1 
+          W_IN[9] = true;
 
       // Check extensions (~1 Elo)
       if (givesCheck
           && depth > 9)
-          W_IN[10] = true; //Only if W_IN[1] = 0, W_IN[0] = 1; extension = 1 
+          W_IN[10] = true;
 
       // Quiet ttMove extensions (~1 Elo)
       if (PvNode
           && move == ttMove
           && move == ss->killers[0]
           && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
-          W_IN[11] = true; //Only if W_IN[10] = 0, W_IN[1] = 0, W_IN[0] = 1; extension = 1 
+          W_IN[11] = true;
 
       extension = calculateExtension(W_IN);
 
