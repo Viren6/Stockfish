@@ -75,6 +75,47 @@ namespace {
     return (r + 1372 - int(delta) * 1073 / int(rootDelta)) / 1024 + (!i && r > 936);
   }
 
+  int inputScales[10][12][2] = {
+      {{0, 1024} , {0, 1024} , {0, 1024} , {0, 0}   , {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = 1
+      {{0, 1024} , {0, 1024} , {0, 0}    , {0, 1024}, {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = 1
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {0, -1024}, {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = -2
+      {{0, 1024} , {0, 1024} , {1024, 0} , {0, 0}   , {0, 1024} , {0, 1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = -1
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}   , {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = -1 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}   , {0, -1024}, {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = -2 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {0, -1024}, {0, 0}    , {0, 0}   , {0, 0}   }, //Extension = -1
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {-1024, 0}, {0, -1024}, {0, 0}   , {0, 0}   }, //Extension = -1 
+      {{0, 1024} , {1024, 0} , {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 1024}, {0, 0}   }, //Extension = 1
+      {{0, 1024} , {1024, 0} , {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {1024, 0}, {0, 1024}}, //Extension = 1
+  };
+
+  int biases[10] = { -2048, -2048, 3072, 4096, 4096, 5120, 5120, 6144, -2048, -3072 };
+  int negativeSlopes[10] = {0   , 0   , 2048, 1024, 1024, 2048, 1024, 1024, 0   , 0    }; //All slopes must be positive
+  int positiveSlopes[10] = {1024, 1024, 0   , 0   , 0   , 0   , 0   , 0   , 1024, 1024 };
+
+  int outputBias = 0;
+  int outputSlopes[2] = {1024, 1024}; //Slope must be positive
+
+  int PReLU(int input, int negativeSlope, int positiveSlope) {
+      int output = 0;
+      if (input >= 0)
+          output = input * positiveSlope / 1024;
+      else
+          output = input * negativeSlope / 1024;
+      return output;
+  }
+
+  int calculateExtension(bool W_IN[12]) {
+      int outputSum = 0;
+      for (int i = 0; i < 10; ++i) {
+          int sum = 0;
+          for (int j = 0; j < 12; ++j) {
+              sum += inputScales[i][j][W_IN[j]];
+          }
+          outputSum += PReLU(sum + biases[i], negativeSlopes[i], positiveSlopes[i]);
+      }
+      return PReLU(outputSum + outputBias, outputSlopes[0], outputSlopes[1]) / 1024;
+  }
+
   constexpr int futility_move_count(bool improving, Depth depth) {
     return improving ? (3 + depth * depth)
                      : (3 + depth * depth) / 2;
@@ -1062,7 +1103,7 @@ moves_loop: // When in check, search starts here
           W_IN[1] = true; //Only if W_IN[0] = 1;
       }
 
-      if (W_IN[1] = true && W_IN[0] = true) {
+      if (W_IN[1] == true && W_IN[0] == true) {
           Value singularBeta = ttValue - (82 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
           Depth singularDepth = (depth - 1) / 2;
 
@@ -1090,7 +1131,7 @@ moves_loop: // When in check, search starts here
           // search without the ttMove. So we assume this expected Cut-node is not singular,
           // that multiple moves fail high, and we can prune the whole subtree by returning
           // a softbound.
-          if (singularBeta >= beta && W_IN[2] = false)
+          if (singularBeta >= beta && W_IN[2] == false)
               return singularBeta;
       }
 
@@ -1127,6 +1168,8 @@ moves_loop: // When in check, search starts here
           && move == ss->killers[0]
           && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
           W_IN[11] = true; //Only if W_IN[10] = 0, W_IN[1] = 0, W_IN[0] = 1; extension = 1 
+
+      extension = calculateExtension(W_IN);
 
       // Add extension to new depth
       newDepth += extension;
