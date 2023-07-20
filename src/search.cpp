@@ -93,9 +93,9 @@ namespace {
                        {1024, 1024, 0   , 0   , 0   , 0   , 0   , 0   , 1024, 1024 }};
 
   int outputBias = 0;
-  int outputSlopes[2] = {1024, 1024}; //Slope must be positive
+  int outputSlopes[2] = {1024, 1024};
 
-  //TUNE(SetRange(-4096, 4096), inputScales, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), negativeSlopes, positiveSlopes, outputSlopes);
+  TUNE(SetRange(-4096, 4096), inputScales, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
 
   int PReLU(int input, int negativeSlope, int positiveSlope) {
       int output = 0;
