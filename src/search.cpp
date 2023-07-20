@@ -116,6 +116,42 @@ namespace {
       return PReLU(outputSum + outputBias, outputSlopes[0], outputSlopes[1]) / 1024;
   }
 
+  int Extensions[2][2][2][2][2][2][2][2][2][2][2][2];
+
+  void extensionsCacher() {
+      for (int i = 0; i < 2; ++i) {
+          for (int j = 0; j < 2; ++j) {
+              for (int k = 0; k < 2; ++k) {
+                  for (int l = 0; l < 2; ++l) {
+                      for (int m = 0; m < 2; ++m) {
+                          for (int n = 0; n < 2; ++n) {
+                              for (int o = 0; o < 2; ++o) {
+                                  for (int p = 0; p < 2; ++p) {
+                                      for (int q = 0; q < 2; ++q) {
+                                          for (int r = 0; r < 2; ++r) {
+                                              for (int s = 0; s < 2; ++s) {
+                                                  for (int t = 0; t < 2; ++t) {
+                                                      bool W_IN[12] = { i,j,k,l,m,n,o,p,q,r,s,t };
+                                                      Extensions[i][j][k][l][m][n][o][p][q][r][s][t] =
+                                                          calculateExtension(W_IN);
+                                                  }
+                                              }
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+      }
+  }
+
+  int extensionsLookup(bool W_IN[12]) {
+      return Extensions[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]];
+  }
+
   constexpr int futility_move_count(bool improving, Depth depth) {
     return improving ? (3 + depth * depth)
                      : (3 + depth * depth) / 2;
@@ -204,6 +240,7 @@ void Search::init() {
 
   for (int i = 1; i < MAX_MOVES; ++i)
       Reductions[i] = int((20.57 + std::log(Threads.size()) / 2) * std::log(i));
+  extensionsCacher();
 }
 
 
@@ -1168,7 +1205,7 @@ moves_loop: // When in check, search starts here
           && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
           W_IN[11] = true;
 
-      extension = calculateExtension(W_IN);
+      extension = extensionsLookup(W_IN);
 
       // Add extension to new depth
       newDepth += extension;
