@@ -89,11 +89,13 @@ namespace {
   };
 
   int biases[10] = { -2048, -2048, 3072, 4096, 4096, 5120, 5120, 6144, -2048, -3072 };
-  int negativeSlopes[10] = {0   , 0   , 2048, 1024, 1024, 2048, 1024, 1024, 0   , 0    }; //All slopes must be positive
-  int positiveSlopes[10] = {1024, 1024, 0   , 0   , 0   , 0   , 0   , 0   , 1024, 1024 };
+  int slopes[2][10] = {{0   , 0   , 2048, 1024, 1024, 2048, 1024, 1024, 0   , 0    },
+                       {1024, 1024, 0   , 0   , 0   , 0   , 0   , 0   , 1024, 1024 }};
 
   int outputBias = 0;
   int outputSlopes[2] = {1024, 1024}; //Slope must be positive
+
+  //TUNE(SetRange(-4096, 4096), inputScales, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), negativeSlopes, positiveSlopes, outputSlopes);
 
   int PReLU(int input, int negativeSlope, int positiveSlope) {
       int output = 0;
@@ -111,7 +113,7 @@ namespace {
           for (int j = 0; j < 12; ++j) {
               sum += inputScales[i][j][W_IN[j]];
           }
-          outputSum += PReLU(sum + biases[i], negativeSlopes[i], positiveSlopes[i]);
+          outputSum += PReLU(sum + biases[i], slopes[0][i], slopes[1][i]);
       }
       return PReLU(outputSum + outputBias, outputSlopes[0], outputSlopes[1]) / 1024;
   }
