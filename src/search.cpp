@@ -80,7 +80,7 @@ namespace {
     const int ttValueValue = 45; const int ttValueAlpha = -44; const int givesCheckLowDepth = -49; const int quietTTMove = 78;
 
     //Residuals
-    const int residualScale = 566; const int residualAdjustment = -107; const int residualBaseline = -80;
+    int residualScale = 566; int residualAdjustment = -107; int residualBaseline = -80;
 
     //Step 10 Reduction Adjustments
     const int pvNodeNotTTMove = 273; const int cutNodeNotTTMove = -13;
@@ -106,27 +106,32 @@ namespace {
     return reduction / 1024;
   }
 
+  //Tune 1 36k game values
   int inputScales[10][12][2] = {
-      {{0, 1024} , {0, 1024} , {0, 1024} , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
-      {{0, 1024} , {0, 1024} , {0, 0}    , {0, 1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
-      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
-      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {0, -1024}, {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
-      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
-      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {0, -1024}, {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
-      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {-1024, 0}, {0, 0}    , {0, -1024}, {0, 0}    , {0, 0}   , {0, 0}   }, 
-      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {-1024, 0}, {0, 0}    , {-1024, 0}, {0, -1024}, {0, 0}   , {0, 0}   }, 
-      {{0, 1024} , {1024, 0} , {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 1024}, {0, 0}   }, 
-      {{0, 1024} , {1024, 0} , {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {1024, 0}, {0, 1024}}, 
+      {{122, 1234}, {248, 862}, {-596, 817}, {84, 257}, {-221, 129}, {64, 17}, {-130, 295}, {149, 156}, {20, 82}, {7, -61}, {11, -194}, {189, 209}},
+      {{6, 1103}, {-442, 703}, {-248, 524}, {-166, 1043}, {132, -243}, {-49, -309}, {-210, 428}, {-144, -183}, {229, 47}, {48, -5}, {-48, 89}, {302, -60}},
+      {{-470, -977}, {153, -847}, {-1077, 0}, {-477, 365}, {263, -890}, {-119, -98}, {295, -345}, {187, 10}, {50, 217}, {243, 407}, {203, 37}, {47, -404}},
+      {{-4, -963}, {-11, -1265}, {-1106, 397}, {-168, -103}, {80, -1102}, {-80, -626}, {22, -34}, {-24, 182}, {478, 77}, {-456, 67}, {135, -258}, {-176, 226}},
+      {{96, -949}, {-1, -977}, {-412, 43}, {187, 31}, {-880, -29}, {197, -201}, {-364, -767}, {-120, -38}, {-207, -107}, {25, -91}, {620, 130}, {123, 63}},
+      {{120, -1047}, {-341, -847}, {-1134, -10}, {-62, 282}, {-1128, -368}, {177, 19}, {218, -700}, {140, -927}, {62, 256}, {232, -44}, {-412, -181}, {-193, 125}},
+      {{-145, -1051}, {97, -615}, {-1086, 5}, {-30, 29}, {-1102, -333}, {-113, -364}, {-1081, 291}, {190, 119}, {-402, -1170}, {-6, -66}, {335, 8}, {328, -49}},
+      {{-68, -873}, {438, -1161}, {-1010, 210}, {219, -107}, {-957, 174}, {76, 247}, {-1211, -197}, {5, -143}, {-1295, -180}, {-163, -1048}, {152, 82}, {189, 59}},
+      {{204, 1020}, {1156, 62}, {-365, -28}, {236, 207}, {198, 361}, {-85, 185}, {326, -432}, {-466, -191}, {103, 93}, {-175, 79}, {-284, 936}, {-290, 504}},
+      {{-246, 1092}, {607, 196}, {-347, -292}, {-9, -43}, {-15, 37}, {68, 173}, {255, -257}, {31, 205}, {131, -140}, {-84, 147}, {926, -4}, {-227, 1037}},
   };
 
-  int biases[10] = { -2048, -2048, 3072, 4096, 4096, 5120, 5120, 6144, -2048, -3072 };
-  int slopes[2][10] = {{0   , 0   , 2048, 1024, 1024, 2048, 1024, 1024, 0   , 0    },
-                       {1024, 1024, 0   , 0   , 0   , 0   , 0   , 0   , 1024, 1024 }};
+  int biases[2][10] = { { -2007, -2044, 3171, 4004, 4079, 5145, 5167, 6206, -2056, -3113 }, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0} };
+  int slopes[2][2][10] = { {{114   , 135   , 1945, 1001, 1063, 2008, 1065, 1024, 53  , 215  },
+                          {1081, 852, 7   , 8   , 8   , 69   , 62   , 26   , 874, 1079 }},
+                          {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                          {0, 0, 0, 0, 0, 0, 0, 0, 0, 0} } };
 
-  int outputBias = 0;
-  int outputSlopes[2] = {1024, 1024};
+  int outputBias[2] = {-64, 0};
+  int outputSlopes[2][2] = { { 938, 878 }, {0, 0} };
 
   TUNE(SetRange(-4096, 4096), inputScales, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
+
+  TUNE(SetRange(128, 1536), residualScale, SetRange(-2048, 2048), residualAdjustment, residualBaseline);
 
   int PReLU(int input, int negativeSlope, int positiveSlope) {
       int output = 0;
@@ -137,16 +142,48 @@ namespace {
       return output;
   }
 
-  int calculateExtension(bool W_IN[12]) {
+  int calculateFinalLayers(bool W_IN[12], int n) {
       int outputSum = 0;
       for (int i = 0; i < 10; ++i) {
           int sum = 0;
           for (int j = 0; j < 12; ++j) {
               sum += inputScales[i][j][W_IN[j]];
           }
-          outputSum += PReLU(sum + biases[i], slopes[0][i], slopes[1][i]);
+          outputSum += PReLU(sum + biases[n][i], slopes[n][0][i], slopes[n][1][i]);
       }
-      return PReLU(outputSum + outputBias, outputSlopes[0], outputSlopes[1]) / 1024;
+      return PReLU(outputSum + outputBias[n], outputSlopes[n][0], outputSlopes[n][1]);
+  }
+
+  int Extensions[2][2][2][2][2][2][2][2][2][2][2][2];
+  int Reduction[2][2][2][2][2][2][2][2][2][2][2][2];
+
+  void extensionsCacher() {
+      for (int i = 0; i < 2; ++i)
+          for (int j = 0; j < 2; ++j)
+              for (int k = 0; k < 2; ++k)
+                  for (int l = 0; l < 2; ++l)
+                      for (int m = 0; m < 2; ++m)
+                          for (int n = 0; n < 2; ++n)
+                              for (int o = 0; o < 2; ++o)
+                                  for (int p = 0; p < 2; ++p)
+                                      for (int q = 0; q < 2; ++q)
+                                          for (int r = 0; r < 2; ++r)
+                                              for (int s = 0; s < 2; ++s)
+                                                  for (int t = 0; t < 2; ++t) {
+                                                      bool W_IN[12] = { i,j,k,l,m,n,o,p,q,r,s,t };
+                                                      Extensions[i][j][k][l][m][n][o][p][q][r][s][t] =
+                                                          calculateFinalLayers(W_IN, 0);
+                                                      Reduction[i][j][k][l][m][n][o][p][q][r][s][t] =
+                                                          calculateFinalLayers(W_IN, 1);
+                                                  }
+  }
+
+  int extensionsLookup(bool W_IN[12]) {
+      return Extensions[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]];
+  }
+
+  int reductionsLookup(bool W_IN[12]) {
+      return Reduction[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]];
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
@@ -237,6 +274,7 @@ void Search::init() {
 
   for (int i = 1; i < MAX_MOVES; ++i)
       Reductions[i] = int((reductionTableScale + std::log(Threads.size()) * 32) * std::log(i) + reductionTableAdjustment);
+  extensionsCacher();
 }
 
 
@@ -617,7 +655,7 @@ namespace {
     TTEntry* tte;
     Key posKey;
     Move ttMove, move, excludedMove, bestMove;
-    Depth extension, newDepth;
+    Depth extension, initialDepth, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
@@ -1041,6 +1079,7 @@ moves_loop: // When in check, search starts here
 
       // Calculate new depth for this move
       newDepth = depth - 1;
+      initialDepth = depth - 1;
 
       Value delta = beta - alpha;
 
@@ -1206,10 +1245,11 @@ moves_loop: // When in check, search starts here
           && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
           W_IN[11] = true;
 
-      extension = calculateExtension(W_IN);
+      extension = extensionsLookup(W_IN);
+      r += reductionsLookup(W_IN);
 
       // Add extension to new depth
-      newDepth += extension;
+      newDepth += extension / 1024;
       ss->doubleExtensions = (ss-1)->doubleExtensions + (extension == 2);
 
       // Speculative prefetch as early as possible
@@ -1277,12 +1317,12 @@ moves_loop: // When in check, search starts here
           // In general we want to cap the LMR depth search at newDepth, but when
           // reduction is negative, we allow this move a limited search extension
           // beyond the first move depth. This may lead to hidden double extensions.
-          int totalReduction = r * lmrDepthScaleTwo + (ss->residualReduction);
-          Depth d = std::clamp(newDepth - (totalReduction / (1024 * 1024)), 1, newDepth + 1 + (r <= LMRDepthReductionThres));
+          int totalAdjustment = r * lmrDepthScaleTwo - extension * 1024 + (ss->residual);
+          Depth d = std::clamp(initialDepth - (totalAdjustment / (1024 * 1024)), 1, newDepth + 1 + (r <= LMRDepthReductionThres));
 
-          (ss+1)->residualReduction = residualScale * (totalReduction % (1024 * 1024)) / 512 + residualAdjustment;
+          (ss+1)->residual = residualScale * (totalAdjustment % (1024 * 1024)) / 512 + residualAdjustment;
           value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, d, true);
-          (ss+1)->residualReduction = residualBaseline;
+          (ss+1)->residual = residualBaseline;
 
           // Do a full-depth search when reduced LMR search fails high
           if (value > alpha && d < newDepth)

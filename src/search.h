@@ -44,7 +44,7 @@ struct Stack {
   Move excludedMove;
   Move killers[2];
   Value staticEval;
-  int residualReduction;
+  int residual;
   int statScore;
   int moveCount;
   bool inCheck;
