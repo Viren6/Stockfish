@@ -106,6 +106,49 @@ namespace {
     return reduction / 1024;
   }
 
+  int inputScales[10][12][2] = {
+      {{0, 1024} , {0, 1024} , {0, 1024} , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, 1024} , {0, 1024} , {0, 0}    , {0, 1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {0, -1024}, {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {0, -1024}, {0, -1024}, {0, 0}    , {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {-1024, 0}, {0, 0}    , {0, -1024}, {0, 0}    , {0, 0}   , {0, 0}   }, 
+      {{0, -1024}, {0, -1024}, {-1024, 0}, {0, 0}   , {-1024, 0}, {0, 0}    , {-1024, 0}, {0, 0}    , {-1024, 0}, {0, -1024}, {0, 0}   , {0, 0}   }, 
+      {{0, 1024} , {1024, 0} , {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 1024}, {0, 0}   }, 
+      {{0, 1024} , {1024, 0} , {0, 0}    , {0, 0}   , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {0, 0}    , {1024, 0}, {0, 1024}}, 
+  };
+
+  int biases[10] = { -2048, -2048, 3072, 4096, 4096, 5120, 5120, 6144, -2048, -3072 };
+  int slopes[2][10] = {{0   , 0   , 2048, 1024, 1024, 2048, 1024, 1024, 0   , 0    },
+                       {1024, 1024, 0   , 0   , 0   , 0   , 0   , 0   , 1024, 1024 }};
+
+  int outputBias = 0;
+  int outputSlopes[2] = {1024, 1024};
+
+  TUNE(SetRange(-4096, 4096), inputScales, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
+
+  int PReLU(int input, int negativeSlope, int positiveSlope) {
+      int output = 0;
+      if (input >= 0)
+          output = input * positiveSlope / 1024;
+      else
+          output = input * negativeSlope / 1024;
+      return output;
+  }
+
+  int calculateExtension(bool W_IN[12]) {
+      int outputSum = 0;
+      for (int i = 0; i < 10; ++i) {
+          int sum = 0;
+          for (int j = 0; j < 12; ++j) {
+              sum += inputScales[i][j][W_IN[j]];
+          }
+          outputSum += PReLU(sum + biases[i], slopes[0][i], slopes[1][i]);
+      }
+      return PReLU(outputSum + outputBias, outputSlopes[0], outputSlopes[1]) / 1024;
+  }
+
   constexpr int futility_move_count(bool improving, Depth depth) {
     return improving ? (3 + depth * depth)
                      : (3 + depth * depth) / 2;
@@ -1078,115 +1121,92 @@ moves_loop: // When in check, search starts here
           }
       }
 
+      bool W_IN[12] = {};
+
       // Step 15. Extensions (~100 Elo)
-      // We take care to not overdo to avoid search getting stuck.
+
       if (ss->ply < thisThread->rootDepth * 2)
+          W_IN[0] = true;
+
+      if (!rootNode
+          && depth >= 4 - (thisThread->completedDepth > 22) + 2 * (PvNode && tte->is_pv())
+          && move == ttMove
+          && !excludedMove
+          && abs(ttValue) < VALUE_KNOWN_WIN
+          && (tte->bound() & BOUND_LOWER)
+          && tte->depth() >= depth - 3)
       {
-          // Singular extension search (~94 Elo). If all moves but one fail low on a
-          // search of (alpha-s, beta-s), and just one fails high on (alpha, beta),
-          // then that move is singular and should be extended. To verify this we do
-          // a reduced search on all the other moves but the ttMove and if the
-          // result is lower than ttValue minus a margin, then we will extend the ttMove.
-          // Depth margin and singularBeta margin are known for having non-linear scaling.
-          // Their values are optimized to time controls of 180+1.8 and longer
-          // so changing them requires tests at this type of time controls.
-          if (   !rootNode
-              &&  depth >= 4 - (thisThread->completedDepth > 22) + 2 * (PvNode && tte->is_pv())
-              &&  move == ttMove
-              && !excludedMove // Avoid recursive singular search
-           /* &&  ttValue != VALUE_NONE Already implicit in the next condition */
-              &&  abs(ttValue) < VALUE_KNOWN_WIN
-              && (tte->bound() & BOUND_LOWER)
-              &&  tte->depth() >= depth - 3)
-          {
-              Value singularBeta = ttValue - (82 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
-              Depth singularDepth = (depth - 1) / 2;
-
-              ss->excludedMove = move;
-              value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
-              ss->excludedMove = MOVE_NONE;
-
-              if (value < singularBeta)
-              {
-                  extension = 1;
-                  singularQuietLMR = !ttCapture;
-                  r += singularExtensionOne;
-
-                  // Avoid search explosion by limiting the number of double extensions
-                  if (  !PvNode
-                      && value < singularBeta - 21
-                      && ss->doubleExtensions <= 11)
-                  {
-                      extension = 2;
-                      if (depth < 13) {
-                          depth++;
-                          r += singularExtensionTwoLowDepth;
-                      } else
-                          r += singularExtensionTwoHighDepth;
-                  }
-              }
-
-              // Multi-cut pruning
-              // Our ttMove is assumed to fail high, and now we failed high also on a reduced
-              // search without the ttMove. So we assume this expected Cut-node is not singular,
-              // that multiple moves fail high, and we can prune the whole subtree by returning
-              // a softbound.
-              else if (singularBeta >= beta)
-                  return singularBeta;
-
-              // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
-              else if (ttValue >= beta) {
-                  if (PvNode) {
-                      extension = -2;
-                      r += ttValueBetaPv;
-                  }
-                  else {
-                      extension = -3;
-                      r += ttValueBetaNonPv;
-                  }
-              }
-
-              // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
-              else if (cutNode) {
-                  if (depth > 8 && depth < 17) {
-                      extension = -3;
-                      r += cutNodeMidDepth;
-                  }
-                  else {
-                      extension = -1;
-                      r += cutNodeOtherDepth;
-                  }
-              }
-
-              // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= value) {
-                  extension = -1;
-                  r += ttValueValue;
-              }
-
-              // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= alpha) {
-                  extension = -1;
-                  r += ttValueAlpha;
-              }
-          }
-
-          // Check extensions (~1 Elo)
-          else if (givesCheck
-              && depth > 9) {
-              extension = 1;
-              r += givesCheckLowDepth;
-          }
-
-          // Quiet ttMove extensions (~1 Elo)
-          else if (PvNode
-              && move == ttMove
-              && move == ss->killers[0]
-              && (*contHist[0])[movedPiece][to_sq(move)] >= 5168) {
-              extension = 1;
-              r += quietTTMove;
-          }
+          W_IN[1] = true; //Only if W_IN[0] = 1;
       }
+
+      if (W_IN[1] == true && W_IN[0] == true) 
+      {
+          Value singularBeta = ttValue - (82 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
+          Depth singularDepth = (depth - 1) / 2;
+
+          ss->excludedMove = move;
+          value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
+          ss->excludedMove = MOVE_NONE;
+
+          if (value < singularBeta)
+          {
+              W_IN[2] = true;
+              singularQuietLMR = !ttCapture;
+          }
+
+          // Avoid search explosion by limiting the number of double extensions
+          if (!PvNode
+              && value < singularBeta - 21
+              && ss->doubleExtensions <= 11)
+          {
+              W_IN[3] = true;
+              depth += depth < 13;
+          }
+
+          // Multi-cut pruning
+          // Our ttMove is assumed to fail high, and now we failed high also on a reduced
+          // search without the ttMove. So we assume this expected Cut-node is not singular,
+          // that multiple moves fail high, and we can prune the whole subtree by returning
+          // a softbound.
+          if (singularBeta >= beta && W_IN[2] == false)
+              return singularBeta;
+      }
+
+      // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
+      if (ttValue >= beta)
+          W_IN[4] = true;
+
+      if (!PvNode)
+          W_IN[5] = true;
+
+      // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
+      if (cutNode)
+          W_IN[6] = true;
+
+      if (depth > 8 && depth < 17)
+          W_IN[7] = true;
+
+      // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
+      if (ttValue <= value)
+          W_IN[8] = true;
+
+      // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
+      if (ttValue <= alpha)
+          W_IN[9] = true;
+
+      // Check extensions (~1 Elo)
+      if (givesCheck
+          && depth > 9)
+          W_IN[10] = true;
+
+      // Quiet ttMove extensions (~1 Elo)
+      if (PvNode
+          && move == ttMove
+          && move == ss->killers[0]
+          && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
+          W_IN[11] = true;
+
+      extension = calculateExtension(W_IN);
 
       // Add extension to new depth
       newDepth += extension;
