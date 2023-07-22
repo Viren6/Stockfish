@@ -80,7 +80,7 @@ namespace {
     const int ttValueValue = -22; const int ttValueAlpha = -72; const int givesCheckLowDepth = -33; const int quietTTMove = 61;
 
     //Residuals
-    int residualScale = 525; int residualAdjustment = -30; int residualBaseline = -92;
+    int residualScale; int residualAdjustment; int residualBaseline;
 
     //Step 10 Reduction Adjustments
     const int pvNodeNotTTMove = 295; const int cutNodeNotTTMove = 4;
@@ -107,31 +107,325 @@ namespace {
   }
 
   //Tune 1 36k game values
-  int inputScales[10][12][2] = {
-      {{122, 1234}, {248, 862}, {-596, 817}, {84, 257}, {-221, 129}, {64, 17}, {-130, 295}, {149, 156}, {20, 82}, {7, -61}, {11, -194}, {189, 209}},
-      {{6, 1103}, {-442, 703}, {-248, 524}, {-166, 1043}, {132, -243}, {-49, -309}, {-210, 428}, {-144, -183}, {229, 47}, {48, -5}, {-48, 89}, {302, -60}},
-      {{-470, -977}, {153, -847}, {-1077, 0}, {-477, 365}, {263, -890}, {-119, -98}, {295, -345}, {187, 10}, {50, 217}, {243, 407}, {203, 37}, {47, -404}},
-      {{-4, -963}, {-11, -1265}, {-1106, 397}, {-168, -103}, {80, -1102}, {-80, -626}, {22, -34}, {-24, 182}, {478, 77}, {-456, 67}, {135, -258}, {-176, 226}},
-      {{96, -949}, {-1, -977}, {-412, 43}, {187, 31}, {-880, -29}, {197, -201}, {-364, -767}, {-120, -38}, {-207, -107}, {25, -91}, {620, 130}, {123, 63}},
-      {{120, -1047}, {-341, -847}, {-1134, -10}, {-62, 282}, {-1128, -368}, {177, 19}, {218, -700}, {140, -927}, {62, 256}, {232, -44}, {-412, -181}, {-193, 125}},
-      {{-145, -1051}, {97, -615}, {-1086, 5}, {-30, 29}, {-1102, -333}, {-113, -364}, {-1081, 291}, {190, 119}, {-402, -1170}, {-6, -66}, {335, 8}, {328, -49}},
-      {{-68, -873}, {438, -1161}, {-1010, 210}, {219, -107}, {-957, 174}, {76, 247}, {-1211, -197}, {5, -143}, {-1295, -180}, {-163, -1048}, {152, 82}, {189, 59}},
-      {{204, 1020}, {1156, 62}, {-365, -28}, {236, 207}, {198, 361}, {-85, 185}, {326, -432}, {-466, -191}, {103, 93}, {-175, 79}, {-284, 936}, {-290, 504}},
-      {{-246, 1092}, {607, 196}, {-347, -292}, {-9, -43}, {-15, 37}, {68, 173}, {255, -257}, {31, 205}, {131, -140}, {-84, 147}, {926, -4}, {-227, 1037}},
-  };
+  int inputScales[10][12][2];
 
-  int biases[2][10] = { { -2007, -2044, 3171, 4004, 4079, 5145, 5167, 6206, -2056, -3113 }, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0} };
-  int slopes[2][2][10] = { {{114   , 135   , 1945, 1001, 1063, 2008, 1065, 1024, 53  , 215  },
-                          {1081, 852, 7   , 8   , 8   , 69   , 62   , 26   , 874, 1079 }},
-                          {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                          {0, 0, 0, 0, 0, 0, 0, 0, 0, 0} } };
+  int biases[2][10];
+  int slopes[2][2][10];
 
-  int outputBias[2] = {-64, 0};
-  int outputSlopes[2][2] = { { 938, 878 }, {0, 0} };
+  int outputBias[2];
+  int outputSlopes[2][2];
 
-  TUNE(SetRange(-4096, 4096), inputScales, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
-
-  TUNE(SetRange(128, 1536), residualScale, SetRange(-2048, 2048), residualAdjustment, residualBaseline);
+  void SetValues() {
+      inputScales[0][0][0] = 143;
+      inputScales[0][0][1] = 1216;
+      inputScales[0][1][0] = 291;
+      inputScales[0][1][1] = 901;
+      inputScales[0][2][0] = -605;
+      inputScales[0][2][1] = 868;
+      inputScales[0][3][0] = 62;
+      inputScales[0][3][1] = 303;
+      inputScales[0][4][0] = -229;
+      inputScales[0][4][1] = 131;
+      inputScales[0][5][0] = 73;
+      inputScales[0][5][1] = 41;
+      inputScales[0][6][0] = -182;
+      inputScales[0][6][1] = 319;
+      inputScales[0][7][0] = 171;
+      inputScales[0][7][1] = 172;
+      inputScales[0][8][0] = 98;
+      inputScales[0][8][1] = 68;
+      inputScales[0][9][0] = -109;
+      inputScales[0][9][1] = -40;
+      inputScales[0][10][0] = 31;
+      inputScales[0][10][1] = -218;
+      inputScales[0][11][0] = 182;
+      inputScales[0][11][1] = 252;
+      inputScales[1][0][0] = -13;
+      inputScales[1][0][1] = 1108;
+      inputScales[1][1][0] = -479;
+      inputScales[1][1][1] = 638;
+      inputScales[1][2][0] = -246;
+      inputScales[1][2][1] = 483;
+      inputScales[1][3][0] = -185;
+      inputScales[1][3][1] = 1025;
+      inputScales[1][4][0] = 156;
+      inputScales[1][4][1] = -269;
+      inputScales[1][5][0] = 18;
+      inputScales[1][5][1] = -246;
+      inputScales[1][6][0] = -223;
+      inputScales[1][6][1] = 418;
+      inputScales[1][7][0] = -171;
+      inputScales[1][7][1] = -206;
+      inputScales[1][8][0] = 232;
+      inputScales[1][8][1] = 28;
+      inputScales[1][9][0] = 53;
+      inputScales[1][9][1] = 25;
+      inputScales[1][10][0] = -143;
+      inputScales[1][10][1] = 90;
+      inputScales[1][11][0] = 295;
+      inputScales[1][11][1] = -4;
+      inputScales[2][0][0] = -462;
+      inputScales[2][0][1] = -1051;
+      inputScales[2][1][0] = 210;
+      inputScales[2][1][1] = -967;
+      inputScales[2][2][0] = -1086;
+      inputScales[2][2][1] = -13;
+      inputScales[2][3][0] = -498;
+      inputScales[2][3][1] = 317;
+      inputScales[2][4][0] = 260;
+      inputScales[2][4][1] = -840;
+      inputScales[2][5][0] = -79;
+      inputScales[2][5][1] = -82;
+      inputScales[2][6][0] = 305;
+      inputScales[2][6][1] = -400;
+      inputScales[2][7][0] = 199;
+      inputScales[2][7][1] = -8;
+      inputScales[2][8][0] = 78;
+      inputScales[2][8][1] = 253;
+      inputScales[2][9][0] = 256;
+      inputScales[2][9][1] = 447;
+      inputScales[2][10][0] = 212;
+      inputScales[2][10][1] = 11;
+      inputScales[2][11][0] = 69;
+      inputScales[2][11][1] = -422;
+      inputScales[3][0][0] = 59;
+      inputScales[3][0][1] = -965;
+      inputScales[3][1][0] = 25;
+      inputScales[3][1][1] = -1305;
+      inputScales[3][2][0] = -1097;
+      inputScales[3][2][1] = 359;
+      inputScales[3][3][0] = -183;
+      inputScales[3][3][1] = -123;
+      inputScales[3][4][0] = 59;
+      inputScales[3][4][1] = -1074;
+      inputScales[3][5][0] = -93;
+      inputScales[3][5][1] = -613;
+      inputScales[3][6][0] = 26;
+      inputScales[3][6][1] = -47;
+      inputScales[3][7][0] = 2;
+      inputScales[3][7][1] = 207;
+      inputScales[3][8][0] = 457;
+      inputScales[3][8][1] = 71;
+      inputScales[3][9][0] = -478;
+      inputScales[3][9][1] = 74;
+      inputScales[3][10][0] = 88;
+      inputScales[3][10][1] = -331;
+      inputScales[3][11][0] = -167;
+      inputScales[3][11][1] = 181;
+      inputScales[4][0][0] = 119;
+      inputScales[4][0][1] = -1025;
+      inputScales[4][1][0] = 44;
+      inputScales[4][1][1] = -982;
+      inputScales[4][2][0] = -418;
+      inputScales[4][2][1] = 132;
+      inputScales[4][3][0] = 228;
+      inputScales[4][3][1] = 2;
+      inputScales[4][4][0] = -843;
+      inputScales[4][4][1] = -65;
+      inputScales[4][5][0] = 182;
+      inputScales[4][5][1] = -268;
+      inputScales[4][6][0] = -383;
+      inputScales[4][6][1] = -720;
+      inputScales[4][7][0] = -128;
+      inputScales[4][7][1] = -113;
+      inputScales[4][8][0] = -210;
+      inputScales[4][8][1] = -154;
+      inputScales[4][9][0] = -36;
+      inputScales[4][9][1] = -87;
+      inputScales[4][10][0] = 550;
+      inputScales[4][10][1] = 132;
+      inputScales[4][11][0] = 188;
+      inputScales[4][11][1] = 58;
+      inputScales[5][0][0] = 95;
+      inputScales[5][0][1] = -1034;
+      inputScales[5][1][0] = -378;
+      inputScales[5][1][1] = -791;
+      inputScales[5][2][0] = -1162;
+      inputScales[5][2][1] = -12;
+      inputScales[5][3][0] = -112;
+      inputScales[5][3][1] = 269;
+      inputScales[5][4][0] = -1086;
+      inputScales[5][4][1] = -401;
+      inputScales[5][5][0] = 237;
+      inputScales[5][5][1] = 5;
+      inputScales[5][6][0] = 278;
+      inputScales[5][6][1] = -697;
+      inputScales[5][7][0] = 111;
+      inputScales[5][7][1] = -1030;
+      inputScales[5][8][0] = 47;
+      inputScales[5][8][1] = 332;
+      inputScales[5][9][0] = 224;
+      inputScales[5][9][1] = -49;
+      inputScales[5][10][0] = -423;
+      inputScales[5][10][1] = -111;
+      inputScales[5][11][0] = -135;
+      inputScales[5][11][1] = 138;
+      inputScales[6][0][0] = -112;
+      inputScales[6][0][1] = -1024;
+      inputScales[6][1][0] = 87;
+      inputScales[6][1][1] = -621;
+      inputScales[6][2][0] = -1149;
+      inputScales[6][2][1] = 1;
+      inputScales[6][3][0] = -1;
+      inputScales[6][3][1] = 16;
+      inputScales[6][4][0] = -1159;
+      inputScales[6][4][1] = -347;
+      inputScales[6][5][0] = -122;
+      inputScales[6][5][1] = -320;
+      inputScales[6][6][0] = -1045;
+      inputScales[6][6][1] = 226;
+      inputScales[6][7][0] = 121;
+      inputScales[6][7][1] = 123;
+      inputScales[6][8][0] = -374;
+      inputScales[6][8][1] = -1174;
+      inputScales[6][9][0] = -42;
+      inputScales[6][9][1] = -129;
+      inputScales[6][10][0] = 372;
+      inputScales[6][10][1] = -22;
+      inputScales[6][11][0] = 303;
+      inputScales[6][11][1] = 10;
+      inputScales[7][0][0] = -89;
+      inputScales[7][0][1] = -832;
+      inputScales[7][1][0] = 421;
+      inputScales[7][1][1] = -1148;
+      inputScales[7][2][0] = -998;
+      inputScales[7][2][1] = 229;
+      inputScales[7][3][0] = 252;
+      inputScales[7][3][1] = -47;
+      inputScales[7][4][0] = -1019;
+      inputScales[7][4][1] = 157;
+      inputScales[7][5][0] = 97;
+      inputScales[7][5][1] = 233;
+      inputScales[7][6][0] = -1222;
+      inputScales[7][6][1] = -193;
+      inputScales[7][7][0] = 86;
+      inputScales[7][7][1] = -81;
+      inputScales[7][8][0] = -1330;
+      inputScales[7][8][1] = -111;
+      inputScales[7][9][0] = -167;
+      inputScales[7][9][1] = -990;
+      inputScales[7][10][0] = 172;
+      inputScales[7][10][1] = 70;
+      inputScales[7][11][0] = 191;
+      inputScales[7][11][1] = 76;
+      inputScales[8][0][0] = 214;
+      inputScales[8][0][1] = 976;
+      inputScales[8][1][0] = 1159;
+      inputScales[8][1][1] = 99;
+      inputScales[8][2][0] = -380;
+      inputScales[8][2][1] = -58;
+      inputScales[8][3][0] = 260;
+      inputScales[8][3][1] = 181;
+      inputScales[8][4][0] = 149;
+      inputScales[8][4][1] = 382;
+      inputScales[8][5][0] = -150;
+      inputScales[8][5][1] = 218;
+      inputScales[8][6][0] = 289;
+      inputScales[8][6][1] = -523;
+      inputScales[8][7][0] = -469;
+      inputScales[8][7][1] = -165;
+      inputScales[8][8][0] = 44;
+      inputScales[8][8][1] = 84;
+      inputScales[8][9][0] = -215;
+      inputScales[8][9][1] = 78;
+      inputScales[8][10][0] = -224;
+      inputScales[8][10][1] = 970;
+      inputScales[8][11][0] = -295;
+      inputScales[8][11][1] = 513;
+      inputScales[9][0][0] = -278;
+      inputScales[9][0][1] = 1099;
+      inputScales[9][1][0] = 570;
+      inputScales[9][1][1] = 227;
+      inputScales[9][2][0] = -376;
+      inputScales[9][2][1] = -283;
+      inputScales[9][3][0] = 0;
+      inputScales[9][3][1] = 7;
+      inputScales[9][4][0] = 16;
+      inputScales[9][4][1] = 112;
+      inputScales[9][5][0] = 98;
+      inputScales[9][5][1] = 197;
+      inputScales[9][6][0] = 247;
+      inputScales[9][6][1] = -263;
+      inputScales[9][7][0] = 33;
+      inputScales[9][7][1] = 242;
+      inputScales[9][8][0] = 89;
+      inputScales[9][8][1] = -183;
+      inputScales[9][9][0] = -125;
+      inputScales[9][9][1] = 222;
+      inputScales[9][10][0] = 885;
+      inputScales[9][10][1] = 51;
+      inputScales[9][11][0] = -245;
+      inputScales[9][11][1] = 1022;
+      biases[0][0] = -1978;
+      biases[0][1] = -2061;
+      biases[0][2] = 3206;
+      biases[0][3] = 3997;
+      biases[0][4] = 4076;
+      biases[0][5] = 5152;
+      biases[0][6] = 5173;
+      biases[0][7] = 6176;
+      biases[0][8] = -2043;
+      biases[0][9] = -3061;
+      biases[1][0] = -1;
+      biases[1][1] = -7;
+      biases[1][2] = 21;
+      biases[1][3] = 46;
+      biases[1][4] = 19;
+      biases[1][5] = 34;
+      biases[1][6] = -19;
+      biases[1][7] = 10;
+      biases[1][8] = -22;
+      biases[1][9] = 24;
+      outputBias[0] = -76;
+      outputBias[1] = 13;
+      slopes[0][0][0] = 85;
+      slopes[0][0][1] = 137;
+      slopes[0][0][2] = 1933;
+      slopes[0][0][3] = 988;
+      slopes[0][0][4] = 1073;
+      slopes[0][0][5] = 2010;
+      slopes[0][0][6] = 1069;
+      slopes[0][0][7] = 1013;
+      slopes[0][0][8] = 77;
+      slopes[0][0][9] = 224;
+      slopes[0][1][0] = 1081;
+      slopes[0][1][1] = 851;
+      slopes[0][1][2] = 14;
+      slopes[0][1][3] = 47;
+      slopes[0][1][4] = 5;
+      slopes[0][1][5] = 69;
+      slopes[0][1][6] = 56;
+      slopes[0][1][7] = 39;
+      slopes[0][1][8] = 840;
+      slopes[0][1][9] = 1101;
+      slopes[1][0][0] = 6;
+      slopes[1][0][1] = 22;
+      slopes[1][0][2] = 7;
+      slopes[1][0][3] = 18;
+      slopes[1][0][4] = 0;
+      slopes[1][0][5] = 38;
+      slopes[1][0][6] = 7;
+      slopes[1][0][7] = 2;
+      slopes[1][0][8] = 2;
+      slopes[1][0][9] = 0;
+      slopes[1][1][0] = 26;
+      slopes[1][1][1] = 30;
+      slopes[1][1][2] = 7;
+      slopes[1][1][3] = 6;
+      slopes[1][1][4] = 43;
+      slopes[1][1][5] = 7;
+      slopes[1][1][6] = 6;
+      slopes[1][1][7] = 12;
+      slopes[1][1][8] = 28;
+      slopes[1][1][9] = 15;
+      outputSlopes[0][0] = 956;
+      outputSlopes[0][1] = 877;
+      outputSlopes[1][0] = 16;
+      outputSlopes[1][1] = 5;
+      residualScale = 538;
+      residualAdjustment = -12;
+      residualBaseline = -92;
+  }
 
   int PReLU(int input, int negativeSlope, int positiveSlope) {
       int output = 0;
@@ -274,6 +568,7 @@ void Search::init() {
 
   for (int i = 1; i < MAX_MOVES; ++i)
       Reductions[i] = int((reductionTableScale + std::log(Threads.size()) * 32) * std::log(i) + reductionTableAdjustment);
+  SetValues();
   extensionsCacher();
 }
 
@@ -1250,7 +1545,6 @@ moves_loop: // When in check, search starts here
 
       // Add extension to new depth
       newDepth += extension / 1024;
-      ss->doubleExtensions = (ss-1)->doubleExtensions + (extension == 2);
 
       // Speculative prefetch as early as possible
       prefetch(TT.first_entry(pos.key_after(move)));
