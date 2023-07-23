@@ -60,30 +60,20 @@ using namespace Search;
 namespace {
 
     //VLTC Tune 1 60k game values
-    const int cutoffCntScale = 241; const int moveCountScale = 95; const int ttMoveScale = 336; const int singularQuietLMRScale = 1068;
-    const int ttCaptureScale = 878; const int clampLower = 922; const int clampUpper = 2764; const int cutNodeScale = 2320;
-    const int reductionAdjustment = 214; const int baseImprovingReductionAdjustment = -24012; const int ttClamp = 2049; const int baseReductionScale = 966;
+    const int baseImprovingReductionAdjustment = -24012; const int baseReductionScale = 966;
     const int baseImprovingReductionScale = 920; const int lmrDepthScale = 978; const int lmrDepthScaleTwo = 876; const int ttMoveCutNodeScale = 3803;
     const int depthReductionDecreaseThres = 4707; const int improvingReductionMax = 1916344;
     const int baseReductionAdjustment = 928808; const int baseReductionDeltaScale = 880029; const int reductionTableScale = 1304;
     const int reductionTableAdjustment = 91; const int improvementAdjustment = 494; const int improvementScale = 123; const int improvementUpper = 991;
-    const int pvAdjustment = 1212; const int pvClamp = 843; const int pvScale = 210; const int ttPvAdjustment = 2270; const int ttPvScale = 361;
-    const int cutNodettPvAdjustment = -318; const int ttPvClampUpper = 1140; const int statScoreScale = 11871; const int statScoreDepthScale = 5401;
-    const int statScoreDepthLower = 7; const int statScoreDepthUpper = 22; const int statScoreAdjustment = -3896348; const int statScoreMainHistoryScale = 2351;
-    const int statScoreContHistoryZero = 1186; const int statScoreContHistoryOne = 1013; const int statScoreContHistoryThree = 895; const int ttPvClampLower = -393;
-    const int improvementLower = 4; const int nullMoveStatScoreThreshold = 17141852; const int futilityPruningStatScoreDivisor = 359047;
-    const int LMRDepthReductionThres = -3754;
-
-    //Extension Reduction Adjustments
-    const int singularExtensionOne = -12; const int singularExtensionTwoLowDepth = 32; const int singularExtensionTwoHighDepth = -266;
-    const int ttValueBetaPv = -19; const int ttValueBetaNonPv = 38; const int cutNodeMidDepth = 35; const int cutNodeOtherDepth = 66;
-    const int ttValueValue = -22; const int ttValueAlpha = -72; const int givesCheckLowDepth = -33; const int quietTTMove = 61;
+    const int ttPvAdjustment = 2270; const int ttPvScale = 361; const int cutNodettPvAdjustment = -318; const int ttPvClampUpper = 1140; const int statScoreScale = 11871; 
+    const int statScoreDepthScale = 5401; const int statScoreDepthLower = 7; const int statScoreDepthUpper = 22; const int statScoreAdjustment = -3896348;
+    const int statScoreMainHistoryScale = 2351; const int statScoreContHistoryZero = 1186; const int statScoreContHistoryOne = 1013; 
+    const int statScoreContHistoryThree = 895; const int ttPvClampLower = -393; const int improvementLower = 4; const int nullMoveStatScoreThreshold = 17141852; 
+    const int futilityPruningStatScoreDivisor = 359047; const int LMRDepthReductionThres = -3754;
+    const int clampLower = 922; const int moveCountScale = 95;
 
     //Residuals
     int residualScale = 583; int residualAdjustment = -3; int residualBaseline = -99;
-
-    //Step 10 Reduction Adjustments
-    const int pvNodeNotTTMove = 295; const int cutNodeNotTTMove = 4;
 
 
   // Different node types, used as a template parameter
@@ -107,28 +97,38 @@ namespace {
   }
 
   //Tune 1 116k game values
-  int inputScales[10][12][2] = {
-      {{114, 1175}, {282, 907}, {-653, 838}, {57, 275}, {-321, 151}, {-132, -38}, {-138, 268}, {51, 310}, {147, 211}, {-188, 64}, {47, -152}, {232, 245}},
-      {{106, 1107}, {-449, 585}, {-189, 503}, {-136, 965}, {103, -224}, {-21, -336}, {-268, 399}, {-75, -204}, {173, -96}, {-3, -31}, {-80, 116}, {302, 15}},
-      {{-340, -1035}, {220, -974}, {-1019, -154}, {-503, 517}, {335, -949}, {-238, 36}, {318, -364}, {264, 41}, {127, 224}, {157, 374}, {84, 42}, {99, -509}},
-      {{-86, -1085}, {22, -1259}, {-1054, 317}, {-290, -199}, {13, -1034}, {-173, -519}, {73, -55}, {105, 300}, {435, 29}, {-456, -86}, {104, -96}, {-119, 58}},
-      {{259, -1221}, {5, -954}, {-462, 140}, {245, 16}, {-809, -82}, {139, -318}, {-427, -750}, {-137, -236}, {-270, -82}, {-54, -152}, {502, 94}, {171, 100}},
-      {{-930, 218}, {-878, -500}, {-167, -1203,}, {379, -198}, {-380, -1099}, {111, 250}, {-686, 362}, {-1114, 92}, {255, -52}, {-31, 293}, {-125, -407}, {119, -45}},
-      {{-85, -1026}, {42, -644}, {-1233, 122}, {59, 15}, {-1090, -277}, {-132, -439}, {-1001, 251}, {119, 72}, {-352, -1173}, {123, -58}, {238, 33}, {268, 24}},
-      {{-157, -861}, {252, -1103}, {-1017, 347}, {257, -125}, {-1058, 204}, {-36, 311}, {-1276, -99}, {44, 41}, {-1382, -48}, {-83, -1058}, {29, 20}, {319, 94}},
-      {{149, 952}, {1238, 110}, {-400, -206}, {279, 202}, {64, 280}, {-73, 187}, {290, -508}, {-583, -143}, {-16, 87}, {-306, -4}, {-210, 1121}, {-370, 543}},
-      {{-240, 982}, {582, 328}, {-450, -377}, {-67, -130}, {-56, -9}, {146, 169}, {44, -335}, {-35, 52}, {178, -274}, {-12, 271}, {1029, 97}, {-310, 1108}},
+  int inputScales[20][20][2] = {
+      {{114, 1175}, {282, 907}, {-653, 838}, {57, 275}, {-321, 151}, {-132, -38}, {-138, 268}, {51, 310}, {147, 211}, {-188, 64}, {47, -152}, {232, 245}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{106, 1107}, {-449, 585}, {-189, 503}, {-136, 965}, {103, -224}, {-21, -336}, {-268, 399}, {-75, -204}, {173, -96}, {-3, -31}, {-80, 116}, {302, 15}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{-340, -1035}, {220, -974}, {-1019, -154}, {-503, 517}, {335, -949}, {-238, 36}, {318, -364}, {264, 41}, {127, 224}, {157, 374}, {84, 42}, {99, -509}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{-86, -1085}, {22, -1259}, {-1054, 317}, {-290, -199}, {13, -1034}, {-173, -519}, {73, -55}, {105, 300}, {435, 29}, {-456, -86}, {104, -96}, {-119, 58}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{259, -1221}, {5, -954}, {-462, 140}, {245, 16}, {-809, -82}, {139, -318}, {-427, -750}, {-137, -236}, {-270, -82}, {-54, -152}, {502, 94}, {171, 100}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{-930, 218}, {-878, -500}, {-167, -1203,}, {379, -198}, {-380, -1099}, {111, 250}, {-686, 362}, {-1114, 92}, {255, -52}, {-31, 293}, {-125, -407}, {119, -45}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{-85, -1026}, {42, -644}, {-1233, 122}, {59, 15}, {-1090, -277}, {-132, -439}, {-1001, 251}, {119, 72}, {-352, -1173}, {123, -58}, {238, 33}, {268, 24}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{-157, -861}, {252, -1103}, {-1017, 347}, {257, -125}, {-1058, 204}, {-36, 311}, {-1276, -99}, {44, 41}, {-1382, -48}, {-83, -1058}, {29, 20}, {319, 94}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{149, 952}, {1238, 110}, {-400, -206}, {279, 202}, {64, 280}, {-73, 187}, {290, -508}, {-583, -143}, {-16, 87}, {-306, -4}, {-210, 1121}, {-370, 543}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{-240, 982}, {582, 328}, {-450, -377}, {-67, -130}, {-56, -9}, {146, 169}, {44, -335}, {-35, 52}, {178, -274}, {-12, 271}, {1029, 97}, {-310, 1108}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, -1024}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 1024},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {500, 0},{0, 0},{0, 0}},
+      {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, -1024},{0, 0}},
+      {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 1024}},
+      {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}},
+      {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}}
   };
 
-  int biases[2][10] = { { -1961, -2085, 3151, 3963, 4026, 5108, 5141, 6171, -2056, -3008},
-                        {-13, 39, 14, 81, 11, 23, 19, 40, -59, 21} };
-  int slopes[2][2][10] = { {{113, 110 ,2021 ,944 ,1004 ,1994 ,1131 ,980 ,19 ,261},
-                            {1098 ,925 ,44 ,103 ,78 ,106 ,16 ,18 ,881 ,1087 }},
-                          {{16, 14, 44, 44, 18, 6, 9, 58 ,3 ,15},
-                          {14, 6, 88, 97, 142, 39, 89, 18, 42, 19} } };
+  int biases[2][20] = { { -1961, -2085, 3151, 3963, 4026, 5108, 5141, 6171, -2056, -3008, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {-13, 39, 14, 81, 11, 23, 19, 40, -59, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} };
+  int slopes[2][2][20] = { {{113, 110 ,2021 ,944 ,1004 ,1994 ,1131 ,980 ,19 ,261, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                            {1098 ,925 ,44 ,103 ,78 ,106 ,16 ,18 ,881 ,1087 , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+                          {{16, 14, 44, 44, 18, 6, 9, 58 ,3 ,15, 1024, 0, 0, 1024, 0, 0, 0, 0, 0, 0},
+                          {14, 6, 88, 97, 142, 39, 89, 18, 42, 19, 0, 2048, 1024, 0, 1024, 0, 0, 0, 0, 0}}};
 
-  int outputBias[2] = {-74, 0};
-  int outputSlopes[2][2] = { { 948, 879 }, {20, 36} };
+  int outputBias[2] = {100, 0};
+  int outputSlopes[2][2] = { { 948, 879 }, {1024, 1024} };
 
   TUNE(SetRange(-4096, 4096), inputScales, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
 
@@ -143,7 +143,7 @@ namespace {
       return output;
   }
 
-  int calculateFinalLayers(bool W_IN[12], int n) {
+  int calculateFinalLayers(bool W_IN[20], int n) {
       int outputSum = 0;
       for (int i = 0; i < 10; ++i) {
           int sum = 0;
@@ -155,8 +155,8 @@ namespace {
       return PReLU(outputSum + outputBias[n], outputSlopes[n][0], outputSlopes[n][1]);
   }
 
-  int Extensions[2][2][2][2][2][2][2][2][2][2][2][2];
-  int Reduction[2][2][2][2][2][2][2][2][2][2][2][2];
+  int Extensions[2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2];
+  int Reduction[2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2];
 
   void extensionsCacher() {
       for (int i = 0; i < 2; ++i)
@@ -170,21 +170,33 @@ namespace {
                                       for (int q = 0; q < 2; ++q)
                                           for (int r = 0; r < 2; ++r)
                                               for (int s = 0; s < 2; ++s)
-                                                  for (int t = 0; t < 2; ++t) {
-                                                      bool W_IN[12] = { i,j,k,l,m,n,o,p,q,r,s,t };
-                                                      Extensions[i][j][k][l][m][n][o][p][q][r][s][t] =
-                                                          calculateFinalLayers(W_IN, 0);
-                                                      Reduction[i][j][k][l][m][n][o][p][q][r][s][t] =
-                                                          calculateFinalLayers(W_IN, 1);
-                                                  }
+                                                  for (int t = 0; t < 2; ++t) 
+                                                      for (int u = 0; u < 2; ++u) 
+                                                          for (int v = 0; v < 2; ++v) 
+                                                              for (int w = 0; w < 2; ++w) 
+                                                                  for (int x = 0; x < 2; ++x) 
+                                                                      for (int y = 0; y < 2; ++y) 
+                                                                          for (int z = 0; z < 2; ++z) 
+                                                                              for (int a = 0; a < 2; ++a) 
+                                                                                  for (int b = 0; b < 2; ++b) {
+                                                                                              bool W_IN[21] = { bool(i),bool(j),bool(k),bool(l),bool(m),bool(n)
+                                                                                                  ,bool(o),bool(p),bool(q),bool(r),bool(s),bool(t),bool(u),bool(v),bool(w),
+                                                                                                  bool(x),bool(y),bool(z),bool(a),bool(b)};
+                                                                                              Extensions[i][j][k][l][m][n][o][p][q][r][s][t][u][v][w][x][y][z][a][b] =
+                                                                                                  calculateFinalLayers(W_IN, 0);
+                                                                                              Reduction[i][j][k][l][m][n][o][p][q][r][s][t][u][v][w][x][y][z][a][b] =
+                                                                                                  calculateFinalLayers(W_IN, 1);
+                                                                                          }
   }
 
-  int extensionsLookup(bool W_IN[12]) {
-      return Extensions[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]];
+  int extensionsLookup(bool W_IN[20]) {
+      return Extensions[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
+          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]];
   }
 
-  int reductionsLookup(bool W_IN[12]) {
-      return Reduction[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]];
+  int reductionsLookup(bool W_IN[20]) {
+      return Reduction[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
+          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]];
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
@@ -941,7 +953,6 @@ namespace {
     if (PvNode
         && !ttMove) {
         depth -= 2 + 2 * (ss->ttHit && tte->depth() >= depth);
-        step10Reduction += pvNodeNotTTMove;
     }
 
     if (depth <= 0)
@@ -951,7 +962,6 @@ namespace {
         && depth >= 8
         && !ttMove) {
         depth -= 2;
-        step10Reduction += cutNodeNotTTMove;
     }
 
     probCutBeta = beta + 168 - 61 * improving;
@@ -1161,7 +1171,7 @@ moves_loop: // When in check, search starts here
           }
       }
 
-      bool W_IN[12] = {};
+      bool W_IN[20] = {};
 
       // Step 15. Extensions (~100 Elo)
 
@@ -1191,7 +1201,6 @@ moves_loop: // When in check, search starts here
           if (value < singularBeta)
           {
               W_IN[2] = true;
-              singularQuietLMR = !ttCapture;
           }
 
           // Avoid search explosion by limiting the number of double extensions
@@ -1199,10 +1208,6 @@ moves_loop: // When in check, search starts here
           {
               W_IN[3] = true;
               depth += depth < 13;
-          }
-
-          if (value < singularBeta - 50) {
-              W_IN[16] = true;
           }
 
           // Multi-cut pruning
@@ -1225,18 +1230,16 @@ moves_loop: // When in check, search starts here
       if (cutNode)
           W_IN[6] = true;
 
-      //if (depth > 8 && depth < 17)
-      //    W_IN[7] = true;
-      if (1 <= depth <= 4)
+      if (1 <= depth && depth <= 4)
           W_IN[12] = true;
 
-      if (5 <= depth <= 9)
+      if (5 <= depth && depth <= 9)
           W_IN[13] = true;
 
-      if (10 <= depth <= 14)
+      if (10 <= depth && depth <= 14)
           W_IN[7] = true;
 
-      if (15 <= depth <= 19)
+      if (15 <= depth && depth <= 19)
           W_IN[14] = true;
 
       if (20 <= depth)
@@ -1255,10 +1258,22 @@ moves_loop: // When in check, search starts here
           W_IN[10] = true;
 
       // Quiet ttMove extensions (~1 Elo)
-      if (move == ttMove
-          && move == ss->killers[0]
+      if (move == ss->killers[0]
           && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
           W_IN[11] = true;
+
+      if (ttCapture)
+          W_IN[16] = true;
+
+      if (ttMove)
+          W_IN[17] = true;
+
+      if (move == ttMove)
+          W_IN[18] = true;
+
+      if ((ss+1)->cutoffCnt >= 4)
+          W_IN[19] = true;
+
 
       extension = extensionsLookup(W_IN);
       r += reductionsLookup(W_IN);
@@ -1285,35 +1300,14 @@ moves_loop: // When in check, search starts here
                      + statScoreContHistoryThree * (*contHist[3])[movedPiece][to_sq(move)]
                      + statScoreAdjustment);
 
-      // Reduction adjustment for all nodes
-      r += reductionAdjustment + step10Reduction;
-      
       // Decrease reduction if opponent's move count is high (~1 Elo)
       r -= std::min((ss-1)->moveCount * moveCountScale, clampLower);
-
-      // Decrease reduction if ttMove has been singularly extended (~1 Elo)
-      r -= singularQuietLMR * singularQuietLMRScale;
-
-      // Decrease reduction if move is ttMove based on next ply fail high count (~2 Elo)
-      r -= (move == ttMove) * (ttClamp - std::min((ss+1)->cutoffCnt * ttMoveScale, ttClamp));
-
-      // Decrease reduction for PvNodes based on depth (~3 Elo)
-      r -= PvNode * (pvAdjustment - (pvClamp - std::min(depth * pvScale, pvClamp)));
-
-      // Increase reduction for cut nodes (~3 Elo)
-      r += cutNode * cutNodeScale;
-
-      // Increase reduction if ttMove is a capture (~3 Elo)
-      r += ttCapture * ttCaptureScale;
 
       // Decrease reduction if position is or has been on the PV
       // and node is not likely to fail low. (~3 Elo)
       // Decrease further on cutNodes. (~1 Elo)
       r -= (ss->ttPv && !likelyFailLow) * 
            (ttPvAdjustment + cutNode * (std::clamp((tte->depth() - depth) * ttPvScale + cutNodettPvAdjustment, ttPvClampLower, ttPvClampUpper)));
-
-      // Increase reduction if next ply has a lot of fail high (~5 Elo)
-      r += std::min((ss + 1)->cutoffCnt * cutoffCntScale, clampUpper);
 
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
       r -= ss->statScore / (statScoreScale + statScoreDepthScale * (depth > statScoreDepthLower && depth < statScoreDepthUpper));
