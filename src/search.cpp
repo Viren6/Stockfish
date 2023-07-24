@@ -1048,9 +1048,9 @@ namespace {
 
   int calculateFinalLayers(bool W_IN[20], int n) {
       int outputSum = 0;
-      for (int i = 0; i < 10; ++i) {
+      for (int i = 0; i < 20; ++i) {
           int sum = 0;
-          for (int j = 0; j < 12; ++j) {
+          for (int j = 0; j < 20; ++j) {
               sum += inputScales[i][j][W_IN[j]];
           }
           outputSum += PReLU(sum + biases[n][i], slopes[n][0][i], slopes[n][1][i]);
@@ -1061,43 +1061,22 @@ namespace {
   int Extensions[2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2];
   int Reduction[2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2];
 
-  void extensionsCacher() {
-      for (int i = 0; i < 2; ++i)
-          for (int j = 0; j < 2; ++j)
-              for (int k = 0; k < 2; ++k)
-                  for (int l = 0; l < 2; ++l)
-                      for (int m = 0; m < 2; ++m)
-                          for (int n = 0; n < 2; ++n)
-                              for (int o = 0; o < 2; ++o)
-                                  for (int p = 0; p < 2; ++p)
-                                      for (int q = 0; q < 2; ++q)
-                                          for (int r = 0; r < 2; ++r)
-                                              for (int s = 0; s < 2; ++s)
-                                                  for (int t = 0; t < 2; ++t) 
-                                                      for (int u = 0; u < 2; ++u) 
-                                                          for (int v = 0; v < 2; ++v) 
-                                                              for (int w = 0; w < 2; ++w) 
-                                                                  for (int x = 0; x < 2; ++x) 
-                                                                      for (int y = 0; y < 2; ++y) 
-                                                                          for (int z = 0; z < 2; ++z) 
-                                                                              for (int a = 0; a < 2; ++a) 
-                                                                                  for (int b = 0; b < 2; ++b) {
-                                                                                              bool W_IN[21] = { bool(i),bool(j),bool(k),bool(l),bool(m),bool(n)
-                                                                                                  ,bool(o),bool(p),bool(q),bool(r),bool(s),bool(t),bool(u),bool(v),bool(w),
-                                                                                                  bool(x),bool(y),bool(z),bool(a),bool(b)};
-                                                                                              Extensions[i][j][k][l][m][n][o][p][q][r][s][t][u][v][w][x][y][z][a][b] =
-                                                                                                  calculateFinalLayers(W_IN, 0);
-                                                                                              Reduction[i][j][k][l][m][n][o][p][q][r][s][t][u][v][w][x][y][z][a][b] =
-                                                                                                  calculateFinalLayers(W_IN, 1);
-                                                                                          }
-  }
-
   int extensionsLookup(bool W_IN[20]) {
+      if (Extensions[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
+          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]] == 0) {
+          Extensions[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
+              [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]] = calculateFinalLayers(W_IN, 0);
+      }
       return Extensions[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
           [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]];
   }
 
   int reductionsLookup(bool W_IN[20]) {
+      if (Reduction[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
+          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]] == 0) {
+          Reduction[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
+              [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]] = calculateFinalLayers(W_IN, 1);
+      }
       return Reduction[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
           [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]];
   }
@@ -1191,7 +1170,6 @@ void Search::init() {
   for (int i = 1; i < MAX_MOVES; ++i)
       Reductions[i] = int((reductionTableScale + std::log(Threads.size()) * 32) * std::log(i) + reductionTableAdjustment);
   SetValues();
-  extensionsCacher();
 }
 
 
