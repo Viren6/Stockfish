@@ -131,6 +131,10 @@ namespace {
   int outputBias[2] = { 100, 0 };
   int outputSlopes[2][2] = { { 948, 879 }, {1024, 1024} };
 
+  TUNE(SetRange(-4096, 4096), inputScales, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
+
+  TUNE(SetRange(128, 1536), residualScale, SetRange(-2048, 2048), residualAdjustment, residualBaseline);
+
   int PReLU(int input, int negativeSlope, int positiveSlope) {
       int output = 0;
       if (input >= 0)
