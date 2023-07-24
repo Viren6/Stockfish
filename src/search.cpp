@@ -71,7 +71,7 @@ namespace {
     const int nullMoveStatScoreThreshold = 17141852; const int futilityPruningStatScoreDivisor = 359047; const int LMRDepthReductionThres = -3754;
 
     //Residuals
-    int residualScale; int residualAdjustment; int residualBaseline;
+    int residualScale = 583; int residualAdjustment = -3; int residualBaseline = -99;
 
 
   // Different node types, used as a template parameter
@@ -95,945 +95,41 @@ namespace {
   }
 
   //Tune 1 116k game values
-  int inputScales[20][20][2];
+  int inputScales[23][23][2] = {
+        {{114, 1175}, {282, 907}, {-653, 838}, {57, 275}, {-321, 151}, {-132, -38}, {-138, 268}, {51, 310}, {147, 211}, {-188, 64}, {47, -152}, {232, 245}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{106, 1107}, {-449, 585}, {-189, 503}, {-136, 965}, {103, -224}, {-21, -336}, {-268, 399}, {-75, -204}, {173, -96}, {-3, -31}, {-80, 116}, {302, 15}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{-340, -1035}, {220, -974}, {-1019, -154}, {-503, 517}, {335, -949}, {-238, 36}, {318, -364}, {264, 41}, {127, 224}, {157, 374}, {84, 42}, {99, -509}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{-86, -1085}, {22, -1259}, {-1054, 317}, {-290, -199}, {13, -1034}, {-173, -519}, {73, -55}, {105, 300}, {435, 29}, {-456, -86}, {104, -96}, {-119, 58}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{259, -1221}, {5, -954}, {-462, 140}, {245, 16}, {-809, -82}, {139, -318}, {-427, -750}, {-137, -236}, {-270, -82}, {-54, -152}, {502, 94}, {171, 100}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{-930, 218}, {-878, -500}, {-167, -1203,}, {379, -198}, {-380, -1099}, {111, 250}, {-686, 362}, {-1114, 92}, {255, -52}, {-31, 293}, {-125, -407}, {119, -45}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{-85, -1026}, {42, -644}, {-1233, 122}, {59, 15}, {-1090, -277}, {-132, -439}, {-1001, 251}, {119, 72}, {-352, -1173}, {123, -58}, {238, 33}, {268, 24}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{-157, -861}, {252, -1103}, {-1017, 347}, {257, -125}, {-1058, 204}, {-36, 311}, {-1276, -99}, {44, 41}, {-1382, -48}, {-83, -1058}, {29, 20}, {319, 94}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{149, 952}, {1238, 110}, {-400, -206}, {279, 202}, {64, 280}, {-73, 187}, {290, -508}, {-583, -143}, {-16, 87}, {-306, -4}, {-210, 1121}, {-370, 543}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{-240, 982}, {582, 328}, {-450, -377}, {-67, -130}, {-56, -9}, {146, 169}, {44, -335}, {-35, 52}, {178, -274}, {-12, 271}, {1029, 97}, {-310, 1108}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, -1024}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 1024},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {500, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, -1024},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 1024}, {0, 0},{0, 0},{0, 0}},
+        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, -1024},{0, 0},{0, 0}},
+        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 1024},{0, 0}},
+        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 1024},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 1024},{0, 1024}},
+        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
+        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}}
+  };
 
-  int biases[2][20];
-  int slopes[2][2][20];
+  int biases[2][23] = { { -1961, -2085, 3151, 3963, 4026, 5108, 5141, 6171, -2056, -3008, 0, 0, 0, 0, 0, 0, 0, -2048, 0, 0, 0, 0, 0},
+                         {-13, 39, 14, 81, 11, 23, 19, 40, -59, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} };
+  int slopes[2][2][23] = { {{113, 110 ,2021 ,944 ,1004 ,1994 ,1131 ,980 ,19 ,261, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                            {1098 ,925 ,44 ,103 ,78 ,106 ,16 ,18 ,881 ,1087 , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+                          {{16, 14, 44, 44, 18, 6, 9, 58 ,3 ,15, 1024, 0, 0, 1024, 0, 1024, 0, 0, 0, 0, 0, 0, 0},
+                          {14, 6, 88, 97, 142, 39, 89, 18, 42, 19, 0, 2048, 1024, 0, 1024, 0, 2048, 3072, 0, 0, 0, 0, 0}} };
 
-  int outputBias[2];
-  int outputSlopes[2][2];
-
-  void SetValues() {
-      inputScales[0][0][0] = 132;
-      inputScales[0][0][1] = 1206;
-      inputScales[0][1][0] = 347;
-      inputScales[0][1][1] = 905;
-      inputScales[0][2][0] = -604;
-      inputScales[0][2][1] = 711;
-      inputScales[0][3][0] = -20;
-      inputScales[0][3][1] = 189;
-      inputScales[0][4][0] = -394;
-      inputScales[0][4][1] = 95;
-      inputScales[0][5][0] = -86;
-      inputScales[0][5][1] = 58;
-      inputScales[0][6][0] = -107;
-      inputScales[0][6][1] = 305;
-      inputScales[0][7][0] = 66;
-      inputScales[0][7][1] = 346;
-      inputScales[0][8][0] = 187;
-      inputScales[0][8][1] = 221;
-      inputScales[0][9][0] = -123;
-      inputScales[0][9][1] = 39;
-      inputScales[0][10][0] = 46;
-      inputScales[0][10][1] = -162;
-      inputScales[0][11][0] = 219;
-      inputScales[0][11][1] = 244;
-      inputScales[0][12][0] = 14;
-      inputScales[0][12][1] = 88;
-      inputScales[0][13][0] = -17;
-      inputScales[0][13][1] = -23;
-      inputScales[0][14][0] = 30;
-      inputScales[0][14][1] = 132;
-      inputScales[0][15][0] = 51;
-      inputScales[0][15][1] = -32;
-      inputScales[0][16][0] = -46;
-      inputScales[0][16][1] = 17;
-      inputScales[0][17][0] = 54;
-      inputScales[0][17][1] = -37;
-      inputScales[0][18][0] = -50;
-      inputScales[0][18][1] = -20;
-      inputScales[0][19][0] = -26;
-      inputScales[0][19][1] = -6;
-      inputScales[1][0][0] = 75;
-      inputScales[1][0][1] = 1176;
-      inputScales[1][1][0] = -403;
-      inputScales[1][1][1] = 624;
-      inputScales[1][2][0] = -153;
-      inputScales[1][2][1] = 569;
-      inputScales[1][3][0] = -150;
-      inputScales[1][3][1] = 1048;
-      inputScales[1][4][0] = -51;
-      inputScales[1][4][1] = -123;
-      inputScales[1][5][0] = 96;
-      inputScales[1][5][1] = -318;
-      inputScales[1][6][0] = -229;
-      inputScales[1][6][1] = 389;
-      inputScales[1][7][0] = 6;
-      inputScales[1][7][1] = -182;
-      inputScales[1][8][0] = 178;
-      inputScales[1][8][1] = -78;
-      inputScales[1][9][0] = 83;
-      inputScales[1][9][1] = -63;
-      inputScales[1][10][0] = 23;
-      inputScales[1][10][1] = 80;
-      inputScales[1][11][0] = 299;
-      inputScales[1][11][1] = 60;
-      inputScales[1][12][0] = -70;
-      inputScales[1][12][1] = 125;
-      inputScales[1][13][0] = 71;
-      inputScales[1][13][1] = 3;
-      inputScales[1][14][0] = 33;
-      inputScales[1][14][1] = 29;
-      inputScales[1][15][0] = -20;
-      inputScales[1][15][1] = -67;
-      inputScales[1][16][0] = 70;
-      inputScales[1][16][1] = -30;
-      inputScales[1][17][0] = -59;
-      inputScales[1][17][1] = -37;
-      inputScales[1][18][0] = 15;
-      inputScales[1][18][1] = 53;
-      inputScales[1][19][0] = -32;
-      inputScales[1][19][1] = -31;
-      inputScales[2][0][0] = -355;
-      inputScales[2][0][1] = -1036;
-      inputScales[2][1][0] = 138;
-      inputScales[2][1][1] = -862;
-      inputScales[2][2][0] = -1075;
-      inputScales[2][2][1] = -41;
-      inputScales[2][3][0] = -519;
-      inputScales[2][3][1] = 576;
-      inputScales[2][4][0] = 347;
-      inputScales[2][4][1] = -1041;
-      inputScales[2][5][0] = -284;
-      inputScales[2][5][1] = 51;
-      inputScales[2][6][0] = 206;
-      inputScales[2][6][1] = -377;
-      inputScales[2][7][0] = 276;
-      inputScales[2][7][1] = -9;
-      inputScales[2][8][0] = 93;
-      inputScales[2][8][1] = 328;
-      inputScales[2][9][0] = 146;
-      inputScales[2][9][1] = 313;
-      inputScales[2][10][0] = 85;
-      inputScales[2][10][1] = 57;
-      inputScales[2][11][0] = 58;
-      inputScales[2][11][1] = -559;
-      inputScales[2][12][0] = 21;
-      inputScales[2][12][1] = -31;
-      inputScales[2][13][0] = 68;
-      inputScales[2][13][1] = 2;
-      inputScales[2][14][0] = -24;
-      inputScales[2][14][1] = 49;
-      inputScales[2][15][0] = 54;
-      inputScales[2][15][1] = -29;
-      inputScales[2][16][0] = -66;
-      inputScales[2][16][1] = -124;
-      inputScales[2][17][0] = -145;
-      inputScales[2][17][1] = 78;
-      inputScales[2][18][0] = -135;
-      inputScales[2][18][1] = -32;
-      inputScales[2][19][0] = 10;
-      inputScales[2][19][1] = 35;
-      inputScales[3][0][0] = -41;
-      inputScales[3][0][1] = -1154;
-      inputScales[3][1][0] = -42;
-      inputScales[3][1][1] = -1137;
-      inputScales[3][2][0] = -1050;
-      inputScales[3][2][1] = 202;
-      inputScales[3][3][0] = -374;
-      inputScales[3][3][1] = -208;
-      inputScales[3][4][0] = 80;
-      inputScales[3][4][1] = -1011;
-      inputScales[3][5][0] = -145;
-      inputScales[3][5][1] = -516;
-      inputScales[3][6][0] = 111;
-      inputScales[3][6][1] = -19;
-      inputScales[3][7][0] = 105;
-      inputScales[3][7][1] = 312;
-      inputScales[3][8][0] = 404;
-      inputScales[3][8][1] = 92;
-      inputScales[3][9][0] = -433;
-      inputScales[3][9][1] = 50;
-      inputScales[3][10][0] = 42;
-      inputScales[3][10][1] = -41;
-      inputScales[3][11][0] = -133;
-      inputScales[3][11][1] = -11;
-      inputScales[3][12][0] = 37;
-      inputScales[3][12][1] = 62;
-      inputScales[3][13][0] = -106;
-      inputScales[3][13][1] = -159;
-      inputScales[3][14][0] = -78;
-      inputScales[3][14][1] = -92;
-      inputScales[3][15][0] = 40;
-      inputScales[3][15][1] = 29;
-      inputScales[3][16][0] = 55;
-      inputScales[3][16][1] = 35;
-      inputScales[3][17][0] = -124;
-      inputScales[3][17][1] = 56;
-      inputScales[3][18][0] = -55;
-      inputScales[3][18][1] = -42;
-      inputScales[3][19][0] = -100;
-      inputScales[3][19][1] = -16;
-      inputScales[4][0][0] = 188;
-      inputScales[4][0][1] = -1215;
-      inputScales[4][1][0] = 5;
-      inputScales[4][1][1] = -899;
-      inputScales[4][2][0] = -452;
-      inputScales[4][2][1] = 133;
-      inputScales[4][3][0] = 142;
-      inputScales[4][3][1] = 120;
-      inputScales[4][4][0] = -709;
-      inputScales[4][4][1] = -148;
-      inputScales[4][5][0] = 156;
-      inputScales[4][5][1] = -421;
-      inputScales[4][6][0] = -491;
-      inputScales[4][6][1] = -777;
-      inputScales[4][7][0] = -157;
-      inputScales[4][7][1] = -218;
-      inputScales[4][8][0] = -273;
-      inputScales[4][8][1] = -162;
-      inputScales[4][9][0] = -44;
-      inputScales[4][9][1] = -193;
-      inputScales[4][10][0] = 472;
-      inputScales[4][10][1] = 80;
-      inputScales[4][11][0] = 124;
-      inputScales[4][11][1] = 2;
-      inputScales[4][12][0] = -90;
-      inputScales[4][12][1] = 68;
-      inputScales[4][13][0] = 22;
-      inputScales[4][13][1] = -29;
-      inputScales[4][14][0] = 85;
-      inputScales[4][14][1] = 39;
-      inputScales[4][15][0] = 87;
-      inputScales[4][15][1] = 124;
-      inputScales[4][16][0] = 62;
-      inputScales[4][16][1] = 15;
-      inputScales[4][17][0] = -19;
-      inputScales[4][17][1] = -43;
-      inputScales[4][18][0] = 66;
-      inputScales[4][18][1] = 55;
-      inputScales[4][19][0] = -5;
-      inputScales[4][19][1] = -109;
-      inputScales[5][0][0] = -884;
-      inputScales[5][0][1] = 179;
-      inputScales[5][1][0] = -809;
-      inputScales[5][1][1] = -625;
-      inputScales[5][2][0] = -146;
-      inputScales[5][2][1] = -1123;
-      inputScales[5][3][0] = 376;
-      inputScales[5][3][1] = -151;
-      inputScales[5][4][0] = -335;
-      inputScales[5][4][1] = -1038;
-      inputScales[5][5][0] = 123;
-      inputScales[5][5][1] = 219;
-      inputScales[5][6][0] = -677;
-      inputScales[5][6][1] = 331;
-      inputScales[5][7][0] = -1215;
-      inputScales[5][7][1] = 101;
-      inputScales[5][8][0] = 279;
-      inputScales[5][8][1] = -127;
-      inputScales[5][9][0] = -49;
-      inputScales[5][9][1] = 251;
-      inputScales[5][10][0] = -142;
-      inputScales[5][10][1] = -549;
-      inputScales[5][11][0] = 180;
-      inputScales[5][11][1] = -38;
-      inputScales[5][12][0] = 44;
-      inputScales[5][12][1] = -103;
-      inputScales[5][13][0] = -120;
-      inputScales[5][13][1] = 25;
-      inputScales[5][14][0] = 23;
-      inputScales[5][14][1] = -42;
-      inputScales[5][15][0] = -69;
-      inputScales[5][15][1] = 65;
-      inputScales[5][16][0] = 108;
-      inputScales[5][16][1] = -173;
-      inputScales[5][17][0] = 45;
-      inputScales[5][17][1] = -34;
-      inputScales[5][18][0] = 54;
-      inputScales[5][18][1] = -88;
-      inputScales[5][19][0] = -105;
-      inputScales[5][19][1] = -31;
-      inputScales[6][0][0] = -63;
-      inputScales[6][0][1] = -1042;
-      inputScales[6][1][0] = 79;
-      inputScales[6][1][1] = -601;
-      inputScales[6][2][0] = -1229;
-      inputScales[6][2][1] = 83;
-      inputScales[6][3][0] = 80;
-      inputScales[6][3][1] = -50;
-      inputScales[6][4][0] = -1163;
-      inputScales[6][4][1] = -339;
-      inputScales[6][5][0] = -199;
-      inputScales[6][5][1] = -417;
-      inputScales[6][6][0] = -837;
-      inputScales[6][6][1] = 273;
-      inputScales[6][7][0] = 178;
-      inputScales[6][7][1] = 39;
-      inputScales[6][8][0] = -333;
-      inputScales[6][8][1] = -1184;
-      inputScales[6][9][0] = -33;
-      inputScales[6][9][1] = -45;
-      inputScales[6][10][0] = 254;
-      inputScales[6][10][1] = 93;
-      inputScales[6][11][0] = 306;
-      inputScales[6][11][1] = 62;
-      inputScales[6][12][0] = -52;
-      inputScales[6][12][1] = 31;
-      inputScales[6][13][0] = 11;
-      inputScales[6][13][1] = 46;
-      inputScales[6][14][0] = 11;
-      inputScales[6][14][1] = -68;
-      inputScales[6][15][0] = -28;
-      inputScales[6][15][1] = -13;
-      inputScales[6][16][0] = 79;
-      inputScales[6][16][1] = 23;
-      inputScales[6][17][0] = 20;
-      inputScales[6][17][1] = 63;
-      inputScales[6][18][0] = 49;
-      inputScales[6][18][1] = 14;
-      inputScales[6][19][0] = -158;
-      inputScales[6][19][1] = 60;
-      inputScales[7][0][0] = -247;
-      inputScales[7][0][1] = -891;
-      inputScales[7][1][0] = 284;
-      inputScales[7][1][1] = -1037;
-      inputScales[7][2][0] = -998;
-      inputScales[7][2][1] = 411;
-      inputScales[7][3][0] = 163;
-      inputScales[7][3][1] = -51;
-      inputScales[7][4][0] = -1019;
-      inputScales[7][4][1] = 164;
-      inputScales[7][5][0] = -5;
-      inputScales[7][5][1] = 344;
-      inputScales[7][6][0] = -1259;
-      inputScales[7][6][1] = -163;
-      inputScales[7][7][0] = -31;
-      inputScales[7][7][1] = 25;
-      inputScales[7][8][0] = -1397;
-      inputScales[7][8][1] = 0;
-      inputScales[7][9][0] = -122;
-      inputScales[7][9][1] = -1036;
-      inputScales[7][10][0] = -65;
-      inputScales[7][10][1] = 45;
-      inputScales[7][11][0] = 289;
-      inputScales[7][11][1] = 134;
-      inputScales[7][12][0] = 72;
-      inputScales[7][12][1] = -20;
-      inputScales[7][13][0] = -92;
-      inputScales[7][13][1] = 15;
-      inputScales[7][14][0] = 20;
-      inputScales[7][14][1] = -10;
-      inputScales[7][15][0] = -102;
-      inputScales[7][15][1] = -48;
-      inputScales[7][16][0] = -16;
-      inputScales[7][16][1] = 28;
-      inputScales[7][17][0] = -82;
-      inputScales[7][17][1] = -72;
-      inputScales[7][18][0] = -17;
-      inputScales[7][18][1] = -93;
-      inputScales[7][19][0] = -71;
-      inputScales[7][19][1] = 105;
-      inputScales[8][0][0] = 171;
-      inputScales[8][0][1] = 1025;
-      inputScales[8][1][0] = 1285;
-      inputScales[8][1][1] = 62;
-      inputScales[8][2][0] = -500;
-      inputScales[8][2][1] = -194;
-      inputScales[8][3][0] = 269;
-      inputScales[8][3][1] = 248;
-      inputScales[8][4][0] = 97;
-      inputScales[8][4][1] = 331;
-      inputScales[8][5][0] = -2;
-      inputScales[8][5][1] = 174;
-      inputScales[8][6][0] = 237;
-      inputScales[8][6][1] = -611;
-      inputScales[8][7][0] = -567;
-      inputScales[8][7][1] = -186;
-      inputScales[8][8][0] = 41;
-      inputScales[8][8][1] = 72;
-      inputScales[8][9][0] = -364;
-      inputScales[8][9][1] = 65;
-      inputScales[8][10][0] = -248;
-      inputScales[8][10][1] = 1117;
-      inputScales[8][11][0] = -394;
-      inputScales[8][11][1] = 438;
-      inputScales[8][12][0] = 4;
-      inputScales[8][12][1] = -29;
-      inputScales[8][13][0] = -57;
-      inputScales[8][13][1] = 84;
-      inputScales[8][14][0] = 39;
-      inputScales[8][14][1] = -40;
-      inputScales[8][15][0] = -9;
-      inputScales[8][15][1] = -2;
-      inputScales[8][16][0] = 66;
-      inputScales[8][16][1] = 133;
-      inputScales[8][17][0] = -85;
-      inputScales[8][17][1] = -30;
-      inputScales[8][18][0] = 8;
-      inputScales[8][18][1] = -62;
-      inputScales[8][19][0] = -81;
-      inputScales[8][19][1] = 52;
-      inputScales[9][0][0] = -332;
-      inputScales[9][0][1] = 986;
-      inputScales[9][1][0] = 711;
-      inputScales[9][1][1] = 341;
-      inputScales[9][2][0] = -525;
-      inputScales[9][2][1] = -495;
-      inputScales[9][3][0] = -170;
-      inputScales[9][3][1] = -133;
-      inputScales[9][4][0] = -136;
-      inputScales[9][4][1] = -63;
-      inputScales[9][5][0] = 174;
-      inputScales[9][5][1] = 95;
-      inputScales[9][6][0] = 47;
-      inputScales[9][6][1] = -259;
-      inputScales[9][7][0] = 6;
-      inputScales[9][7][1] = 114;
-      inputScales[9][8][0] = 118;
-      inputScales[9][8][1] = -256;
-      inputScales[9][9][0] = 83;
-      inputScales[9][9][1] = 279;
-      inputScales[9][10][0] = 987;
-      inputScales[9][10][1] = 133;
-      inputScales[9][11][0] = -269;
-      inputScales[9][11][1] = 1123;
-      inputScales[9][12][0] = 92;
-      inputScales[9][12][1] = -56;
-      inputScales[9][13][0] = 74;
-      inputScales[9][13][1] = 96;
-      inputScales[9][14][0] = -43;
-      inputScales[9][14][1] = -30;
-      inputScales[9][15][0] = 54;
-      inputScales[9][15][1] = 73;
-      inputScales[9][16][0] = -42;
-      inputScales[9][16][1] = -16;
-      inputScales[9][17][0] = -80;
-      inputScales[9][17][1] = -45;
-      inputScales[9][18][0] = 50;
-      inputScales[9][18][1] = -48;
-      inputScales[9][19][0] = -88;
-      inputScales[9][19][1] = -74;
-      inputScales[10][0][0] = 46;
-      inputScales[10][0][1] = -40;
-      inputScales[10][1][0] = -50;
-      inputScales[10][1][1] = -1;
-      inputScales[10][2][0] = 55;
-      inputScales[10][2][1] = 8;
-      inputScales[10][3][0] = 34;
-      inputScales[10][3][1] = 65;
-      inputScales[10][4][0] = 46;
-      inputScales[10][4][1] = -996;
-      inputScales[10][5][0] = -27;
-      inputScales[10][5][1] = 23;
-      inputScales[10][6][0] = 51;
-      inputScales[10][6][1] = 43;
-      inputScales[10][7][0] = -61;
-      inputScales[10][7][1] = 56;
-      inputScales[10][8][0] = 31;
-      inputScales[10][8][1] = -160;
-      inputScales[10][9][0] = 72;
-      inputScales[10][9][1] = 42;
-      inputScales[10][10][0] = -69;
-      inputScales[10][10][1] = 15;
-      inputScales[10][11][0] = 0;
-      inputScales[10][11][1] = -70;
-      inputScales[10][12][0] = -61;
-      inputScales[10][12][1] = -105;
-      inputScales[10][13][0] = 32;
-      inputScales[10][13][1] = 61;
-      inputScales[10][14][0] = -84;
-      inputScales[10][14][1] = -42;
-      inputScales[10][15][0] = -66;
-      inputScales[10][15][1] = -1;
-      inputScales[10][16][0] = 33;
-      inputScales[10][16][1] = 84;
-      inputScales[10][17][0] = 60;
-      inputScales[10][17][1] = 27;
-      inputScales[10][18][0] = -19;
-      inputScales[10][18][1] = 46;
-      inputScales[10][19][0] = 92;
-      inputScales[10][19][1] = 2;
-      inputScales[11][0][0] = -88;
-      inputScales[11][0][1] = 26;
-      inputScales[11][1][0] = -29;
-      inputScales[11][1][1] = 3;
-      inputScales[11][2][0] = 64;
-      inputScales[11][2][1] = -19;
-      inputScales[11][3][0] = 126;
-      inputScales[11][3][1] = 39;
-      inputScales[11][4][0] = -50;
-      inputScales[11][4][1] = 63;
-      inputScales[11][5][0] = 106;
-      inputScales[11][5][1] = 1071;
-      inputScales[11][6][0] = 39;
-      inputScales[11][6][1] = -23;
-      inputScales[11][7][0] = -118;
-      inputScales[11][7][1] = 29;
-      inputScales[11][8][0] = 39;
-      inputScales[11][8][1] = 22;
-      inputScales[11][9][0] = -49;
-      inputScales[11][9][1] = 78;
-      inputScales[11][10][0] = -102;
-      inputScales[11][10][1] = 5;
-      inputScales[11][11][0] = -7;
-      inputScales[11][11][1] = 81;
-      inputScales[11][12][0] = 14;
-      inputScales[11][12][1] = 2;
-      inputScales[11][13][0] = -81;
-      inputScales[11][13][1] = -29;
-      inputScales[11][14][0] = 27;
-      inputScales[11][14][1] = 59;
-      inputScales[11][15][0] = 55;
-      inputScales[11][15][1] = -6;
-      inputScales[11][16][0] = -48;
-      inputScales[11][16][1] = -17;
-      inputScales[11][17][0] = 33;
-      inputScales[11][17][1] = -105;
-      inputScales[11][18][0] = 45;
-      inputScales[11][18][1] = -58;
-      inputScales[11][19][0] = 53;
-      inputScales[11][19][1] = 58;
-      inputScales[12][0][0] = -23;
-      inputScales[12][0][1] = -58;
-      inputScales[12][1][0] = 44;
-      inputScales[12][1][1] = -45;
-      inputScales[12][2][0] = -66;
-      inputScales[12][2][1] = -21;
-      inputScales[12][3][0] = -4;
-      inputScales[12][3][1] = 59;
-      inputScales[12][4][0] = -1;
-      inputScales[12][4][1] = 4;
-      inputScales[12][5][0] = -45;
-      inputScales[12][5][1] = -69;
-      inputScales[12][6][0] = 63;
-      inputScales[12][6][1] = -18;
-      inputScales[12][7][0] = 23;
-      inputScales[12][7][1] = 78;
-      inputScales[12][8][0] = 48;
-      inputScales[12][8][1] = 72;
-      inputScales[12][9][0] = -57;
-      inputScales[12][9][1] = 99;
-      inputScales[12][10][0] = 16;
-      inputScales[12][10][1] = -17;
-      inputScales[12][11][0] = 18;
-      inputScales[12][11][1] = -27;
-      inputScales[12][12][0] = 39;
-      inputScales[12][12][1] = -127;
-      inputScales[12][13][0] = -52;
-      inputScales[12][13][1] = -30;
-      inputScales[12][14][0] = 30;
-      inputScales[12][14][1] = -50;
-      inputScales[12][15][0] = -9;
-      inputScales[12][15][1] = 42;
-      inputScales[12][16][0] = -30;
-      inputScales[12][16][1] = -24;
-      inputScales[12][17][0] = 452;
-      inputScales[12][17][1] = 126;
-      inputScales[12][18][0] = 21;
-      inputScales[12][18][1] = 30;
-      inputScales[12][19][0] = -42;
-      inputScales[12][19][1] = -28;
-      inputScales[13][0][0] = 17;
-      inputScales[13][0][1] = -46;
-      inputScales[13][1][0] = -35;
-      inputScales[13][1][1] = -57;
-      inputScales[13][2][0] = -85;
-      inputScales[13][2][1] = 77;
-      inputScales[13][3][0] = -18;
-      inputScales[13][3][1] = 17;
-      inputScales[13][4][0] = -31;
-      inputScales[13][4][1] = -61;
-      inputScales[13][5][0] = -4;
-      inputScales[13][5][1] = -54;
-      inputScales[13][6][0] = 83;
-      inputScales[13][6][1] = 32;
-      inputScales[13][7][0] = 58;
-      inputScales[13][7][1] = 33;
-      inputScales[13][8][0] = 15;
-      inputScales[13][8][1] = -22;
-      inputScales[13][9][0] = -9;
-      inputScales[13][9][1] = -95;
-      inputScales[13][10][0] = 9;
-      inputScales[13][10][1] = 38;
-      inputScales[13][11][0] = 58;
-      inputScales[13][11][1] = -66;
-      inputScales[13][12][0] = -61;
-      inputScales[13][12][1] = 44;
-      inputScales[13][13][0] = -40;
-      inputScales[13][13][1] = -67;
-      inputScales[13][14][0] = -71;
-      inputScales[13][14][1] = 5;
-      inputScales[13][15][0] = 44;
-      inputScales[13][15][1] = 12;
-      inputScales[13][16][0] = 81;
-      inputScales[13][16][1] = -76;
-      inputScales[13][17][0] = 52;
-      inputScales[13][17][1] = -42;
-      inputScales[13][18][0] = -31;
-      inputScales[13][18][1] = -1007;
-      inputScales[13][19][0] = 18;
-      inputScales[13][19][1] = 80;
-      inputScales[14][0][0] = -4;
-      inputScales[14][0][1] = -9;
-      inputScales[14][1][0] = -28;
-      inputScales[14][1][1] = -8;
-      inputScales[14][2][0] = -75;
-      inputScales[14][2][1] = -44;
-      inputScales[14][3][0] = 54;
-      inputScales[14][3][1] = 1;
-      inputScales[14][4][0] = 21;
-      inputScales[14][4][1] = -39;
-      inputScales[14][5][0] = -20;
-      inputScales[14][5][1] = 48;
-      inputScales[14][6][0] = 59;
-      inputScales[14][6][1] = -19;
-      inputScales[14][7][0] = 9;
-      inputScales[14][7][1] = -167;
-      inputScales[14][8][0] = 79;
-      inputScales[14][8][1] = 62;
-      inputScales[14][9][0] = -106;
-      inputScales[14][9][1] = -39;
-      inputScales[14][10][0] = -1;
-      inputScales[14][10][1] = -8;
-      inputScales[14][11][0] = -128;
-      inputScales[14][11][1] = -20;
-      inputScales[14][12][0] = -33;
-      inputScales[14][12][1] = 64;
-      inputScales[14][13][0] = -17;
-      inputScales[14][13][1] = -29;
-      inputScales[14][14][0] = 24;
-      inputScales[14][14][1] = -140;
-      inputScales[14][15][0] = 2;
-      inputScales[14][15][1] = 13;
-      inputScales[14][16][0] = -32;
-      inputScales[14][16][1] = -64;
-      inputScales[14][17][0] = 10;
-      inputScales[14][17][1] = -28;
-      inputScales[14][18][0] = -6;
-      inputScales[14][18][1] = 70;
-      inputScales[14][19][0] = -33;
-      inputScales[14][19][1] = 1033;
-      inputScales[15][0][0] = 57;
-      inputScales[15][0][1] = -21;
-      inputScales[15][1][0] = -11;
-      inputScales[15][1][1] = 36;
-      inputScales[15][2][0] = 66;
-      inputScales[15][2][1] = -37;
-      inputScales[15][3][0] = 29;
-      inputScales[15][3][1] = 62;
-      inputScales[15][4][0] = -199;
-      inputScales[15][4][1] = -62;
-      inputScales[15][5][0] = -26;
-      inputScales[15][5][1] = -70;
-      inputScales[15][6][0] = 70;
-      inputScales[15][6][1] = 32;
-      inputScales[15][7][0] = -9;
-      inputScales[15][7][1] = 29;
-      inputScales[15][8][0] = -11;
-      inputScales[15][8][1] = -18;
-      inputScales[15][9][0] = -21;
-      inputScales[15][9][1] = -76;
-      inputScales[15][10][0] = 27;
-      inputScales[15][10][1] = -38;
-      inputScales[15][11][0] = 75;
-      inputScales[15][11][1] = -89;
-      inputScales[15][12][0] = 1;
-      inputScales[15][12][1] = -41;
-      inputScales[15][13][0] = 77;
-      inputScales[15][13][1] = 174;
-      inputScales[15][14][0] = 32;
-      inputScales[15][14][1] = 8;
-      inputScales[15][15][0] = -37;
-      inputScales[15][15][1] = 28;
-      inputScales[15][16][0] = 28;
-      inputScales[15][16][1] = -10;
-      inputScales[15][17][0] = -121;
-      inputScales[15][17][1] = -72;
-      inputScales[15][18][0] = -92;
-      inputScales[15][18][1] = 79;
-      inputScales[15][19][0] = -27;
-      inputScales[15][19][1] = -15;
-      inputScales[16][0][0] = -93;
-      inputScales[16][0][1] = 18;
-      inputScales[16][1][0] = 5;
-      inputScales[16][1][1] = -12;
-      inputScales[16][2][0] = -121;
-      inputScales[16][2][1] = 77;
-      inputScales[16][3][0] = -53;
-      inputScales[16][3][1] = -23;
-      inputScales[16][4][0] = 71;
-      inputScales[16][4][1] = 45;
-      inputScales[16][5][0] = -18;
-      inputScales[16][5][1] = 84;
-      inputScales[16][6][0] = 55;
-      inputScales[16][6][1] = -9;
-      inputScales[16][7][0] = 58;
-      inputScales[16][7][1] = -86;
-      inputScales[16][8][0] = 72;
-      inputScales[16][8][1] = -115;
-      inputScales[16][9][0] = 24;
-      inputScales[16][9][1] = 58;
-      inputScales[16][10][0] = -55;
-      inputScales[16][10][1] = 18;
-      inputScales[16][11][0] = 75;
-      inputScales[16][11][1] = 5;
-      inputScales[16][12][0] = -1;
-      inputScales[16][12][1] = 127;
-      inputScales[16][13][0] = 108;
-      inputScales[16][13][1] = 26;
-      inputScales[16][14][0] = 13;
-      inputScales[16][14][1] = -20;
-      inputScales[16][15][0] = 52;
-      inputScales[16][15][1] = -38;
-      inputScales[16][16][0] = -128;
-      inputScales[16][16][1] = 5;
-      inputScales[16][17][0] = -95;
-      inputScales[16][17][1] = 66;
-      inputScales[16][18][0] = -36;
-      inputScales[16][18][1] = -60;
-      inputScales[16][19][0] = 4;
-      inputScales[16][19][1] = 33;
-      inputScales[17][0][0] = 33;
-      inputScales[17][0][1] = 47;
-      inputScales[17][1][0] = 181;
-      inputScales[17][1][1] = -16;
-      inputScales[17][2][0] = 79;
-      inputScales[17][2][1] = -152;
-      inputScales[17][3][0] = 24;
-      inputScales[17][3][1] = 37;
-      inputScales[17][4][0] = 106;
-      inputScales[17][4][1] = 9;
-      inputScales[17][5][0] = 46;
-      inputScales[17][5][1] = 38;
-      inputScales[17][6][0] = 1;
-      inputScales[17][6][1] = 48;
-      inputScales[17][7][0] = 80;
-      inputScales[17][7][1] = 24;
-      inputScales[17][8][0] = -115;
-      inputScales[17][8][1] = -55;
-      inputScales[17][9][0] = -91;
-      inputScales[17][9][1] = 74;
-      inputScales[17][10][0] = 11;
-      inputScales[17][10][1] = 5;
-      inputScales[17][11][0] = 27;
-      inputScales[17][11][1] = -48;
-      inputScales[17][12][0] = -3;
-      inputScales[17][12][1] = 9;
-      inputScales[17][13][0] = -77;
-      inputScales[17][13][1] = 27;
-      inputScales[17][14][0] = 33;
-      inputScales[17][14][1] = 9;
-      inputScales[17][15][0] = 75;
-      inputScales[17][15][1] = 49;
-      inputScales[17][16][0] = 55;
-      inputScales[17][16][1] = -7;
-      inputScales[17][17][0] = 1;
-      inputScales[17][17][1] = -67;
-      inputScales[17][18][0] = -36;
-      inputScales[17][18][1] = 63;
-      inputScales[17][19][0] = 74;
-      inputScales[17][19][1] = -39;
-      inputScales[18][0][0] = -39;
-      inputScales[18][0][1] = 17;
-      inputScales[18][1][0] = 60;
-      inputScales[18][1][1] = 57;
-      inputScales[18][2][0] = 34;
-      inputScales[18][2][1] = 37;
-      inputScales[18][3][0] = 54;
-      inputScales[18][3][1] = -7;
-      inputScales[18][4][0] = 6;
-      inputScales[18][4][1] = -16;
-      inputScales[18][5][0] = 31;
-      inputScales[18][5][1] = 37;
-      inputScales[18][6][0] = 10;
-      inputScales[18][6][1] = 7;
-      inputScales[18][7][0] = 69;
-      inputScales[18][7][1] = -37;
-      inputScales[18][8][0] = 44;
-      inputScales[18][8][1] = 68;
-      inputScales[18][9][0] = 32;
-      inputScales[18][9][1] = 14;
-      inputScales[18][10][0] = 35;
-      inputScales[18][10][1] = 60;
-      inputScales[18][11][0] = 121;
-      inputScales[18][11][1] = -75;
-      inputScales[18][12][0] = -28;
-      inputScales[18][12][1] = -97;
-      inputScales[18][13][0] = 55;
-      inputScales[18][13][1] = -78;
-      inputScales[18][14][0] = 33;
-      inputScales[18][14][1] = 47;
-      inputScales[18][15][0] = 53;
-      inputScales[18][15][1] = 13;
-      inputScales[18][16][0] = 48;
-      inputScales[18][16][1] = 28;
-      inputScales[18][17][0] = 38;
-      inputScales[18][17][1] = 122;
-      inputScales[18][18][0] = 78;
-      inputScales[18][18][1] = 3;
-      inputScales[18][19][0] = 53;
-      inputScales[18][19][1] = 33;
-      inputScales[19][0][0] = 37;
-      inputScales[19][0][1] = 92;
-      inputScales[19][1][0] = 56;
-      inputScales[19][1][1] = -26;
-      inputScales[19][2][0] = -16;
-      inputScales[19][2][1] = -66;
-      inputScales[19][3][0] = -9;
-      inputScales[19][3][1] = -59;
-      inputScales[19][4][0] = 58;
-      inputScales[19][4][1] = -64;
-      inputScales[19][5][0] = -44;
-      inputScales[19][5][1] = 17;
-      inputScales[19][6][0] = -41;
-      inputScales[19][6][1] = -96;
-      inputScales[19][7][0] = 36;
-      inputScales[19][7][1] = -49;
-      inputScales[19][8][0] = 78;
-      inputScales[19][8][1] = -102;
-      inputScales[19][9][0] = -17;
-      inputScales[19][9][1] = 7;
-      inputScales[19][10][0] = 80;
-      inputScales[19][10][1] = -91;
-      inputScales[19][11][0] = 50;
-      inputScales[19][11][1] = -19;
-      inputScales[19][12][0] = 30;
-      inputScales[19][12][1] = 3;
-      inputScales[19][13][0] = 27;
-      inputScales[19][13][1] = 100;
-      inputScales[19][14][0] = -88;
-      inputScales[19][14][1] = 105;
-      inputScales[19][15][0] = 92;
-      inputScales[19][15][1] = 9;
-      inputScales[19][16][0] = -42;
-      inputScales[19][16][1] = 42;
-      inputScales[19][17][0] = 93;
-      inputScales[19][17][1] = -76;
-      inputScales[19][18][0] = 56;
-      inputScales[19][18][1] = -113;
-      inputScales[19][19][0] = 60;
-      inputScales[19][19][1] = 225;
-      biases[0][0] = -1912;
-      biases[0][1] = -2068;
-      biases[0][2] = 3123;
-      biases[0][3] = 4017;
-      biases[0][4] = 3968;
-      biases[0][5] = 5119;
-      biases[0][6] = 5131;
-      biases[0][7] = 6137;
-      biases[0][8] = -2060;
-      biases[0][9] = -2963;
-      biases[0][10] = 36;
-      biases[0][11] = -4;
-      biases[0][12] = -7;
-      biases[0][13] = -6;
-      biases[0][14] = -4;
-      biases[0][15] = 34;
-      biases[0][16] = 24;
-      biases[0][17] = -21;
-      biases[0][18] = 15;
-      biases[0][19] = 3;
-      biases[1][0] = 7;
-      biases[1][1] = 44;
-      biases[1][2] = 10;
-      biases[1][3] = 123;
-      biases[1][4] = -9;
-      biases[1][5] = 19;
-      biases[1][6] = 44;
-      biases[1][7] = 75;
-      biases[1][8] = -43;
-      biases[1][9] = 70;
-      biases[1][10] = 86;
-      biases[1][11] = 12;
-      biases[1][12] = 73;
-      biases[1][13] = 11;
-      biases[1][14] = 16;
-      biases[1][15] = 13;
-      biases[1][16] = -12;
-      biases[1][17] = 47;
-      biases[1][18] = 31;
-      biases[1][19] = 1;
-      outputBias[0] = 115;
-      outputBias[1] = 9;
-      slopes[0][0][0] = 62;
-      slopes[0][0][1] = 154;
-      slopes[0][0][2] = 2008;
-      slopes[0][0][3] = 982;
-      slopes[0][0][4] = 948;
-      slopes[0][0][5] = 1968;
-      slopes[0][0][6] = 1100;
-      slopes[0][0][7] = 971;
-      slopes[0][0][8] = 19;
-      slopes[0][0][9] = 259;
-      slopes[0][0][10] = 27;
-      slopes[0][0][11] = 6;
-      slopes[0][0][12] = 2;
-      slopes[0][0][13] = 0;
-      slopes[0][0][14] = 24;
-      slopes[0][0][15] = 9;
-      slopes[0][0][16] = 6;
-      slopes[0][0][17] = 39;
-      slopes[0][0][18] = 50;
-      slopes[0][0][19] = 1;
-      slopes[0][1][0] = 1115;
-      slopes[0][1][1] = 921;
-      slopes[0][1][2] = 61;
-      slopes[0][1][3] = 65;
-      slopes[0][1][4] = 65;
-      slopes[0][1][5] = 123;
-      slopes[0][1][6] = 3;
-      slopes[0][1][7] = 23;
-      slopes[0][1][8] = 911;
-      slopes[0][1][9] = 1115;
-      slopes[0][1][10] = 24;
-      slopes[0][1][11] = 39;
-      slopes[0][1][12] = 24;
-      slopes[0][1][13] = 62;
-      slopes[0][1][14] = 37;
-      slopes[0][1][15] = 6;
-      slopes[0][1][16] = 17;
-      slopes[0][1][17] = 37;
-      slopes[0][1][18] = 4;
-      slopes[0][1][19] = 2;
-      slopes[1][0][0] = 40;
-      slopes[1][0][1] = 82;
-      slopes[1][0][2] = 101;
-      slopes[1][0][3] = 17;
-      slopes[1][0][4] = 45;
-      slopes[1][0][5] = 56;
-      slopes[1][0][6] = 14;
-      slopes[1][0][7] = 26;
-      slopes[1][0][8] = 45;
-      slopes[1][0][9] = 53;
-      slopes[1][0][10] = 1018;
-      slopes[1][0][11] = 35;
-      slopes[1][0][12] = 13;
-      slopes[1][0][13] = 972;
-      slopes[1][0][14] = 12;
-      slopes[1][0][15] = 6;
-      slopes[1][0][16] = 45;
-      slopes[1][0][17] = 48;
-      slopes[1][0][18] = 37;
-      slopes[1][0][19] = 20;
-      slopes[1][1][0] = 51;
-      slopes[1][1][1] = 61;
-      slopes[1][1][2] = 96;
-      slopes[1][1][3] = 109;
-      slopes[1][1][4] = 119;
-      slopes[1][1][5] = 102;
-      slopes[1][1][6] = 82;
-      slopes[1][1][7] = 26;
-      slopes[1][1][8] = 18;
-      slopes[1][1][9] = 40;
-      slopes[1][1][10] = 50;
-      slopes[1][1][11] = 2029;
-      slopes[1][1][12] = 1016;
-      slopes[1][1][13] = 7;
-      slopes[1][1][14] = 1059;
-      slopes[1][1][15] = 73;
-      slopes[1][1][16] = 36;
-      slopes[1][1][17] = 18;
-      slopes[1][1][18] = 43;
-      slopes[1][1][19] = 37;
-      outputSlopes[0][0] = 904;
-      outputSlopes[0][1] = 885;
-      outputSlopes[1][0] = 1016;
-      outputSlopes[1][1] = 1027;
-      residualScale = 625;
-      residualAdjustment = -67;
-      residualBaseline = -108;
-  }
+  int outputBias[2] = { 100, 0 };
+  int outputSlopes[2][2] = { { 948, 879 }, {1024, 1024} };
 
   int PReLU(int input, int negativeSlope, int positiveSlope) {
       int output = 0;
@@ -1056,26 +152,15 @@ namespace {
       return PReLU(outputSum + outputBias[n], outputSlopes[n][0], outputSlopes[n][1]);
   }
 
-  int Extensions[2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2];
-  int Reduction[2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2];
+  int Store[2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2];
 
-  int extensionsLookup(bool W_IN[23]) {
-      if (Extensions[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
+  int Lookup(bool W_IN[23], int n) {
+      if (Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
           [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]] == 0) {
-          Extensions[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
-              [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]] = calculateFinalLayers(W_IN, 0);
+          Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
+              [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]] = calculateFinalLayers(W_IN, n);
       }
-      return Extensions[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
-          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]];
-  }
-
-  int reductionsLookup(bool W_IN[23]) {
-      if (Reduction[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
-          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]] == 0) {
-          Reduction[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
-              [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]] = calculateFinalLayers(W_IN, 1);
-      }
-      return Reduction[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
+      return Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
           [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]];
   }
 
@@ -1167,7 +252,6 @@ void Search::init() {
 
   for (int i = 1; i < MAX_MOVES; ++i)
       Reductions[i] = int((reductionTableScale + std::log(Threads.size()) * 32) * std::log(i) + reductionTableAdjustment);
-  SetValues();
 }
 
 
@@ -2051,9 +1135,10 @@ moves_loop: // When in check, search starts here
           }
       }
 
-      bool W_IN[23] = {};
 
-      // Step 15. Extensions (~100 Elo)
+
+      // Step 15. Extensions/Reductions (~200 Elo)
+      bool W_IN[23] = {};
 
       if (ss->ply < thisThread->rootDepth * 2)
           W_IN[0] = true;
@@ -2066,7 +1151,7 @@ moves_loop: // When in check, search starts here
           && (tte->bound() & BOUND_LOWER)
           && tte->depth() >= depth - 3)
       {
-          W_IN[1] = true; //Only if W_IN[0] = 1;
+          W_IN[1] = true; 
       }
 
       if (W_IN[1] == true && W_IN[0] == true) 
@@ -2083,30 +1168,22 @@ moves_loop: // When in check, search starts here
               W_IN[2] = true;
           }
 
-          // Avoid search explosion by limiting the number of double extensions
           if (value < singularBeta - 21)
           {
               W_IN[3] = true;
               depth += depth < 13;
           }
 
-          // Multi-cut pruning
-          // Our ttMove is assumed to fail high, and now we failed high also on a reduced
-          // search without the ttMove. So we assume this expected Cut-node is not singular,
-          // that multiple moves fail high, and we can prune the whole subtree by returning
-          // a softbound.
           if (singularBeta >= beta && W_IN[2] == false)
               return singularBeta;
       }
 
-      // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
       if (ttValue >= beta)
           W_IN[4] = true;
 
       if (PvNode)
           W_IN[5] = true;
 
-      // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
       if (cutNode)
           W_IN[6] = true;
 
@@ -2125,19 +1202,15 @@ moves_loop: // When in check, search starts here
       if (20 <= depth)
           W_IN[15] = true;
 
-      // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
       if (ttValue <= value)
           W_IN[8] = true;
 
-      // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
       if (ttValue <= alpha)
           W_IN[9] = true;
 
-      // Check extensions (~1 Elo)
       if (givesCheck)
           W_IN[10] = true;
 
-      // Quiet ttMove extensions (~1 Elo)
       if (move == ss->killers[0]
           && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
           W_IN[11] = true;
@@ -2154,17 +1227,17 @@ moves_loop: // When in check, search starts here
       if ((ss+1)->cutoffCnt >= 4)
           W_IN[19] = true;
 
-      if ((ss-1)->moveCount > 8)
+      if ((ss-1)->moveCount >= 9)
           W_IN[20] = true;
 
       if (ss->ttPv && !likelyFailLow)
           W_IN[21] = true;
 
-      if(tte->depth() >= depth + 3)
-          W_IN[22] = true
+      if (tte->depth() >= depth + 3)
+          W_IN[22] = true;
 
-      extension = extensionsLookup(W_IN);
-      r += reductionsLookup(W_IN);
+      extension = Lookup(W_IN, 0);
+      r += Lookup(W_IN, 1);
 
       // Add extension to new depth
       newDepth += extension / 1024;
