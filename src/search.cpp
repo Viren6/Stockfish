@@ -65,12 +65,10 @@ namespace {
     const int depthReductionDecreaseThres = 4707; const int improvingReductionMax = 1916344;
     const int baseReductionAdjustment = 928808; const int baseReductionDeltaScale = 880029; const int reductionTableScale = 1304;
     const int reductionTableAdjustment = 91; const int improvementAdjustment = 494; const int improvementScale = 123; const int improvementUpper = 991;
-    const int ttPvAdjustment = 2270; const int ttPvScale = 361; const int cutNodettPvAdjustment = -318; const int ttPvClampUpper = 1140; const int statScoreScale = 11871; 
-    const int statScoreDepthScale = 5401; const int statScoreDepthLower = 7; const int statScoreDepthUpper = 22; const int statScoreAdjustment = -3896348;
-    const int statScoreMainHistoryScale = 2351; const int statScoreContHistoryZero = 1186; const int statScoreContHistoryOne = 1013; 
-    const int statScoreContHistoryThree = 895; const int ttPvClampLower = -393; const int improvementLower = 4; const int nullMoveStatScoreThreshold = 17141852; 
-    const int futilityPruningStatScoreDivisor = 359047; const int LMRDepthReductionThres = -3754;
-    const int clampLower = 922; const int moveCountScale = 95;
+    const int statScoreScale = 11871; const int statScoreDepthScale = 5401; const int statScoreDepthLower = 7; const int statScoreDepthUpper = 22; 
+    const int statScoreAdjustment = -3896348; const int statScoreMainHistoryScale = 2351; const int statScoreContHistoryZero = 1186; 
+    const int statScoreContHistoryOne = 1013;  const int statScoreContHistoryThree = 895; const int improvementLower = 4; 
+    const int nullMoveStatScoreThreshold = 17141852; const int futilityPruningStatScoreDivisor = 359047; const int LMRDepthReductionThres = -3754;
 
     //Residuals
     int residualScale; int residualAdjustment; int residualBaseline;
@@ -1046,11 +1044,11 @@ namespace {
       return output;
   }
 
-  int calculateFinalLayers(bool W_IN[20], int n) {
+  int calculateFinalLayers(bool W_IN[23], int n) {
       int outputSum = 0;
-      for (int i = 0; i < 20; ++i) {
+      for (int i = 0; i < 23; ++i) {
           int sum = 0;
-          for (int j = 0; j < 20; ++j) {
+          for (int j = 0; j < 23; ++j) {
               sum += inputScales[i][j][W_IN[j]];
           }
           outputSum += PReLU(sum + biases[n][i], slopes[n][0][i], slopes[n][1][i]);
@@ -1058,27 +1056,27 @@ namespace {
       return PReLU(outputSum + outputBias[n], outputSlopes[n][0], outputSlopes[n][1]);
   }
 
-  int Extensions[2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2];
-  int Reduction[2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2];
+  int Extensions[2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2];
+  int Reduction[2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2];
 
-  int extensionsLookup(bool W_IN[20]) {
+  int extensionsLookup(bool W_IN[23]) {
       if (Extensions[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
-          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]] == 0) {
+          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]] == 0) {
           Extensions[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
-              [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]] = calculateFinalLayers(W_IN, 0);
+              [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]] = calculateFinalLayers(W_IN, 0);
       }
       return Extensions[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
-          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]];
+          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]];
   }
 
-  int reductionsLookup(bool W_IN[20]) {
+  int reductionsLookup(bool W_IN[23]) {
       if (Reduction[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
-          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]] == 0) {
+          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]] == 0) {
           Reduction[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
-              [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]] = calculateFinalLayers(W_IN, 1);
+              [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]] = calculateFinalLayers(W_IN, 1);
       }
       return Reduction[W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
-          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]];
+          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]];
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
@@ -2053,7 +2051,7 @@ moves_loop: // When in check, search starts here
           }
       }
 
-      bool W_IN[20] = {};
+      bool W_IN[23] = {};
 
       // Step 15. Extensions (~100 Elo)
 
@@ -2156,6 +2154,14 @@ moves_loop: // When in check, search starts here
       if ((ss+1)->cutoffCnt >= 4)
           W_IN[19] = true;
 
+      if ((ss-1)->moveCount > 8)
+          W_IN[20] = true;
+
+      if (ss->ttPv && !likelyFailLow)
+          W_IN[21] = true;
+
+      if(tte->depth() >= depth + 3)
+          W_IN[22] = true
 
       extension = extensionsLookup(W_IN);
       r += reductionsLookup(W_IN);
@@ -2181,15 +2187,6 @@ moves_loop: // When in check, search starts here
                      + statScoreContHistoryOne * (*contHist[1])[movedPiece][to_sq(move)]
                      + statScoreContHistoryThree * (*contHist[3])[movedPiece][to_sq(move)]
                      + statScoreAdjustment);
-
-      // Decrease reduction if opponent's move count is high (~1 Elo)
-      r -= std::min((ss-1)->moveCount * moveCountScale, clampLower);
-
-      // Decrease reduction if position is or has been on the PV
-      // and node is not likely to fail low. (~3 Elo)
-      // Decrease further on cutNodes. (~1 Elo)
-      r -= (ss->ttPv && !likelyFailLow) * 
-           (ttPvAdjustment + cutNode * (std::clamp((tte->depth() - depth) * ttPvScale + cutNodettPvAdjustment, ttPvClampLower, ttPvClampUpper)));
 
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
       r -= ss->statScore / (statScoreScale + statScoreDepthScale * (depth > statScoreDepthLower && depth < statScoreDepthUpper));
