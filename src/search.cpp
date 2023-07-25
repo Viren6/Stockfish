@@ -60,19 +60,30 @@ using namespace Search;
 namespace {
 
     //VLTC Tune 1 60k game values
-    const int baseImprovingReductionAdjustment = -24012; const int baseReductionScale = 966;
-    const int baseImprovingReductionScale = 920; const int lmrDepthScale = 978; const int lmrDepthScaleTwo = 876; const int ttMoveCutNodeScale = 3803;
-    const int depthReductionDecreaseThres = 4707; const int improvingReductionMax = 1916344;
-    const int baseReductionAdjustment = 928808; const int baseReductionDeltaScale = 880029; const int reductionTableScale = 1304;
-    const int reductionTableAdjustment = 91; const int improvementAdjustment = 494; const int improvementScale = 123; const int improvementUpper = 991;
-    const int statScoreScale = 11871; const int statScoreDepthScale = 5401; const int statScoreDepthLower = 7; const int statScoreDepthUpper = 22; 
-    const int statScoreAdjustment = -3896348; const int statScoreMainHistoryScale = 2351; const int statScoreContHistoryZero = 1186; 
-    const int statScoreContHistoryOne = 1013;  const int statScoreContHistoryThree = 895; const int improvementLower = 4; 
-    const int nullMoveStatScoreThreshold = 17141852; const int futilityPruningStatScoreDivisor = 359047; const int LMRDepthReductionThres = -3754;
+    int cutoffCntScale = 241; int moveCountScale = 95; int ttMoveScale = 336; int singularQuietLMRScale = 1068;
+    int ttCaptureScale = 878; int clampLower = 922; int clampUpper = 2764; int cutNodeScale = 2320;
+    int reductionAdjustment = 214; int baseImprovingReductionAdjustment = -24012; int ttClamp = 2049; int baseReductionScale = 966;
+    int baseImprovingReductionScale = 920; int lmrDepthScale = 978; int lmrDepthScaleTwo = 876; int ttMoveCutNodeScale = 3803;
+    int depthReductionDecreaseThres = 4707; int improvingReductionMax = 1916344;
+    int baseReductionAdjustment = 928808; int baseReductionDeltaScale = 880029; int reductionTableScale = 1304;
+    int reductionTableAdjustment = 91; int improvementAdjustment = 494; int improvementScale = 123; int improvementUpper = 991;
+    int pvAdjustment = 1212; int pvClamp = 843; int pvScale = 210; int ttPvAdjustment = 2270; int ttPvScale = 361;
+    int cutNodettPvAdjustment = -318; int ttPvClampUpper = 1140; int statScoreScale = 11871; int statScoreDepthScale = 5401;
+    int statScoreDepthLower = 7; int statScoreDepthUpper = 22; int statScoreAdjustment = -3896348; int statScoreMainHistoryScale = 2351;
+    int statScoreContHistoryZero = 1186; int statScoreContHistoryOne = 1013; int statScoreContHistoryThree = 895; int ttPvClampLower = -393;
+    int improvementLower = 4; int nullMoveStatScoreThreshold = 17141852; int futilityPruningStatScoreDivisor = 359047;
+    int LMRDepthReductionThres = -3754;
+
+    //Extension Reduction Adjustments
+    int singularExtensionOne = -12; int singularExtensionTwoLowDepth = 32; int singularExtensionTwoHighDepth = -266;
+    int ttValueBetaPv = -19; int ttValueBetaNonPv = 38; int cutNodeMidDepth = 35; int cutNodeOtherDepth = 66;
+    int ttValueValue = -22; int ttValueAlpha = -72; int givesCheckLowDepth = -33; int quietTTMove = 61;
 
     //Residuals
-    int residualScale = 583; int residualAdjustment = -3; int residualBaseline = -99;
+    int residualScale = 525; int residualAdjustment = -30; int residualBaseline = -92;
 
+    //Step 10 Reduction Adjustments
+    int pvNodeNotTTMove = 295; int cutNodeNotTTMove = 4;
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
@@ -95,45 +106,34 @@ namespace {
   }
 
   //Tune 1 116k game values
-  int inputScales[23][23][2] = {
-        {{114, 1175}, {282, 907}, {-653, 838}, {57, 275}, {-321, 151}, {-132, -38}, {-138, 268}, {51, 310}, {147, 211}, {-188, 64}, {47, -152}, {232, 245}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{106, 1107}, {-449, 585}, {-189, 503}, {-136, 965}, {103, -224}, {-21, -336}, {-268, 399}, {-75, -204}, {173, -96}, {-3, -31}, {-80, 116}, {302, 15}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{-340, -1035}, {220, -974}, {-1019, -154}, {-503, 517}, {335, -949}, {-238, 36}, {318, -364}, {264, 41}, {127, 224}, {157, 374}, {84, 42}, {99, -509}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{-86, -1085}, {22, -1259}, {-1054, 317}, {-290, -199}, {13, -1034}, {-173, -519}, {73, -55}, {105, 300}, {435, 29}, {-456, -86}, {104, -96}, {-119, 58}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{259, -1221}, {5, -954}, {-462, 140}, {245, 16}, {-809, -82}, {139, -318}, {-427, -750}, {-137, -236}, {-270, -82}, {-54, -152}, {502, 94}, {171, 100}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{-930, 218}, {-878, -500}, {-167, -1203,}, {379, -198}, {-380, -1099}, {111, 250}, {-686, 362}, {-1114, 92}, {255, -52}, {-31, 293}, {-125, -407}, {119, -45}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{-85, -1026}, {42, -644}, {-1233, 122}, {59, 15}, {-1090, -277}, {-132, -439}, {-1001, 251}, {119, 72}, {-352, -1173}, {123, -58}, {238, 33}, {268, 24}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{-157, -861}, {252, -1103}, {-1017, 347}, {257, -125}, {-1058, 204}, {-36, 311}, {-1276, -99}, {44, 41}, {-1382, -48}, {-83, -1058}, {29, 20}, {319, 94}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{149, 952}, {1238, 110}, {-400, -206}, {279, 202}, {64, 280}, {-73, 187}, {290, -508}, {-583, -143}, {-16, 87}, {-306, -4}, {-210, 1121}, {-370, 543}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{-240, 982}, {582, 328}, {-450, -377}, {-67, -130}, {-56, -9}, {146, 169}, {44, -335}, {-35, 52}, {178, -274}, {-12, 271}, {1029, 97}, {-310, 1108}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, -1024}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 1024},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {500, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, -1024},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 1024}, {0, 0},{0, 0},{0, 0}},
-        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, -1024},{0, 0},{0, 0}},
-        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 1024},{0, 0}},
-        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 1024},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 1024},{0, 1024}},
-        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}},
-        {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},{0, 0},{0, 0}, {0, 0},{0, 0},{0, 0}}
-  };
+  int inputScales[23][23][2];
 
-  int biases[2][23] = { { -1961, -2085, 3151, 3963, 4026, 5108, 5141, 6171, -2056, -3008, 0, 0, 0, 0, 0, 0, 0, -2048, 0, 0, 0, 0, 0},
-                         {-13, 39, 14, 81, 11, 23, 19, 40, -59, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} };
-  int slopes[2][2][23] = { {{113, 110 ,2021 ,944 ,1004 ,1994 ,1131 ,980 ,19 ,261, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                            {1098 ,925 ,44 ,103 ,78 ,106 ,16 ,18 ,881 ,1087 , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
-                          {{16, 14, 44, 44, 18, 6, 9, 58 ,3 ,15, 1024, 0, 0, 1024, 0, 1024, 0, 0, 0, 0, 0, 0, 0},
-                          {14, 6, 88, 97, 142, 39, 89, 18, 42, 19, 0, 2048, 1024, 0, 1024, 0, 2048, 3072, 0, 0, 0, 0, 0}} };
+  int biases[2][23];
+  int slopes[2][2][23];
 
-  int outputBias[2] = { 100, 0 };
-  int outputSlopes[2][2] = { { 948, 879 }, {1024, 1024} };
+  int outputBias[2];
+  int outputSlopes[2][2];
 
   TUNE(SetRange(-4096, 4096), inputScales, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
 
-  TUNE(SetRange(128, 1536), residualScale, SetRange(-2048, 2048), residualAdjustment, residualBaseline);
+  TUNE(SetRange(100, 1000), cutoffCntScale, SetRange(50, 500), moveCountScale,
+      SetRange(50, 1000), ttMoveScale, SetRange(400, 2000), singularQuietLMRScale,
+      SetRange(400, 2000), ttCaptureScale, SetRange(500, 4000), clampLower, SetRange(500, 4000), clampUpper,
+      SetRange(800, 4000), cutNodeScale, SetRange(-1000, 1000), reductionAdjustment,
+      SetRange(-1000000, 1000000), baseImprovingReductionAdjustment, SetRange(500, 3000), ttClamp,
+      SetRange(400, 2000), baseReductionScale, baseImprovingReductionScale, lmrDepthScale, lmrDepthScaleTwo,
+      SetRange(800, 4000), ttMoveCutNodeScale, SetRange(1600, 10000), depthReductionDecreaseThres, SetRange(400000, 2500000), improvingReductionMax,
+      baseReductionAdjustment, baseReductionDeltaScale, SetRange(500, 5000), reductionTableScale, SetRange(-10000, 10000),
+      reductionTableAdjustment, SetRange(400, 2000), improvementAdjustment, SetRange(-100, 500), improvementScale, SetRange(400, 3000),
+      improvementUpper, SetRange(400, 5000), pvAdjustment, SetRange(500, 4000), pvClamp, SetRange(50, 1000), pvScale, SetRange(400, 4000), ttPvAdjustment,
+      SetRange(100, 1000), ttPvScale, SetRange(-2000, 2000), cutNodettPvAdjustment, SetRange(400, 3000), ttPvClampUpper, SetRange(1000, 100000), statScoreScale,
+      SetRange(1000, 10000), statScoreDepthScale, SetRange(0, 10), statScoreDepthLower, SetRange(10, 30), statScoreDepthUpper, SetRange(-10000000, 10000000),
+      statScoreAdjustment, SetRange(400, 4000), statScoreMainHistoryScale,
+      SetRange(0, 4000), statScoreContHistoryZero, statScoreContHistoryOne, statScoreContHistoryThree, SetRange(-1000, 1000), ttPvClampLower,
+      SetRange(-1000, 1000), improvementLower, SetRange(7744896, 27744896), nullMoveStatScoreThreshold, SetRange(213344, 413344), futilityPruningStatScoreDivisor,
+      SetRange(-3072, 3072), singularExtensionOne, singularExtensionTwoLowDepth, singularExtensionTwoHighDepth, ttValueBetaPv, ttValueBetaNonPv, cutNodeMidDepth,
+      cutNodeOtherDepth, ttValueValue, ttValueAlpha, givesCheckLowDepth, quietTTMove, SetRange(-12000, -1500), LMRDepthReductionThres,
+      SetRange(128, 1536), residualScale, SetRange(-2048, 2048), residualAdjustment, residualBaseline, pvNodeNotTTMove, cutNodeNotTTMove);
 
   int PReLU(int input, int negativeSlope, int positiveSlope) {
       int output = 0;
@@ -921,6 +921,7 @@ namespace {
     if (PvNode
         && !ttMove) {
         depth -= 2 + 2 * (ss->ttHit && tte->depth() >= depth);
+        step10Reduction += pvNodeNotTTMove;
     }
 
     if (depth <= 0)
@@ -930,6 +931,7 @@ namespace {
         && depth >= 8
         && !ttMove) {
         depth -= 2;
+        step10Reduction += cutNodeNotTTMove;
     }
 
     probCutBeta = beta + 168 - 61 * improving;
@@ -1142,7 +1144,9 @@ moves_loop: // When in check, search starts here
 
 
       // Step 15. Extensions/Reductions (~200 Elo)
-      bool W_IN[23] = {};
+      bool W_IN[18] = {};
+      bool customDepthInput[5] = {};
+      bool customStatScoreInput[19] = {};
 
       if (ss->ply < thisThread->rootDepth * 2)
           W_IN[0] = true;
@@ -1191,56 +1195,159 @@ moves_loop: // When in check, search starts here
       if (cutNode)
           W_IN[6] = true;
 
-      if (1 <= depth && depth <= 4)
-          W_IN[12] = true;
+      if (depth <= 4)
+          customDepthInput[0] = true;
 
       if (5 <= depth && depth <= 9)
-          W_IN[13] = true;
+          customDepthInput[1] = true;
 
       if (10 <= depth && depth <= 14)
-          W_IN[7] = true;
+          customDepthInput[2] = true;
 
       if (15 <= depth && depth <= 19)
-          W_IN[14] = true;
+          customDepthInput[3] = true;
 
       if (20 <= depth)
-          W_IN[15] = true;
+          customDepthInput[4] = true;
 
       if (ttValue <= value)
-          W_IN[8] = true;
+          W_IN[7] = true;
 
       if (ttValue <= alpha)
-          W_IN[9] = true;
+          W_IN[8] = true;
 
       if (givesCheck)
-          W_IN[10] = true;
+          W_IN[9] = true;
 
       if (move == ss->killers[0]
           && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
-          W_IN[11] = true;
+          W_IN[10] = true;
 
       if (ttCapture)
-          W_IN[16] = true;
+          W_IN[11] = true;
 
       if (ttMove)
-          W_IN[17] = true;
+          W_IN[12] = true;
 
       if (move == ttMove)
-          W_IN[18] = true;
+          W_IN[13] = true;
 
       if ((ss+1)->cutoffCnt >= 4)
-          W_IN[19] = true;
+          W_IN[14] = true;
 
       if ((ss-1)->moveCount >= 9)
-          W_IN[20] = true;
+          W_IN[15] = true;
 
       if (ss->ttPv && !likelyFailLow)
-          W_IN[21] = true;
+          W_IN[16] = true;
 
       if (tte->depth() >= depth + 3)
-          W_IN[22] = true;
+          W_IN[17] = true;
 
-      extension = Lookup(W_IN, 0);
+      ss->statScore = std::clamp(2 * thisThread->mainHistory[us][from_to(move)]
+          + (*contHist[0])[movedPiece][to_sq(move)]
+          + (*contHist[1])[movedPiece][to_sq(move)]
+          + (*contHist[3])[movedPiece][to_sq(move)]
+          - 4006 , -90000, 90000); //-90, -75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75, 90
+
+      customStatScoreInput[(ss->statScore + 90000) / 10000] = true;
+
+      
+
+      //Old Extension System to transistion away from
+      if (W_IN[0] == true)
+      {
+          if (W_IN[1] == true)
+          {
+
+              if (W_IN[2] == true)
+              {
+                  extension = 1024;
+                  singularQuietLMR = !ttCapture;
+                  r += singularExtensionOne;
+
+                  // Avoid search explosion by limiting the number of double extensions
+                  if (W_IN[3] == true
+                      && ss->doubleExtensions <= 11)
+                  {
+                      extension = 2048;
+                      if (depth < 13) {
+                          depth++;
+                          r += singularExtensionTwoLowDepth;
+                      }
+                      else
+                          r += singularExtensionTwoHighDepth;
+                  }
+              }
+
+              // Multi-cut pruning
+              // Our ttMove is assumed to fail high, and now we failed high also on a reduced
+              // search without the ttMove. So we assume this expected Cut-node is not singular,
+              // that multiple moves fail high, and we can prune the whole subtree by returning
+              // a softbound.
+              else if (singularBeta >= beta)
+                  return singularBeta;
+
+              // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
+              else if (ttValue >= beta) {
+                  if (PvNode) {
+                      extension = -2048;
+                      r += ttValueBetaPv;
+                  }
+                  else {
+                      extension = -3072;
+                      r += ttValueBetaNonPv;
+                  }
+              }
+
+              // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
+              else if (cutNode) {
+                  if (depth > 8 && depth < 17) {
+                      extension = -3072;
+                      r += cutNodeMidDepth;
+                  }
+                  else {
+                      extension = -1024;
+                      r += cutNodeOtherDepth;
+                  }
+              }
+
+              // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
+              else if (ttValue <= value) {
+                  extension = -1024;
+                  r += ttValueValue;
+              }
+
+              // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
+              else if (ttValue <= alpha) {
+                  extension = -1024;
+                  r += ttValueAlpha;
+              }
+          }
+
+          // Check extensions (~1 Elo)
+          else if (givesCheck
+              && depth > 9) {
+              extension = 1024;
+              r += givesCheckLowDepth;
+          }
+
+          // Quiet ttMove extensions (~1 Elo)
+          else if (PvNode
+              && move == ttMove
+              && move == ss->killers[0]
+              && (*contHist[0])[movedPiece][to_sq(move)] >= 5168) {
+              extension = 1024;
+              r += quietTTMove;
+          }
+      }
+      ss->doubleExtensions = (ss - 1)->doubleExtensions + (extension == 2048);
+      //
+      // End Old Extension System
+      //
+
+      //New NN system
+      extension += Lookup(W_IN, 0);
       r += Lookup(W_IN, 1);
 
       // Add extension to new depth
@@ -1259,14 +1366,52 @@ moves_loop: // When in check, search starts here
       // Step 16. Make the move
       pos.do_move(move, st, givesCheck);
 
-      ss->statScore =  (statScoreMainHistoryScale * thisThread->mainHistory[us][from_to(move)]
-                     + statScoreContHistoryZero * (*contHist[0])[movedPiece][to_sq(move)]
-                     + statScoreContHistoryOne * (*contHist[1])[movedPiece][to_sq(move)]
-                     + statScoreContHistoryThree * (*contHist[3])[movedPiece][to_sq(move)]
-                     + statScoreAdjustment);
+      //
+      //Old Reduction System To Transistion away from
+      //
+
+      // Reduction adjustment for all nodes
+      r += reductionAdjustment + step10Reduction;
+
+      // Decrease reduction if opponent's move count is high (~1 Elo)
+      r -= std::min((ss - 1)->moveCount * moveCountScale, clampLower);
+
+      // Decrease reduction if ttMove has been singularly extended (~1 Elo)
+      r -= singularQuietLMR * singularQuietLMRScale;
+
+      // Decrease reduction if move is ttMove based on next ply fail high count (~2 Elo)
+      r -= (move == ttMove) * (ttClamp - std::min((ss + 1)->cutoffCnt * ttMoveScale, ttClamp));
+
+      // Decrease reduction for PvNodes based on depth (~3 Elo)
+      r -= PvNode * (pvAdjustment - (pvClamp - std::min(depth * pvScale, pvClamp)));
+
+      // Increase reduction for cut nodes (~3 Elo)
+      r += cutNode * cutNodeScale;
+
+      // Increase reduction if ttMove is a capture (~3 Elo)
+      r += ttCapture * ttCaptureScale;
+
+      // Decrease reduction if position is or has been on the PV
+      // and node is not likely to fail low. (~3 Elo)
+      // Decrease further on cutNodes. (~1 Elo)
+      r -= (ss->ttPv && !likelyFailLow) *
+          (ttPvAdjustment + cutNode * (std::clamp((tte->depth() - depth) * ttPvScale + cutNodettPvAdjustment, ttPvClampLower, ttPvClampUpper)));
+
+      // Increase reduction if next ply has a lot of fail high (~5 Elo)
+      r += std::min((ss + 1)->cutoffCnt * cutoffCntScale, clampUpper);
+
+      ss->statScore = (statScoreMainHistoryScale * thisThread->mainHistory[us][from_to(move)]
+          + statScoreContHistoryZero * (*contHist[0])[movedPiece][to_sq(move)]
+          + statScoreContHistoryOne * (*contHist[1])[movedPiece][to_sq(move)]
+          + statScoreContHistoryThree * (*contHist[3])[movedPiece][to_sq(move)]
+          + statScoreAdjustment);
 
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
       r -= ss->statScore / (statScoreScale + statScoreDepthScale * (depth > statScoreDepthLower && depth < statScoreDepthUpper));
+
+      //
+      //End Old Reduction System
+      //
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
