@@ -115,7 +115,7 @@ namespace {
         { {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}}
   };
 
-  int customDepthInput[24][5] = {
+  int depthInput[24][5] = {
       {663, 516, 181, 377, 1513},
       {-2395, -2039, -2440, -1494, -1487},
       {1091, 1396, 1707, 563, 1208},
@@ -141,7 +141,7 @@ namespace {
       {-631, -1153, 186, 347, -1607},
       {0, 0, 0, 0, 0}};
 
-  int customSingularExtensionInput[24][8] = {
+  int singularInput[24][8] = {
       {0, 1606, 1606, 1606, 1038, -1234, -1234, -1234},
       {0, 2250, 2250, 2250, 670, -1467, -1467, -1467},
       {0, 1464, 1464, 1464, -18, -1945, -1945, -1945},
@@ -168,7 +168,7 @@ namespace {
       {0, 0, 0, 0, 0, 0, 0, 0}
   };
 
-  int customLinearStatScore[24] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1024};
+  int statScoreInput[24] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1024};
 
   int biases[2][24] = { { -1937, -1802, 3203, 4203, 3922, 4949, 5277, 6087, -2830, -2927, 19, -116, -37, 36, 11, -248, -8, -2003, -278, 2, 68, 120, 86, 0},
                          {-360, -39, -167, -24, 90, 157, -289, -322, -54, 58, 359, -288, 134, 85, -472, 288, 79, 170, -211, -282, 99, 214, 79, 0} };
@@ -179,6 +179,8 @@ namespace {
 
   int outputBias[2] = { 30, 139 };
   int outputSlopes[2][2] = { { 1094, 813 }, {965, 862} };
+
+  TUNE(SetRange(-4096, 4096), inputScales, depthInput, singularInput, statScoreInput, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
 
   int PReLU(int input, int negativeSlope, int positiveSlope) {
       int output = 0;
@@ -196,8 +198,8 @@ namespace {
           for (int j = 0; j < 17; ++j) {
               sum += inputScales[i][j][W_IN[j]];
           }
-          sum += customDepthInput[i][depth] + customSingularExtensionInput[i][singular]
-              + customLinearStatScore[i] * statScore;
+          sum += depthInput[i][depth] + singularInput[i][singular]
+              + statScoreInput[i] * statScore;
           outputSum += PReLU(sum + biases[n][i], slopes[n][0][i], slopes[n][1][i]);
       }
       return PReLU(outputSum + outputBias[n], outputSlopes[n][0], outputSlopes[n][1]);
