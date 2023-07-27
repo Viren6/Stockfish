@@ -125,7 +125,7 @@ namespace {
   // we convert it to a suitable fractional skill level using anchoring to CCRL Elo
   // (goldfish 1.13 = 2000) and a fit through Ordo derived Elo for a match (TC 60+0.6)
   // results spanning a wide range of k values.
-  struct Skill {
+  struct Skill { 
     Skill(int skill_level, int uci_elo) {
         if (uci_elo)
         {
