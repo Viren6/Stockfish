@@ -59,6 +59,10 @@ using namespace Search;
 
 namespace {
 
+    //VLTC Tune 1 60k game values
+    const int lmrDepthScale = 978; const int lmrDepthScaleTwo = 876; const int ttMoveCutNodeScale = 3803;
+    const int depthReductionDecreaseThres = 4707; const int LMRDepthReductionThres = -3754;
+
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
 
@@ -70,9 +74,138 @@ namespace {
   // Reductions lookup table initialized at startup
   int Reductions[MAX_MOVES]; // [depth or moveNumber]
 
-  Depth reduction(bool i, Depth d, int mn, Value delta, Value rootDelta) {
-    int r = Reductions[d] * Reductions[mn];
-    return (r + 1372 - int(delta) * 1073 / int(rootDelta)) / 1024 + (!i && r > 936);
+  int reduction(bool i, Depth d, int mn, Value delta, Value rootDelta) {
+      int r = Reductions[d] * Reductions[mn];
+      return (r + 1372 - int(delta) * 1073 / int(rootDelta)) / 1024 + (!i && r > 936);
+  }
+
+  //Extension/Reduction NN Take 5 14k game values
+  const int inputScales[24][17][2] = {
+    {{-490, 1217}, {196, 165}, {-1466, -130}, {-754, -80}, {34, 486}, {19, 226}, {-354, -114}, {522, 540}, {504, 547}, {302, -337}, {-293, -425}, {-603, 208}, {-103, 428}, {504, 619}, {130, -305}, {54, -850}, {-248, -123}},
+    {{35, 1008}, {-197, 311}, {-246, -669}, {1163, -451}, {-15, 59}, {438, -249}, {553, 28}, {-70, -238}, {51, 687}, {-481, -197}, {-266, 1091}, {197, -18}, {-365, -133}, {221, 951}, {-237, -80}, {455, 256}, {181, 32}},
+    {{78, -725}, {28, -1585}, {430, -1325}, {-99, -39}, {746, -543}, {599, 277}, {176, 917}, {357, 778}, {1147, -11}, {3, -905}, {-688, 52}, {-676, 452}, {-260, 647}, {-280, -703}, {-460, 620}, {486, -456}, {138, 419}},
+    {{-581, -968}, {-760, -1648}, {-720, -310}, {-260, -687}, {212, -476}, {1053, -182}, {-120, -275}, {632, 566}, {-397, 781}, {-222, -218}, {209, 908}, {663, -397}, {-358, -300}, {434, 179}, {-157, 431}, {-890, 900}, {-164, 241}},
+    {{58, -2042}, {57, -435}, {-667, 630}, {246, 25}, {-750, -385}, {-264, -20}, {-190, 352}, {743, 413}, {-229, 12}, {567, 375}, {-750, 461}, {-1103, -196}, {203, -731}, {1057, -170}, {-235, 587}, {306, 811}, {-140, -221}},
+    {{-1363, 1209}, {-535, 70}, {-537, -317}, {-56, 653}, {-1118, 608}, {461, -184}, {-504, -275}, {-194, 579}, {-137, -13}, {565, 638}, {581, 872}, {-484, 484}, {626, -391}, {-427, -224}, {-69, 224}, {-431, 342}, {300, 47}},
+    {{533, -457}, {394, -446}, {-1149, -161}, {-99, -286}, {-709, 287}, {-569, -1194}, {250, 313}, {30, 316}, {198, 397}, {-41, -265}, {914, 1124}, {-329, -218}, {441, -583}, {-596, -173}, {278, -538}, {38, 1175}, {295, 79}},
+    {{-315, -1338}, {-377, -701}, {-555, 363}, {-1, 859}, {-1182, 623}, {-1133, -375}, {148, -1088}, {-567, -292}, {-328, 179}, {242, 131}, {-73, 281}, {419, -163}, {-541, -190}, {-20, 68}, {277, 364}, {314, -149}, {-111, 207}},
+    {{-447, 714}, {335, 812}, {251, 1004}, {-348, 286}, {-371, -168}, {280, 376}, {-818, -382}, {-101, 1007}, {-316, -65}, {201, 585}, {102, 202}, {-205, 158}, {-236, -408}, {620, -362}, {661, -284}, {457, -409}, {61, 220}},
+    {{-311, 1534}, {559, 522}, {-208, -180}, {179, 840}, {604, -119}, {465, -345}, {-478, 868}, {819, -303}, {129, 2000}, {-458, 365}, {30, -511}, {324, -323}, {60, -100}, {44, 473}, {-329, -696}, {-552, 356}, {-134, -228}},
+    {{165, -443}, {245, 213}, {675, -965}, {-431, 366}, {129, -35}, {236, 79}, {-115, 511}, {499, -361}, {378, -388}, {402, -32}, {71, 146}, {506, -1000}, {175, -258}, {-24, -144}, {-506, -602}, {59, 378}, {-89, 203}},
+    {{-26, -90}, {-327, 929}, {80, 356}, {84, 401}, {562, 589}, {172, -287}, {-893, 368}, {-127, -136}, {531, -730}, {-685, 323}, {261, -148}, {-213, -22}, {-152, -37}, {-13, 495}, {-639, -706}, {693, 1113}, {-33, -97}},
+    {{75, 573}, {-81, -671}, {645, -568}, {176, -537}, {166, -477}, {-86, -9}, {-406, -280}, {-1057, 372}, {-385, 711}, {0, 200}, {134, 33}, {362, 223}, {222, 502}, {293, -289}, {242, 399}, {427, 1216}, {278, -199}},
+    {{21, -516}, {120, -1285}, {-846, 528}, {-255, 428}, {286, -195}, {-102, -106}, {-316, -317}, {-5, 711}, {120, 432}, {-463, 537}, {2, 703}, {379, -1610}, {-333, 97}, {531, 443}, {279, -257}, {726, -163}, {-43, 266}},
+    {{38, -307}, {1, 1365}, {-232, 526}, {876, 153}, {63, 572}, {124, 86}, {-283, -571}, {-318, -331}, {5, 824}, {-92, -201}, {140, 147}, {68, 1362}, {373, 1238}, {90, -42}, {-740, 289}, {342, -158}, {185, -109}},
+    {{369, 178}, {-194, -101}, {-274, 289}, {-282, 751}, {-57, 879}, {-544, 279}, {-215, 320}, {-449, -98}, {300, -510}, {-505, -560}, {758, 569}, {-146, -208}, {-183, -117}, {-853, -1071}, {1358, 458}, {88, 177}, {322, -409}},
+    {{-55, 53}, {140, -926}, {-125, -9}, {34, -430}, {-539, -570}, {460, 67}, {81, -357}, {183, 496}, {81, -1883}, {-207, -98}, {-774, -256}, {-548, 582}, {192, 620}, {-376, -849}, {-396, 1478}, {-481, 113}, {-104, -265}},
+    {{-67, 328}, {354, -890}, {469, -520}, {-309, 1370}, {169, -30}, {278, -615}, {-708, 197}, {-717, -558}, {-1081, 93}, {461, 910}, {-249, 352}, {-530, -18}, {-734, -773}, {-517, -68}, {805, -220}, {-763, 672}, {158, -25}},
+    {{-1028, 284}, {39, 217}, {48, -94}, {111, -572}, {-192, -698}, {153, -526}, {313, 80}, {-63, -503}, {202, -556}, {-115, -293}, {408, -329}, {-755, -1016}, {222, 990}, {-330, 159}, {-246, -745}, {-775, -715}, {-211, 39}},
+    {{-286, 42}, {148, 320}, {293, 193}, {229, -462}, {382, -193}, {786, -172}, {-176, 740}, {-510, -193}, {325, 611}, {-883, 43}, {304, -46}, {435, 467}, {670, 457}, {-325, -381}, {-939, 94}, {156, -106}, {28, 0}},
+    {{-773, -157}, {23, -61}, {617, -1014}, {-41, -614}, {-209, 364}, {347, 91}, {-33, -413}, {54, 171}, {-896, -1147}, {-519, 689}, {210, 4}, {127, 585}, {156, -145}, {-77, -145}, {-728, -857}, {-286, 1112}, {-86, 131}},
+    {{681, -320}, {-438, -457}, {-215, 347}, {833, 234}, {31, 8}, {-552, 1014}, {116, 91}, {-50, 686}, {-334, 81}, {668, -300}, {129, -281}, {-85, -27}, {897, -580}, {121, 185}, {-182, -662}, {-172, 348}, {-60, -21}},
+    {{746, -310}, {-495, 108}, {-135, -160}, {-88, -594}, {1497, 615}, {577, 265}, {-368, -882}, {-246, 116}, {26, 243}, {-127, 264}, {-201, -10}, {27, -118}, {-699, -257}, {-596, -313}, {-200, 127}, {671, -273}, {47, 19}},
+    {{430, 112}, {-65, 4}, {-130, -234}, {-126, 70}, {-75, 90}, {-78, -586}, {-13, 254}, {243, 398}, {224, 225}, {-37, -78}, {-261, 154}, {-88, 323}, {171, 168}, {-289, -215}, {14, -71}, {163, -125}, {71, 213}}
+  };
+
+  const int depthInput[24][5] = { 
+    {842, 770, -58, 321, 1746},
+    {-2545, -1941, -2490, -1570, -1571},
+    {1085, 1254, 1778, 248, 957},
+    {61, -505, 1273, -162, -1225},
+    {-309, 573, -561, -865, -323},
+    {-789, -1287, -748, -2850, -833},
+    {650, -64, 812, 826, 1161},
+    {-73, 1212, -621, -509, 109},
+    {-854, -1142, -1034, -441, -624},
+    {1, -1115, -1791, -1304, 330},
+    {-120, -1570, -642, -846, -1406},
+    {105, -681, 217, -563, 372},
+    {180, 1339, 27, 1043, 49},
+    {-403, -633, 583, 108, -814},
+    {1089, 1411, 731, 371, 1826},
+    {-690, -854, -1711, -207, 1087},
+    {1373, 335, -59, -785, 969},
+    {-710, -286, -1142, 669, -1346},
+    {1158, 1339, 538, 723, 932},
+    {1181, 1660, 1938, 1280, 631},
+    {263, -170, -213, 219, -235},
+    {-402, 98, 665, 90, -270},
+    {-560, -879, 54, 644, -1780},
+    {33, 354, -281, 325, -78}
+  };
+
+  const int singularInput[24][8] = {
+    {74, 1035, 1453, 1475, 971, -1258, -1194},
+    {94, 2508, 2194, 2070, 641, -1274, -1505},
+    {194, 1290, 1414, 1456, -140, -2149, -1665},
+    {-116, -31, 35, 72, 942, -694, -650},
+    {3, 377, 355, 710, 469, 160, -111},
+    {-246, 824, -1404, -1336, -1141, 32, 216},
+    {-159, -408, -398, -1002, 521, -973, -434},
+    {-46, 585, 633, 948, 133, -534, -686},
+    {-75, 184, 754, 193, 770, -1027, -924},
+    {67, -108, -653, -724, -468, -1118, -861},
+    {2, 57, -147, -250, 88, 658, 865},
+    {388, -1343, -1308, -1140, -1495, -630, -754},
+    {534, 87, 324, -49, -542, 553, -95},
+    {105, 668, 453, 931, -119, -189, -551},
+    {-208, -25, -321, -257, -241, -959, -443},
+    {224, -479, -428, -180, -40, 871, 643},
+    {433, -295, -194, -102, 895, 1234, 874},
+    {-397, -1139, -983, -935, -601, -447, -334},
+    {117, 403, 342, 74, 48, -266, -649},
+    {343, -569, -300, -336, -249, 803, 492},
+    {162, 1122, 1271, 1012, 961, 1314, 838},
+    {-160, 93, 337, 57, -747, -152, -214},
+    {-127, -116, -300, -18, -129, 206, 287},
+    {-26, 23, 15, -19, 151, 81, 158}
+  };
+
+  const int statScoreInput[24] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1024};
+
+  const int biases[2][24] = { { -1990, -1726, 3153, 4226, 3994, 5040, 5373, 6183, -2728, -2859, 121, 72, 33, 105, 62, -239, 57, -1854, -347, 29, 128, 44, 62, 43},
+                         {-423, -51, -274, -14, 207, 124, -256, -324, -112, 13, 423, -463, 74, 238, -432, 179, 26, 283, -185, -254, -8, 303, 22, -104} };
+  const int slopes[2][2][24] = { {{167, 272, 2007, 1007, 1182, 2483, 1123, 895, 138, 275, 88, 249, 396, 211, 175, 77, 484, 460, 24, 494, 229, 123, 453, 53},
+                            {842, 978, 4, 7, 33, 117, 91, 144, 888, 949, 62, 156, 113, 190, 320, 68, 87, 149, 397, 382, 255, 183, 3, 39}},
+                          {{217, 92, 493, 426, 238, 320, 105, 43, 443, 64, 607, 77, 489, 1189, 411, 1228, 3, 145, 239, 310, 186, 41, 210, 1018},
+                          {189, 122, 195, 146, 68, 408, 266, 159, 57, 142, 339, 2124, 1165, 167, 1197, 325, 2034, 3322, 201, 100, 77, 373, 49, 1003}} };
+
+  const int outputBias[2] = { -34, 161 };
+  const int outputSlopes[2][2] = { { 1007, 779 }, {951, 806} };
+
+  int PReLU(int input, int negativeSlope, int positiveSlope) {
+      int output = 0;
+      if (input >= 0)
+          output = input * positiveSlope / 1024;
+      else
+          output = input * negativeSlope / 1024;
+      return output;
+  }
+
+  int calculateFinalLayers(bool W_IN[17], int depth, int singular, int statScore, int n) {
+      int outputSum = 0;
+      for (int i = 0; i < 24; ++i) {
+          int sum = 0;
+          for (int j = 0; j < 17; ++j) {
+              sum += inputScales[i][j][W_IN[j]];
+          }
+          sum += depthInput[i][depth] + singularInput[i][singular]
+              + statScoreInput[i] * statScore;
+          outputSum += PReLU(sum + biases[n][i], slopes[n][0][i], slopes[n][1][i]);
+      }
+      return PReLU(outputSum + outputBias[n], outputSlopes[n][0], outputSlopes[n][1]);
+  }
+
+  int Store[2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][5][8][17];
+
+  int Lookup(bool W_IN[17], int depth, int singular, int statScore, int n) {
+      if (Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
+          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][depth][singular][statScore] == 0) {
+          Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
+              [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][depth][singular][statScore] = calculateFinalLayers(W_IN, depth, singular, statScore, n);
+      }
+      return Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
+          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][depth][singular][statScore];
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
@@ -543,7 +676,7 @@ namespace {
     TTEntry* tte;
     Key posKey;
     Move ttMove, move, excludedMove, bestMove;
-    Depth extension, newDepth;
+    Depth extension, initialDepth, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
@@ -962,10 +1095,11 @@ moves_loop: // When in check, search starts here
 
       // Calculate new depth for this move
       newDepth = depth - 1;
+      initialDepth = depth - 1;
 
       Value delta = beta - alpha;
 
-      Depth r = reduction(improving, depth, moveCount, delta, thisThread->rootDelta);
+      int r = reduction(improving, depth, moveCount, delta, thisThread->rootDelta) * 1024;
 
       // Step 14. Pruning at shallow depth (~120 Elo). Depth conditions are important for mate finding.
       if (  !rootNode
@@ -976,7 +1110,7 @@ moves_loop: // When in check, search starts here
           moveCountPruning = moveCount >= futility_move_count(improving, depth);
 
           // Reduced depth of the next LMR search
-          int lmrDepth = newDepth - r;
+          int lmrDepth = newDepth - (r * lmrDepthScale / 1024 / 1024);
 
           if (   capture
               || givesCheck)
@@ -1042,86 +1176,103 @@ moves_loop: // When in check, search starts here
           }
       }
 
-      // Step 15. Extensions (~100 Elo)
-      // We take care to not overdo to avoid search getting stuck.
+      // Step 15. Extensions/Reductions (~200 Elo)
+      bool W_IN[17] = {};
+      int customSingular = 0;
+
       if (ss->ply < thisThread->rootDepth * 2)
+          W_IN[0] = true;
+
+      if (!rootNode
+          && depth >= 4 - (thisThread->completedDepth > 22) + 2 * (PvNode && tte->is_pv())
+          && move == ttMove
+          && !excludedMove
+          && abs(ttValue) < VALUE_KNOWN_WIN
+          && (tte->bound() & BOUND_LOWER)
+          && tte->depth() >= depth - 3)
       {
-          // Singular extension search (~94 Elo). If all moves but one fail low on a
-          // search of (alpha-s, beta-s), and just one fails high on (alpha, beta),
-          // then that move is singular and should be extended. To verify this we do
-          // a reduced search on all the other moves but the ttMove and if the
-          // result is lower than ttValue minus a margin, then we will extend the ttMove.
-          // Depth margin and singularBeta margin are known for having non-linear scaling.
-          // Their values are optimized to time controls of 180+1.8 and longer
-          // so changing them requires tests at this type of time controls.
-          if (   !rootNode
-              &&  depth >= 4 - (thisThread->completedDepth > 22) + 2 * (PvNode && tte->is_pv())
-              &&  move == ttMove
-              && !excludedMove // Avoid recursive singular search
-           /* &&  ttValue != VALUE_NONE Already implicit in the next condition */
-              &&  abs(ttValue) < VALUE_KNOWN_WIN
-              && (tte->bound() & BOUND_LOWER)
-              &&  tte->depth() >= depth - 3)
-          {
-              Value singularBeta = ttValue - (82 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
-              Depth singularDepth = (depth - 1) / 2;
-
-              ss->excludedMove = move;
-              value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
-              ss->excludedMove = MOVE_NONE;
-
-              if (value < singularBeta)
-              {
-                  extension = 1;
-                  singularQuietLMR = !ttCapture;
-
-                  // Avoid search explosion by limiting the number of double extensions
-                  if (  !PvNode
-                      && value < singularBeta - 21
-                      && ss->doubleExtensions <= 11)
-                  {
-                      extension = 2;
-                      depth += depth < 13;
-                  }
-              }
-
-              // Multi-cut pruning
-              // Our ttMove is assumed to fail high, and now we failed high also on a reduced
-              // search without the ttMove. So we assume this expected Cut-node is not singular,
-              // that multiple moves fail high, and we can prune the whole subtree by returning
-              // a softbound.
-              else if (singularBeta >= beta)
-                  return singularBeta;
-
-              // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
-              else if (ttValue >= beta)
-                  extension = -2 - !PvNode;
-
-              // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
-              else if (cutNode)
-                  extension = depth > 8 && depth < 17 ? -3 : -1;
-
-              // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= value)
-                  extension = -1;
-          }
-
-          // Check extensions (~1 Elo)
-          else if (   givesCheck
-                   && depth > 9)
-              extension = 1;
-
-          // Quiet ttMove extensions (~1 Elo)
-          else if (   PvNode
-                   && move == ttMove
-                   && move == ss->killers[0]
-                   && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
-              extension = 1;
+          W_IN[1] = true; 
       }
 
+      if (W_IN[1] == true && W_IN[0] == true) 
+      {
+          Value singularBeta = ttValue - (82 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
+          Depth singularDepth = (depth - 1) / 2;
+
+          ss->excludedMove = move;
+          value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
+          ss->excludedMove = MOVE_NONE;
+
+          customSingular = std::clamp(int(value - singularBeta) / 25, -3, 3) + 4;
+
+          if (value < singularBeta - 21)
+              depth += depth < 13;
+
+          if (singularBeta >= beta && W_IN[2] == false)
+              return singularBeta;
+      }
+
+      if (ttValue >= beta)
+          W_IN[2] = true;
+
+      if (PvNode)
+          W_IN[3] = true;
+
+      if (cutNode)
+          W_IN[4] = true;
+
+      if (ttValue <= value)
+          W_IN[5] = true;
+
+      if (ttValue <= alpha)
+          W_IN[6] = true;
+
+      if (givesCheck)
+          W_IN[7] = true;
+
+      if (move == ss->killers[0]
+          && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
+          W_IN[8] = true;
+
+      if (ttCapture)
+          W_IN[9] = true;
+
+      if (ttMove)
+          W_IN[10] = true;
+
+      if (move == ttMove)
+          W_IN[11] = true;
+
+      if ((ss+1)->cutoffCnt >= 4)
+          W_IN[12] = true;
+
+      if ((ss-1)->moveCount >= 9)
+          W_IN[13] = true;
+
+      if (ss->ttPv && !likelyFailLow)
+          W_IN[14] = true;
+
+      if (tte->depth() >= depth + 3)
+          W_IN[15] = true;
+
+      if (improving)
+          W_IN[16] = true;
+
+      int customDepth = std::clamp(depth / 5, 0, 4);
+
+      ss->statScore = 2 * thisThread->mainHistory[us][from_to(move)]
+          + (*contHist[0])[movedPiece][to_sq(move)]
+          + (*contHist[1])[movedPiece][to_sq(move)]
+          + (*contHist[3])[movedPiece][to_sq(move)]
+          - 4006;
+
+      int customStatScore = std::clamp(ss->statScore / 10000, -8, 8) + 8;
+
+      extension = Lookup(W_IN, customDepth, customSingular, customStatScore, 0);
+      r += Lookup(W_IN, customDepth, customSingular, customStatScore, 1);
+
       // Add extension to new depth
-      newDepth += extension;
-      ss->doubleExtensions = (ss-1)->doubleExtensions + (extension == 2);
+      newDepth += extension / 1024;
 
       // Speculative prefetch as early as possible
       prefetch(TT.first_entry(pos.key_after(move)));
@@ -1136,49 +1287,6 @@ moves_loop: // When in check, search starts here
       // Step 16. Make the move
       pos.do_move(move, st, givesCheck);
 
-      // Decrease reduction if position is or has been on the PV
-      // and node is not likely to fail low. (~3 Elo)
-      // Decrease further on cutNodes. (~1 Elo)
-      if (   ss->ttPv
-          && !likelyFailLow)
-          r -= cutNode && tte->depth() >= depth + 3 ? 3 : 2;
-
-      // Decrease reduction if opponent's move count is high (~1 Elo)
-      if ((ss-1)->moveCount > 8)
-          r--;
-
-      // Increase reduction for cut nodes (~3 Elo)
-      if (cutNode)
-          r += 2;
-
-      // Increase reduction if ttMove is a capture (~3 Elo)
-      if (ttCapture)
-          r++;
-
-      // Decrease reduction for PvNodes based on depth (~2 Elo)
-      if (PvNode)
-          r -= 1 + (depth < 6);
-
-      // Decrease reduction if ttMove has been singularly extended (~1 Elo)
-      if (singularQuietLMR)
-          r--;
-
-      // Increase reduction if next ply has a lot of fail high (~5 Elo)
-      if ((ss+1)->cutoffCnt > 3)
-          r++;
-
-      else if (move == ttMove)
-          r--;
-
-      ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
-                     + (*contHist[0])[movedPiece][to_sq(move)]
-                     + (*contHist[1])[movedPiece][to_sq(move)]
-                     + (*contHist[3])[movedPiece][to_sq(move)]
-                     - 4006;
-
-      // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
-      r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
-
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
       // been searched. In general, we would like to reduce them, but there are many
@@ -1192,8 +1300,8 @@ moves_loop: // When in check, search starts here
           // In general we want to cap the LMR depth search at newDepth, but when
           // reduction is negative, we allow this move a limited search extension
           // beyond the first move depth. This may lead to hidden double extensions.
-          Depth d = std::clamp(newDepth - r, 1, newDepth + 1);
-
+          int totalAdjustment = r * lmrDepthScaleTwo - extension * 1024;
+          Depth d = std::clamp(initialDepth - (totalAdjustment / (1024 * 1024)), 1, newDepth + 1 + (r <= LMRDepthReductionThres));
           value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, d, true);
 
           // Do a full-depth search when reduced LMR search fails high
@@ -1225,9 +1333,9 @@ moves_loop: // When in check, search starts here
       {
           // Increase reduction for cut nodes and not ttMove (~1 Elo)
           if (!ttMove && cutNode)
-              r += 2;
+              r += ttMoveCutNodeScale;
 
-          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth - (r > 3), !cutNode);
+          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth - (r >= depthReductionDecreaseThres), !cutNode);
       }
 
       // For PV nodes only, do a full PV search on the first move or after a fail
