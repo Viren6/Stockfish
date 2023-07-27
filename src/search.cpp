@@ -190,9 +190,9 @@ namespace {
       return output;
   }
 
-  int calculateFinalLayers(bool W_IN[23], int depth, int singular, int statScore, int n) {
+  int calculateFinalLayers(bool W_IN[17], int depth, int singular, int statScore, int n) {
       int outputSum = 0;
-      for (int i = 0; i < 23; ++i) {
+      for (int i = 0; i < 24; ++i) {
           int sum = 0;
           for (int j = 0; j < 17; ++j) {
               sum += inputScales[i][j][W_IN[j]];
@@ -206,7 +206,7 @@ namespace {
 
   int Store[2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][2][5][8][17];
 
-  int Lookup(bool W_IN[23], int depth, int singular, int statScore, int n) {
+  int Lookup(bool W_IN[17], int depth, int singular, int statScore, int n) {
       if (Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
           [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][W_IN[18]][W_IN[19]][W_IN[20]][W_IN[21]][W_IN[22]] == 0) {
           Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
