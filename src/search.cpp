@@ -60,12 +60,8 @@ using namespace Search;
 namespace {
 
     //VLTC Tune 1 60k game values
-    const int baseImprovingReductionAdjustment = -24012; const int baseReductionScale = 966;
-    const int baseImprovingReductionScale = 920; const int lmrDepthScale = 978; const int lmrDepthScaleTwo = 876; const int ttMoveCutNodeScale = 3803;
-    const int depthReductionDecreaseThres = 4707; const int improvingReductionMax = 1916344;
-    const int baseReductionAdjustment = 928808; const int baseReductionDeltaScale = 880029; const int reductionTableScale = 1304;
-    const int reductionTableAdjustment = 91; const int improvementAdjustment = 494; const int improvementScale = 123; const int improvementUpper = 991;
-    const int improvementLower = 4;  const int LMRDepthReductionThres = -3754;
+    const int lmrDepthScale = 978; const int lmrDepthScaleTwo = 876; const int ttMoveCutNodeScale = 3803;
+    const int depthReductionDecreaseThres = 4707; const int LMRDepthReductionThres = -3754;
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
@@ -78,13 +74,9 @@ namespace {
   // Reductions lookup table initialized at startup
   int Reductions[MAX_MOVES]; // [depth or moveNumber]
 
-  int reduction(int improvement, Depth d, int mn, Value delta, Value rootDelta) {
-    int r = (Reductions[d] * Reductions[mn]) / 64 / 64;
-    int reduction = baseReductionScale * r + baseReductionAdjustment - int(delta) * baseReductionDeltaScale / int(rootDelta);
-    if(improvement <= improvementLower)
-        reduction += std::min(r * baseImprovingReductionScale + baseImprovingReductionAdjustment, improvingReductionMax) *
-        std::min(improvementAdjustment - improvement * improvementScale / 1024, improvementUpper) / 1024;
-    return reduction / 1024;
+  int reduction(bool i, Depth d, int mn, Value delta, Value rootDelta) {
+      int r = Reductions[d] * Reductions[mn];
+      return (r + 1372 - int(delta) * 1073 / int(rootDelta)) / 1024 + (!i && r > 936);
   }
 
   //Extension/Reduction NN Take 4 61k game values
@@ -304,7 +296,7 @@ namespace {
 void Search::init() {
 
   for (int i = 1; i < MAX_MOVES; ++i)
-      Reductions[i] = int((reductionTableScale + std::log(Threads.size()) * 32) * std::log(i) + reductionTableAdjustment);
+      Reductions[i] = int((20.57 + std::log(Threads.size()) / 2) * std::log(i));
 }
 
 
@@ -690,7 +682,7 @@ namespace {
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
-    int moveCount, captureCount, quietCount, improvement;
+    int moveCount, captureCount, quietCount;
 
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
@@ -850,7 +842,6 @@ namespace {
         // Skip early pruning when in check
         ss->staticEval = eval = VALUE_NONE;
         improving = false;
-        improvement = 0;
         goto moves_loop;
     }
     else if (excludedMove)
@@ -887,14 +878,14 @@ namespace {
         thisThread->mainHistory[~us][from_to((ss-1)->currentMove)] << bonus;
     }
 
-    // Set up the improvement variable, which is the difference between the current
-    // static evaluation and the previous static evaluation at our turn (if we were
-    // in check at our previous move we look at the move prior to it). The improvement
-    // margin and the improving flag are used in various pruning heuristics.
-    improvement =   (ss-2)->staticEval != VALUE_NONE ? ss->staticEval - (ss-2)->staticEval
-                  : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval - (ss-4)->staticEval
-                  :                                    173;
-    improving = improvement > 0;
+    // Set up the improving flag, which is true if current static evaluation is
+    // bigger than the previous static evaluation at our turn (if we were in 
+    // check at our previous move we look at static evaluaion at move prior to it
+    // and if we were in check at move prior to it flag is set to true) and is
+    // false otherwise. The improving flag is used in various pruning heuristics.
+    improving = (ss - 2)->staticEval != VALUE_NONE ? ss->staticEval > (ss - 2)->staticEval
+        : (ss - 4)->staticEval != VALUE_NONE ? ss->staticEval > (ss - 4)->staticEval
+        : true;
 
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
@@ -1109,7 +1100,7 @@ moves_loop: // When in check, search starts here
 
       Value delta = beta - alpha;
 
-      int r = reduction(improvement, depth, moveCount, delta, thisThread->rootDelta);
+      int r = reduction(improving, depth, moveCount, delta, thisThread->rootDelta) * 1024;
 
       // Step 14. Pruning at shallow depth (~120 Elo). Depth conditions are important for mate finding.
       if (  !rootNode
