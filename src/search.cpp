@@ -172,7 +172,7 @@ namespace {
   int outputBias[2] = { 30, 139 };
   int outputSlopes[2][2] = { { 1094, 813 }, {965, 862} };
 
-  TUNE(SetRange(-4096, 4096), inputScales, depthInput, singularInput, statScoreInput, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
+  //TUNE(SetRange(-4096, 4096), inputScales, depthInput, singularInput, statScoreInput, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
 
   int PReLU(int input, int negativeSlope, int positiveSlope) {
       int output = 0;
