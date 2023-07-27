@@ -908,7 +908,7 @@ namespace {
     // The depth condition is important for mate finding.
     if (   !ss->ttPv
         &&  depth < 9
-        && eval - futility_margin(depth, cutNode && !ss->ttHit, improving) - (ss - 1)->statScore / 306 >= beta
+        &&  eval - futility_margin(depth, cutNode && !ss->ttHit, improving) - (ss-1)->statScore / 306 >= beta
         &&  eval >= beta
         &&  eval < 24923) // larger than VALUE_KNOWN_WIN, but smaller than TB wins
         return eval;
@@ -916,7 +916,7 @@ namespace {
     // Step 9. Null move search with verification search (~35 Elo)
     if (   !PvNode
         && (ss-1)->currentMove != MOVE_NULL
-        && (ss - 1)->statScore < 17329
+        && (ss-1)->statScore < 17329
         &&  eval >= beta
         &&  eval >= ss->staticEval
         &&  ss->staticEval >= beta - 21 * depth + 258
@@ -976,7 +976,6 @@ namespace {
         &&  depth >= 8
         && !ttMove)
         depth -= 2;
-
 
     probCutBeta = beta + 168 - 61 * improving;
 
@@ -1277,8 +1276,8 @@ moves_loop: // When in check, search starts here
 
       int customStatScore = std::clamp(ss->statScore / 10000, -8, 8) + 8;
 
-      //extension = Lookup(W_IN, customDepth, customSingular, customStatScore, 0);
-      //r += Lookup(W_IN, customDepth, customSingular, customStatScore, 1);
+      extension = Lookup(W_IN, customDepth, customSingular, customStatScore, 0);
+      r += Lookup(W_IN, customDepth, customSingular, customStatScore, 1);
 
       // Add extension to new depth
       newDepth += extension / 1024;
