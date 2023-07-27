@@ -99,7 +99,7 @@ namespace {
 
   int reduction(int improvement, Depth d, int mn, Value delta, Value rootDelta) {
     int r = (Reductions[d] * Reductions[mn]) / 64 / 64;
-    int reduction = baseReductionScale * r + baseReductionAdjustment - int(delta) * baseReductionDeltaScale / int(rootDelta);
+    int reduction = r + (baseReductionAdjustment / 966) - int(delta) * (baseReductionDeltaScale / 966) / int(rootDelta) * (966 / 1024);
     if(improvement <= improvementLower)
         reduction += std::min(r * baseImprovingReductionScale + baseImprovingReductionAdjustment, improvingReductionMax) *
         std::min(improvementAdjustment - improvement * improvementScale / 1024, improvementUpper) / 1024;
@@ -1162,12 +1162,6 @@ moves_loop: // When in check, search starts here
               else if (ttValue <= value) {
                   extension = -1;
                   r += ttValueValue;
-              }
-
-              // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= alpha) {
-                  extension = -1;
-                  r += ttValueAlpha;
               }
           }
 
