@@ -138,16 +138,15 @@ namespace {
       {1615, 1587, 2062, 998, 762},
       {172, -312, -388, 202, -145},
       {-287, -104, 796, 214, -347},
-      {-631, -1153, 186, 347, -1607}
-      {0, 0, 0, 0, 0, 0, 0, 0}
-  };
+      {-631, -1153, 186, 347, -1607},
+      {0, 0, 0, 0, 0}};
 
   int customSingularExtensionInput[24][8] = {
       {0, 1606, 1606, 1606, 1038, -1234, -1234, -1234},
-      {0, 2250, 2250, 2250, 670, -1467, -1467, -1467, -1467},
+      {0, 2250, 2250, 2250, 670, -1467, -1467, -1467},
       {0, 1464, 1464, 1464, -18, -1945, -1945, -1945},
-      {0, , 177, 177, 835, -919, -919, -919},
-      {0, , 414, 414, 321, -17, -17, -17},
+      {0, 177, 177, 177, 835, -919, -919, -919},
+      {0, 414, 414, 414, 321, -17, -17, -17},
       {0, 1307, -1307, -1307, -1189, 123, 123, 123},
       {0, -362, -362, -362, 477, -835, -835, -835},
       {0, 733, 733, 733, 208, -627, -627, -627},
@@ -156,7 +155,7 @@ namespace {
       {0, 258, -258, -258, 407, 808, 808, 808},
       {0, -1363, -1363, -1363, -1637, -693, -693, -693},
       {0, 73, 73, 73, -324, 63, 63, 63},
-      {0, , 768, 768, -35, -93, -93, -93},
+      {0, 768, 768, 768, -35, -93, -93, -93},
       {0, -257, -257, -257, -215, -691, -691, -691},
       {0, -430, -430, -430, 96, 720, 720, 720},
       {0, -57, -57, -57, 693, 989, 989, 989},
@@ -208,12 +207,12 @@ namespace {
 
   int Lookup(bool W_IN[17], int depth, int singular, int statScore, int n) {
       if (Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
-          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][depth][singular][statScore] == 0) {
+          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][depth][singular][statScore] == 0) {
           Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
-              [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][depth][singular][statScore] = calculateFinalLayers(W_IN, n);
+              [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][depth][singular][statScore] = calculateFinalLayers(W_IN, depth, singular, statScore, n);
       }
       return Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][W_IN[10]][W_IN[11]][W_IN[12]]
-          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][W_IN[17]][depth][singular][statScore];
+          [W_IN[13]][W_IN[14]][W_IN[15]][W_IN[16]][depth][singular][statScore];
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
@@ -1214,7 +1213,7 @@ moves_loop: // When in check, search starts here
           value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
           ss->excludedMove = MOVE_NONE;
 
-          customSingular = std::clamp((value - singularBeta) / 25, -3, 3) + 4;
+          customSingular = std::clamp(int(value - singularBeta) / 25, -3, 3) + 4;
 
           if (value < singularBeta - 21)
               depth += depth < 13;
@@ -1230,7 +1229,7 @@ moves_loop: // When in check, search starts here
           W_IN[3] = true;
 
       if (cutNode)
-          W_IN[4 = true;
+          W_IN[4] = true;
 
       if (ttValue <= value)
           W_IN[5] = true;
