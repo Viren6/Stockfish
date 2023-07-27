@@ -965,19 +965,18 @@ namespace {
     // Step 10. If the position doesn't have a ttMove, decrease depth by 2
     // (or by 4 if the TT entry for the current position was hit and the stored depth is greater than or equal to the current depth).
     // Use qsearch if depth is equal or below zero (~9 Elo)
-    if (PvNode
-        && !ttMove) {
+    if (    PvNode
+        && !ttMove)
         depth -= 2 + 2 * (ss->ttHit && tte->depth() >= depth);
-    }
 
     if (depth <= 0)
         return qsearch<PV>(pos, ss, alpha, beta);
 
-    if (cutNode
-        && depth >= 8
-        && !ttMove) {
+    if (    cutNode
+        &&  depth >= 8
+        && !ttMove)
         depth -= 2;
-    }
+
 
     probCutBeta = beta + 168 - 61 * improving;
 
@@ -1278,8 +1277,8 @@ moves_loop: // When in check, search starts here
 
       int customStatScore = std::clamp(ss->statScore / 10000, -8, 8) + 8;
 
-      extension = Lookup(W_IN, customDepth, customSingular, customStatScore, 0);
-      r += Lookup(W_IN, customDepth, customSingular, customStatScore, 1);
+      //extension = Lookup(W_IN, customDepth, customSingular, customStatScore, 0);
+      //r += Lookup(W_IN, customDepth, customSingular, customStatScore, 1);
 
       // Add extension to new depth
       newDepth += extension / 1024;
