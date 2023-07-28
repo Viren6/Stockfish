@@ -208,19 +208,19 @@ namespace {
   //    return PReLU(outputSum + outputBias[n], outputSlopes[n][0], outputSlopes[n][1]);
   //}
 
-  //int Store[2][2][2][2][2][2][2][2][2][2][5][3][3][5][4][15];
+  int Store[2][2][2][2][2][2][2][2][2][2][5][3][3][5][4][15];
 
-  //int Lookup(bool W_IN[9], int depth, int singular, int statScore, int nodeType, int ttValue, int ttMove, int n) {
-  //    //dbg_hit_on(Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][ttMove]
-  //    //    [ttValue][nodeType][depth][singular][statScore] == 0);
-  //    if (Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
-  //        [ttValue][nodeType][depth][singular][statScore] == 0) {
-  //        Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
-  //            [ttValue][nodeType][depth][singular][statScore] = calculateFinalLayers(W_IN, depth, singular, statScore, nodeType, ttValue, ttMove, n);
-  //    }
-  //    return Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
-  //        [ttValue][nodeType][depth][singular][statScore];
-  //}
+  int Lookup(bool W_IN[9], int depth, int singular, int statScore, int nodeType, int ttValue, int ttMove, int n) {
+      //dbg_hit_on(Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][ttMove]
+      //    [ttValue][nodeType][depth][singular][statScore] == 0);
+      if (Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
+          [ttValue][nodeType][depth][singular][statScore] == 0) {
+          Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
+              [ttValue][nodeType][depth][singular][statScore] = 1;// calculateFinalLayers(W_IN, depth, singular, statScore, nodeType, ttValue, ttMove, n);
+      }
+      return Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
+          [ttValue][nodeType][depth][singular][statScore];
+  }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
     return improving ? (3 + depth * depth)
@@ -1288,8 +1288,8 @@ moves_loop: // When in check, search starts here
 
       int customStatScore = std::clamp(ss->statScore / 10000, -7, 7) + 7;
 
-      //extension = Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 0);
-      //r += Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 1);
+      extension = Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 0);
+      r += Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 1);
 
       // Add extension to new depth
       newDepth += extension / 1024;
