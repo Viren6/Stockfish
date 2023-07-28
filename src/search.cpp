@@ -79,7 +79,7 @@ namespace {
       return (r + 1372 - int(delta) * 1073 / int(rootDelta)) / 1024 + (!i && r > 936);
   }
 
-  //Extension/Reduction NN Take 5 14k game values
+  //Extension/Reduction NN Zero Initialise
   int inputScales[24][9][2] = {};
 
   int depthInput[24][5] = {};
@@ -105,10 +105,10 @@ namespace {
   int outputBias[2] = {};
   int outputSlopes[2][2] = { { 1024, 1024 }, {1024, 1024} };
 
-  //TUNE(SetRange(-4096, 4096), inputScales, depthInput, singularInput, nodeTypeInput, ttValueInput, ttMoveInput, statScoreInput, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
+  TUNE(SetRange(-4096, 4096), inputScales, depthInput, singularInput, nodeTypeInput, ttValueInput, ttMoveInput, statScoreInput, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
 
-  //TUNE( SetRange(400, 2000), lmrDepthScale, lmrDepthScaleTwo, SetRange(800, 4000), ttMoveCutNodeScale, 
-  //    SetRange(1600, 10000), depthReductionDecreaseThres, SetRange(-12000, -1500), LMRDepthReductionThres);
+  TUNE( SetRange(400, 2000), lmrDepthScale, lmrDepthScaleTwo, SetRange(800, 4000), ttMoveCutNodeScale, 
+      SetRange(1600, 10000), depthReductionDecreaseThres, SetRange(-12000, -1500), LMRDepthReductionThres);
 
   int PReLU(int input, int negativeSlope, int positiveSlope) {
       int output = 0;
