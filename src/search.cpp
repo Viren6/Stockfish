@@ -79,7 +79,7 @@ namespace {
       return (r + 1372 - int(delta) * 1073 / int(rootDelta)) / 1024 + (!i && r > 936);
   }
 
-  ////Extension/Reduction NN Take 5 14k game values
+  //Extension/Reduction NN Take 5 14k game values
   //int inputScales[24][9][2] = {
   //  {{-490, 1217}, {196, 165}, {522, 540}, {504, 547}, {-103, 428}, {504, 619}, {130, -305}, {54, -850}, {-248, -123}},
   //  {{35, 1008}, {-197, 311}, {-70, -238}, {51, 687}, {-365, -133}, {221, 951}, {-237, -80}, {455, 256}, {181, 32}},
@@ -176,47 +176,45 @@ namespace {
   //                        {{217, 92, 493, 426, 238, 320, 105, 43, 443, 64, 607, 77, 489, 1189, 411, 1228, 3, 145, 239, 310, 186, 41, 210, 1018},
   //                        {189, 122, 195, 146, 68, 408, 266, 159, 57, 142, 339, 2124, 1165, 167, 1197, 325, 2034, 3322, 201, 100, 77, 373, 49, 1003}} };
 
-  //int outputBias[2] = { -34, 161 };
-  //int outputSlopes[2][2] = { { 1007, 779 }, {951, 806} };
+  int outputBias[2] = { -34, 161 };
+  int outputSlopes[2][2] = { { 1007, 779 }, {951, 806} };
 
   ////TUNE(SetRange(-4096, 4096), inputScales, depthInput, singularInput, statScoreInput, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
 
   ////TUNE( SetRange(400, 2000), lmrDepthScale, lmrDepthScaleTwo, SetRange(800, 4000), ttMoveCutNodeScale, 
   ////    SetRange(1600, 10000), depthReductionDecreaseThres, SetRange(-12000, -1500), LMRDepthReductionThres);
 
-  //int PReLU(int input, int negativeSlope, int positiveSlope) {
-  //    int output = 0;
-  //    if (input >= 0)
-  //        output = input * positiveSlope / 1024;
-  //    else
-  //        output = input * negativeSlope / 1024;
-  //    return output;
-  //}
+  int PReLU(int input, int negativeSlope, int positiveSlope) {
+      int output = 0;
+      if (input >= 0)
+          output = input * positiveSlope / 1024;
+      else
+          output = input * negativeSlope / 1024;
+      return output;
+  }
 
-  //int calculateFinalLayers(bool W_IN[9], int depth, int singular, int statScore, int nodeType, int ttValue, int ttMove, int n) {
-  //    int outputSum = 0;
-  //    for (int i = 0; i < 24; ++i) {
-  //        int sum = 0;
-  //        for (int j = 0; j < 9; ++j) {
-  //            sum += inputScales[i][j][W_IN[j]];
-  //        }
-  //        sum += depthInput[i][depth] + singularInput[i][singular] + nodeTypeInput[i][nodeType]
-  //            + ttValueInput[i][ttValue] + ttMoveInput[i][ttMove]
-  //            + statScoreInput[i] * statScore;
-  //        outputSum += PReLU(sum + biases[n][i], slopes[n][0][i], slopes[n][1][i]);
-  //    }
-  //    return PReLU(outputSum + outputBias[n], outputSlopes[n][0], outputSlopes[n][1]);
-  //}
+  int calculateFinalLayers(/*bool W_IN[9], int depth, int singular, int statScore, int nodeType, int ttValue, int ttMove,*/ int n) {
+      int outputSum = 0;
+      for (int i = 0; i < 24; ++i) {
+          //int sum = 0;
+          for (int j = 0; j < 9; ++j) {
+              //sum += inputScales[i][j][W_IN[j]];
+          }
+          //sum += depthInput[i][depth] + singularInput[i][singular] + nodeTypeInput[i][nodeType]
+          //    + ttValueInput[i][ttValue] + ttMoveInput[i][ttMove]
+          //    + statScoreInput[i] * statScore;
+          //outputSum += PReLU(sum + biases[n][i], slopes[n][0][i], slopes[n][1][i]);
+      }
+      return PReLU(outputSum + outputBias[n], outputSlopes[n][0], outputSlopes[n][1]);
+  }
 
   int Store[2][2][2][2][2][2][2][2][2][2][5][3][3][5][4][15];
 
   int Lookup(bool W_IN[9], int depth, int singular, int statScore, int nodeType, int ttValue, int ttMove, int n) {
-      //dbg_hit_on(Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][W_IN[9]][ttMove]
-      //    [ttValue][nodeType][depth][singular][statScore] == 0);
       if (Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
           [ttValue][nodeType][depth][singular][statScore] == 0) {
           Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
-              [ttValue][nodeType][depth][singular][statScore] = 1;// calculateFinalLayers(W_IN, depth, singular, statScore, nodeType, ttValue, ttMove, n);
+              [ttValue][nodeType][depth][singular][statScore] = calculateFinalLayers(/*W_IN, depth, singular, statScore, nodeType, ttValue, ttMove,*/ n);
       }
       return Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
           [ttValue][nodeType][depth][singular][statScore];
