@@ -195,9 +195,9 @@ namespace {
 
   int calculateFinalLayers(bool W_IN[9], int depth, int singular, int statScore, int nodeType, int ttValue, int ttMove, int n) {
       int outputSum = 0;
-      for (int i = 0; i < 24; ++i) {
+      for (int i = 0; i < 24; i++) {
           int sum = 0;
-          for (int j = 0; j < 1; ++j) {
+          for (int j = 0; j < 9; j++) {
               sum += inputScales[i][j][W_IN[j]];
           }
           sum += depthInput[i][depth] + singularInput[i][singular] + nodeTypeInput[i][nodeType]
