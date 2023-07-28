@@ -1215,7 +1215,7 @@ moves_loop: // When in check, search starts here
 
           if (singularBeta >= beta && value >= singularBeta)
               return singularBeta;
-      }
+      } 
 
       if (ttValue >= beta)
           W_IN[2] = true;
