@@ -179,10 +179,10 @@ namespace {
   int outputBias[2] = { -34, 161 };
   int outputSlopes[2][2] = { { 1007, 779 }, {951, 806} };
 
-  ////TUNE(SetRange(-4096, 4096), inputScales, depthInput, singularInput, statScoreInput, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
+  //TUNE(SetRange(-4096, 4096), inputScales, depthInput, singularInput, nodeTypeInput, ttValueInput, ttMoveInput, statScoreInput, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
 
-  ////TUNE( SetRange(400, 2000), lmrDepthScale, lmrDepthScaleTwo, SetRange(800, 4000), ttMoveCutNodeScale, 
-  ////    SetRange(1600, 10000), depthReductionDecreaseThres, SetRange(-12000, -1500), LMRDepthReductionThres);
+  //TUNE( SetRange(400, 2000), lmrDepthScale, lmrDepthScaleTwo, SetRange(800, 4000), ttMoveCutNodeScale, 
+  //    SetRange(1600, 10000), depthReductionDecreaseThres, SetRange(-12000, -1500), LMRDepthReductionThres);
 
   int PReLU(int input, int negativeSlope, int positiveSlope) {
       int output = 0;
@@ -1234,10 +1234,10 @@ moves_loop: // When in check, search starts here
 
       int customTTValue = 0;
 
-      if (ttValue <= value)
+      if (ttValue >= beta)
           customTTValue = 1;
 
-      if (ttValue >= beta)
+      if (ttValue <= value)
           customTTValue = 2;
 
       if (givesCheck)
