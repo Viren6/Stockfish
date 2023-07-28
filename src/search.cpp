@@ -1288,8 +1288,8 @@ moves_loop: // When in check, search starts here
 
       int customStatScore = std::clamp(ss->statScore / 10000, -7, 7) + 7;
 
-      extension = Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 0);
-      r += Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 1);
+      //extension = Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 0);
+      //r += Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 1);
 
       // Add extension to new depth
       newDepth += extension / 1024;
