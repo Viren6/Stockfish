@@ -97,17 +97,17 @@ namespace {
   int biases[2][24] = { {},
                          {} };
 
-  int slopes[2][2][24] = { {{1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024}},
-                          {{1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024}} };
+  int slopes[2][2][24] = { {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+                          {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}} };
 
   int outputBias[2] = {};
   int outputSlopes[2][2] = { { 1024, 1024 }, {1024, 1024} };
 
   TUNE(SetRange(-4096, 4096), inputScales, depthInput, singularInput, nodeTypeInput, ttValueInput, ttMoveInput, statScoreInput, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
 
-  TUNE( SetRange(400, 2000), lmrDepthScale, lmrDepthScaleTwo, SetRange(800, 4000), ttMoveCutNodeScale, 
+  TUNE( SetRange(400, 2000), lmrDepthScale, lmrDepthScaleTwo, SetRange(800, 5000), ttMoveCutNodeScale, 
       SetRange(1600, 10000), depthReductionDecreaseThres, SetRange(-12000, -1500), LMRDepthReductionThres);
 
   int PReLU(int input, int negativeSlope, int positiveSlope) {
