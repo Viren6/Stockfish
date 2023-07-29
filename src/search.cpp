@@ -1037,7 +1037,7 @@ moves_loop: // When in check, search starts here
 
       Value delta = beta - alpha;
 
-      int r = reduction(improving, depth, moveCount, delta, thisThread->rootDelta) * 1024;
+      int r = reduction(improving, depth, moveCount, delta, thisThread->rootDelta) * lmrDepthScale;
 
       // Step 14. Pruning at shallow depth (~120 Elo). Depth conditions are important for mate finding.
       if (  !rootNode
@@ -1048,7 +1048,7 @@ moves_loop: // When in check, search starts here
           moveCountPruning = moveCount >= futility_move_count(improving, depth);
 
           // Reduced depth of the next LMR search
-          int lmrDepth = newDepth - (r * lmrDepthScale / 1024 / 1024);
+          int lmrDepth = newDepth - (r / 1024);
 
           if (   capture
               || givesCheck)
@@ -1213,6 +1213,7 @@ moves_loop: // When in check, search starts here
       int customStatScore = std::clamp(ss->statScore / 10000, -7, 7) + 7;
 
       extension = Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 0);
+      r = r * lmrDepthScaleTwo / 1024;
       r += Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 1);
 
       // Add extension to new depth
@@ -1244,8 +1245,8 @@ moves_loop: // When in check, search starts here
           // In general we want to cap the LMR depth search at newDepth, but when
           // reduction is negative, we allow this move a limited search extension
           // beyond the first move depth. This may lead to hidden double extensions.
-          int totalAdjustment = r * lmrDepthScaleTwo - extension * 1024;
-          Depth d = std::clamp(initialDepth - (totalAdjustment / (1024 * 1024)), 1, newDepth + 1 + (r <= LMRDepthReductionThres));
+          int totalAdjustment = r - extension;
+          Depth d = std::clamp(initialDepth - (totalAdjustment / 1024), 1, newDepth + 1 + (r <= LMRDepthReductionThres));
           value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, d, true);
 
           // Do a full-depth search when reduced LMR search fails high
