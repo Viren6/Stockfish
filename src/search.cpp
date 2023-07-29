@@ -59,6 +59,10 @@ using namespace Search;
 
 namespace {
 
+    //VLTC Tune 1 60k game values
+    int lmrDepthScale = 978; int lmrDepthScaleTwo = 876; int ttMoveCutNodeScale = 3803;
+    int depthReductionDecreaseThres = 4707; int LMRDepthReductionThres = -3754;
+
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
 
@@ -70,9 +74,76 @@ namespace {
   // Reductions lookup table initialized at startup
   int Reductions[MAX_MOVES]; // [depth or moveNumber]
 
-  Depth reduction(bool i, Depth d, int mn, Value delta, Value rootDelta) {
-    int r = Reductions[d] * Reductions[mn];
-    return (r + 1372 - int(delta) * 1073 / int(rootDelta)) / 1024 + (!i && r > 936);
+  int reduction(bool i, Depth d, int mn, Value delta, Value rootDelta) {
+      int r = Reductions[d] * Reductions[mn];
+      return (r + 1372 - int(delta) * 1073 / int(rootDelta)) / 1024 + (!i && r > 936);
+  }
+
+  //Extension/Reduction NN Zero Initialise
+  int inputScales[24][9][2] = {};
+
+  int depthInput[24][5] = {};
+
+  int singularInput[24][4] = {};
+
+  int nodeTypeInput[24][3] = {};
+
+  int ttValueInput[24][3] = {};
+
+  int ttMoveInput[24][5] = {};
+
+  int statScoreInput[24] = {};
+
+  int biases[2][24] = { {},
+                         {} };
+
+  int slopes[2][2][24] = { {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+                          {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}} };
+
+  int outputBias[2] = {};
+  int outputSlopes[2][2] = { { 1024, 1024 }, {1024, 1024} };
+
+  TUNE(SetRange(-4096, 4096), inputScales, depthInput, singularInput, nodeTypeInput, ttValueInput, ttMoveInput, statScoreInput, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
+
+  TUNE(SetRange(400, 2000), lmrDepthScale, lmrDepthScaleTwo, SetRange(800, 5000), ttMoveCutNodeScale,
+      SetRange(1600, 10000), depthReductionDecreaseThres, SetRange(-12000, -1500), LMRDepthReductionThres);
+
+  int PReLU(int input, int negativeSlope, int positiveSlope) {
+      int output = 0;
+      if (input >= 0)
+          output = input * positiveSlope / 1024;
+      else
+          output = input * negativeSlope / 1024;
+      return output;
+  }
+
+  int calculateFinalLayers(bool W_IN[9], int depth, int singular, int statScore, int nodeType, int ttValue, int ttMove, int n) {
+      int outputSum = 0;
+      for (int i = 0; i < 24; i++) {
+          int sum = 0;
+          for (int j = 0; j < 9; j++) {
+              sum += inputScales[i][j][W_IN[j]];
+          }
+          sum += depthInput[i][depth] + singularInput[i][singular] + nodeTypeInput[i][nodeType]
+              + ttValueInput[i][ttValue] + ttMoveInput[i][ttMove]
+              + statScoreInput[i] * statScore;
+          outputSum += PReLU(sum + biases[n][i], slopes[n][0][i], slopes[n][1][i]);
+      }
+      return PReLU(outputSum + outputBias[n], outputSlopes[n][0], outputSlopes[n][1]);
+  }
+
+  int Store[2][2][2][2][2][2][2][2][2][2][5][3][3][5][4][15];
+
+  int Lookup(bool W_IN[9], int depth, int singular, int statScore, int nodeType, int ttValue, int ttMove, int n) {
+      if (Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
+          [ttValue][nodeType][depth][singular][statScore] == 0) {
+          Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
+              [ttValue][nodeType][depth][singular][statScore] = calculateFinalLayers(W_IN, depth, singular, statScore, nodeType, ttValue, ttMove, n);
+      }
+      return Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
+          [ttValue][nodeType][depth][singular][statScore];
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
@@ -543,7 +614,7 @@ namespace {
     TTEntry* tte;
     Key posKey;
     Move ttMove, move, excludedMove, bestMove;
-    Depth extension, newDepth;
+    Depth extension, initialDepth, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
@@ -962,10 +1033,11 @@ moves_loop: // When in check, search starts here
 
       // Calculate new depth for this move
       newDepth = depth - 1;
+      initialDepth = depth - 1;
 
       Value delta = beta - alpha;
 
-      Depth r = reduction(improving, depth, moveCount, delta, thisThread->rootDelta);
+      int r = reduction(improving, depth, moveCount, delta, thisThread->rootDelta) * lmrDepthScale;
 
       // Step 14. Pruning at shallow depth (~120 Elo). Depth conditions are important for mate finding.
       if (  !rootNode
@@ -976,7 +1048,7 @@ moves_loop: // When in check, search starts here
           moveCountPruning = moveCount >= futility_move_count(improving, depth);
 
           // Reduced depth of the next LMR search
-          int lmrDepth = newDepth - r;
+          int lmrDepth = newDepth - (r / 1024);
 
           if (   capture
               || givesCheck)
@@ -1042,86 +1114,110 @@ moves_loop: // When in check, search starts here
           }
       }
 
-      // Step 15. Extensions (~100 Elo)
-      // We take care to not overdo to avoid search getting stuck.
+      // Step 15. Extensions/Reductions (~200 Elo)
+      bool W_IN[9] = {};
+      int customSingular = 0;
+
       if (ss->ply < thisThread->rootDepth * 2)
+          W_IN[0] = true;
+
+      if (!rootNode
+          && depth >= 4 - (thisThread->completedDepth > 22) + 2 * (PvNode && tte->is_pv())
+          && move == ttMove
+          && !excludedMove
+          && abs(ttValue) < VALUE_KNOWN_WIN
+          && (tte->bound() & BOUND_LOWER)
+          && tte->depth() >= depth - 3)
       {
-          // Singular extension search (~94 Elo). If all moves but one fail low on a
-          // search of (alpha-s, beta-s), and just one fails high on (alpha, beta),
-          // then that move is singular and should be extended. To verify this we do
-          // a reduced search on all the other moves but the ttMove and if the
-          // result is lower than ttValue minus a margin, then we will extend the ttMove.
-          // Depth margin and singularBeta margin are known for having non-linear scaling.
-          // Their values are optimized to time controls of 180+1.8 and longer
-          // so changing them requires tests at this type of time controls.
-          if (   !rootNode
-              &&  depth >= 4 - (thisThread->completedDepth > 22) + 2 * (PvNode && tte->is_pv())
-              &&  move == ttMove
-              && !excludedMove // Avoid recursive singular search
-           /* &&  ttValue != VALUE_NONE Already implicit in the next condition */
-              &&  abs(ttValue) < VALUE_KNOWN_WIN
-              && (tte->bound() & BOUND_LOWER)
-              &&  tte->depth() >= depth - 3)
-          {
-              Value singularBeta = ttValue - (82 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
-              Depth singularDepth = (depth - 1) / 2;
-
-              ss->excludedMove = move;
-              value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
-              ss->excludedMove = MOVE_NONE;
-
-              if (value < singularBeta)
-              {
-                  extension = 1;
-                  singularQuietLMR = !ttCapture;
-
-                  // Avoid search explosion by limiting the number of double extensions
-                  if (  !PvNode
-                      && value < singularBeta - 21
-                      && ss->doubleExtensions <= 11)
-                  {
-                      extension = 2;
-                      depth += depth < 13;
-                  }
-              }
-
-              // Multi-cut pruning
-              // Our ttMove is assumed to fail high, and now we failed high also on a reduced
-              // search without the ttMove. So we assume this expected Cut-node is not singular,
-              // that multiple moves fail high, and we can prune the whole subtree by returning
-              // a softbound.
-              else if (singularBeta >= beta)
-                  return singularBeta;
-
-              // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
-              else if (ttValue >= beta)
-                  extension = -2 - !PvNode;
-
-              // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
-              else if (cutNode)
-                  extension = depth > 8 && depth < 17 ? -3 : -1;
-
-              // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= value)
-                  extension = -1;
-          }
-
-          // Check extensions (~1 Elo)
-          else if (   givesCheck
-                   && depth > 9)
-              extension = 1;
-
-          // Quiet ttMove extensions (~1 Elo)
-          else if (   PvNode
-                   && move == ttMove
-                   && move == ss->killers[0]
-                   && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
-              extension = 1;
+          W_IN[1] = true; 
       }
 
+      if (W_IN[1] == true && W_IN[0] == true) 
+      {
+          Value singularBeta = ttValue - (82 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
+          Depth singularDepth = (depth - 1) / 2;
+
+          ss->excludedMove = move;
+          value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
+          ss->excludedMove = MOVE_NONE;
+
+          customSingular = std::clamp((int(value - singularBeta) + 80) / 20, 1, 3);
+
+          if (value < singularBeta - 21)
+              depth += depth < 13;
+
+          if (singularBeta >= beta && value >= singularBeta)
+              return singularBeta;
+      } 
+
+      int customNodeType = 0;
+      
+      if (PvNode)
+         customNodeType = 1;
+
+      if (cutNode)
+          customNodeType = 2;
+
+      int customTTValue = 0;
+
+      if (ttValue >= beta)
+          customTTValue = 1;
+
+      if (ttValue <= value)
+          customTTValue = 2;
+
+      if (givesCheck)
+          W_IN[2] = true;
+
+      if (move == ss->killers[0]
+          && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
+          W_IN[3] = true;
+
+      int customTTMove = 0;
+
+      if (ttMove)
+          customTTMove = 1;
+
+      if (ttCapture)
+          customTTMove = 2;
+
+      if (move == ttMove)
+          customTTMove = 3;
+
+      if (move == ttMove && ttCapture)
+          customTTMove = 4;
+
+      if ((ss+1)->cutoffCnt >= 4)
+          W_IN[4] = true;
+
+      if ((ss-1)->moveCount >= 9)
+          W_IN[5] = true;
+
+      if (ss->ttPv && !likelyFailLow)
+          W_IN[6] = true;
+
+      if (tte->depth() >= depth + 3)
+          W_IN[7] = true;
+
+      if (improving)
+          W_IN[8] = true;
+
+      int customDepth = std::clamp(depth / 5, 0, 4);
+
+      ss->statScore = 2 * thisThread->mainHistory[us][from_to(move)]
+          + (*contHist[0])[movedPiece][to_sq(move)]
+          + (*contHist[1])[movedPiece][to_sq(move)]
+          + (*contHist[3])[movedPiece][to_sq(move)]
+          - 4006;
+
+      int customStatScore = std::clamp(ss->statScore / 10000, -7, 7) + 7;
+
+      extension = Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 0);
+      r = r * lmrDepthScaleTwo / 1024;
+      r += Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 1);
+
       // Add extension to new depth
-      newDepth += extension;
-      ss->doubleExtensions = (ss-1)->doubleExtensions + (extension == 2);
+      newDepth += extension / 1024;
 
       // Speculative prefetch as early as possible
       prefetch(TT.first_entry(pos.key_after(move)));
@@ -1136,49 +1232,6 @@ moves_loop: // When in check, search starts here
       // Step 16. Make the move
       pos.do_move(move, st, givesCheck);
 
-      // Decrease reduction if position is or has been on the PV
-      // and node is not likely to fail low. (~3 Elo)
-      // Decrease further on cutNodes. (~1 Elo)
-      if (   ss->ttPv
-          && !likelyFailLow)
-          r -= cutNode && tte->depth() >= depth + 3 ? 3 : 2;
-
-      // Decrease reduction if opponent's move count is high (~1 Elo)
-      if ((ss-1)->moveCount > 8)
-          r--;
-
-      // Increase reduction for cut nodes (~3 Elo)
-      if (cutNode)
-          r += 2;
-
-      // Increase reduction if ttMove is a capture (~3 Elo)
-      if (ttCapture)
-          r++;
-
-      // Decrease reduction for PvNodes based on depth (~2 Elo)
-      if (PvNode)
-          r -= 1 + (depth < 6);
-
-      // Decrease reduction if ttMove has been singularly extended (~1 Elo)
-      if (singularQuietLMR)
-          r--;
-
-      // Increase reduction if next ply has a lot of fail high (~5 Elo)
-      if ((ss+1)->cutoffCnt > 3)
-          r++;
-
-      else if (move == ttMove)
-          r--;
-
-      ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
-                     + (*contHist[0])[movedPiece][to_sq(move)]
-                     + (*contHist[1])[movedPiece][to_sq(move)]
-                     + (*contHist[3])[movedPiece][to_sq(move)]
-                     - 4006;
-
-      // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
-      r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
-
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
       // been searched. In general, we would like to reduce them, but there are many
@@ -1192,8 +1245,8 @@ moves_loop: // When in check, search starts here
           // In general we want to cap the LMR depth search at newDepth, but when
           // reduction is negative, we allow this move a limited search extension
           // beyond the first move depth. This may lead to hidden double extensions.
-          Depth d = std::clamp(newDepth - r, 1, newDepth + 1);
-
+          int totalAdjustment = r - extension;
+          Depth d = std::clamp(initialDepth - (totalAdjustment / 1024), 1, newDepth + 1 + (r <= LMRDepthReductionThres));
           value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, d, true);
 
           // Do a full-depth search when reduced LMR search fails high
@@ -1225,9 +1278,9 @@ moves_loop: // When in check, search starts here
       {
           // Increase reduction for cut nodes and not ttMove (~1 Elo)
           if (!ttMove && cutNode)
-              r += 2;
+              r += ttMoveCutNodeScale;
 
-          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth - (r > 3), !cutNode);
+          value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth - (r >= depthReductionDecreaseThres), !cutNode);
       }
 
       // For PV nodes only, do a full PV search on the first move or after a fail
