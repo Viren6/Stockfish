@@ -94,8 +94,6 @@ namespace {
 
   int statScoreInput[24] = {};
 
-  int moveCountInput[24][7] = {};
-
   int biases[2][24] = { {},
                          {} };
 
@@ -107,7 +105,7 @@ namespace {
   int outputBias[2] = {};
   int outputSlopes[2][2] = { { 1024, 1024 }, {1024, 1024} };
 
-  TUNE(SetRange(-4096, 4096), inputScales, depthInput, singularInput, nodeTypeInput, ttValueInput, ttMoveInput, statScoreInput, moveCountInput, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
+  TUNE(SetRange(-4096, 4096), inputScales, depthInput, singularInput, nodeTypeInput, ttValueInput, ttMoveInput, statScoreInput, SetRange(-16384, 16384), biases, outputBias, SetRange(0, 8192), slopes, outputSlopes);
 
   TUNE(SetRange(400, 2000), lmrDepthScale, lmrDepthScaleTwo, SetRange(800, 5000), ttMoveCutNodeScale,
       SetRange(1600, 10000), depthReductionDecreaseThres, SetRange(-12000, -1500), LMRDepthReductionThres);
@@ -121,7 +119,7 @@ namespace {
       return output;
   }
 
-  int calculateFinalLayers(bool W_IN[9], int depth, int singular, int statScore, int nodeType, int ttValue, int ttMove, int moveCount, int n) {
+  int calculateFinalLayers(bool W_IN[9], int depth, int singular, int statScore, int nodeType, int ttValue, int ttMove, int n) {
       int outputSum = 0;
       for (int i = 0; i < 24; i++) {
           int sum = 0;
@@ -130,22 +128,22 @@ namespace {
           }
           sum += depthInput[i][depth] + singularInput[i][singular] + nodeTypeInput[i][nodeType]
               + ttValueInput[i][ttValue] + ttMoveInput[i][ttMove]
-              + statScoreInput[i] * statScore + moveCountInput[i][moveCount];
+              + statScoreInput[i] * statScore;
           outputSum += PReLU(sum + biases[n][i], slopes[n][0][i], slopes[n][1][i]);
       }
       return PReLU(outputSum + outputBias[n], outputSlopes[n][0], outputSlopes[n][1]);
   }
 
-  int Store[2][2][2][2][2][2][2][2][2][2][5][3][3][5][4][15][7];
+  int Store[2][2][2][2][2][2][2][2][2][2][5][3][3][5][4][15];
 
-  int Lookup(bool W_IN[9], int depth, int singular, int statScore, int nodeType, int ttValue, int ttMove, int moveCount, int n) {
+  int Lookup(bool W_IN[9], int depth, int singular, int statScore, int nodeType, int ttValue, int ttMove, int n) {
       if (Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
-          [ttValue][nodeType][depth][singular][statScore][moveCount] == 0) {
+          [ttValue][nodeType][depth][singular][statScore] == 0) {
           Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
-              [ttValue][nodeType][depth][singular][statScore][moveCount] = calculateFinalLayers(W_IN, depth, singular, statScore, nodeType, ttValue, ttMove, moveCount, n);
+              [ttValue][nodeType][depth][singular][statScore] = calculateFinalLayers(W_IN, depth, singular, statScore, nodeType, ttValue, ttMove, n);
       }
       return Store[n][W_IN[0]][W_IN[1]][W_IN[2]][W_IN[3]][W_IN[4]][W_IN[5]][W_IN[6]][W_IN[7]][W_IN[8]][ttMove]
-          [ttValue][nodeType][depth][singular][statScore][moveCount];
+          [ttValue][nodeType][depth][singular][statScore];
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
@@ -1206,8 +1204,6 @@ moves_loop: // When in check, search starts here
 
       int customDepth = std::clamp(depth / 5, 0, 4);
 
-      int customMoveCount = std::clamp(moveCount / 5, 0, 6);
-
       ss->statScore = 2 * thisThread->mainHistory[us][from_to(move)]
           + (*contHist[0])[movedPiece][to_sq(move)]
           + (*contHist[1])[movedPiece][to_sq(move)]
@@ -1216,9 +1212,9 @@ moves_loop: // When in check, search starts here
 
       int customStatScore = std::clamp(ss->statScore / 10000, -7, 7) + 7;
 
-      extension = Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, customMoveCount, 0);
+      extension = Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 0);
       r = r * lmrDepthScaleTwo / 1024;
-      r += Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, customMoveCount, 1);
+      r += Lookup(W_IN, customDepth, customSingular, customStatScore, customNodeType, customTTValue, customTTMove, 1);
 
       // Add extension to new depth
       newDepth += extension / 1024;
