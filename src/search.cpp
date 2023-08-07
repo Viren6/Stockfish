@@ -756,7 +756,7 @@ namespace {
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
-    if (eval < alpha - 456 - std::max(252 * depth * depth, 252 * (ss+1)->cutoffCnt * (ss+1)->cutoffCnt))
+    if (eval < alpha - 456 - 252 * depth * depth * ((ss+1)->cutoffCnt + 1))
     {
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
