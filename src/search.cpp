@@ -1082,6 +1082,11 @@ moves_loop: // When in check, search starts here
                   {
                       extension = 2;
                       depth += depth < 13;
+
+                      if (!cutNode
+                          && value < singularBeta - 42
+                          && ss->doubleExtensions <= 11)
+                            extension = 3;
                   }
               }
 
@@ -1121,7 +1126,7 @@ moves_loop: // When in check, search starts here
 
       // Add extension to new depth
       newDepth += extension;
-      ss->doubleExtensions = (ss-1)->doubleExtensions + (extension == 2);
+      ss->doubleExtensions = (ss-1)->doubleExtensions + (extension == 2) + (extension == 3);
 
       // Speculative prefetch as early as possible
       prefetch(TT.first_entry(pos.key_after(move)));
