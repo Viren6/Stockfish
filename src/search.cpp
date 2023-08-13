@@ -281,13 +281,13 @@ void Thread::search() {
   {
       (ss-i)->continuationHistory = &this->continuationHistory[0][0][NO_PIECE][0]; // Use as a sentinel
       (ss-i)->staticEval = VALUE_NONE;
-      (ss-i)->reduction = VALUE_NONE;
+      (ss-i)->reduction = 1;
   }
 
   for (int i = 0; i <= MAX_PLY + 2; ++i) 
   {
       (ss+i)->ply = i;
-      (ss+i)->reduction = VALUE_NONE;
+      (ss+i)->reduction = 1;
   }
 
   ss->pv = pv;
@@ -760,16 +760,8 @@ namespace {
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
-    if (ss->reduction != VALUE_NONE) {
-        dbg_mean_of(ss->reduction, 1);
-    }
-    if ((ss-1)->reduction != VALUE_NONE) {
-        dbg_mean_of((ss-1)->reduction, 2);
-    }
-    if ((ss+1)->reduction != VALUE_NONE) {
-        dbg_mean_of((ss+1)->reduction, 3);
-    }
-    if (eval < alpha - 456 - 252 * depth * depth)
+
+    if (eval < alpha - 456 * (ss-1)->reduction - 252 * depth * depth)
     {
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
@@ -1174,7 +1166,6 @@ moves_loop: // When in check, search starts here
       r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
 
       ss->reduction = r;
-      dbg_mean_of(r, 0);
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
