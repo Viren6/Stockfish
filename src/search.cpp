@@ -284,7 +284,7 @@ void Thread::search() {
       (ss-i)->reduction = 1;
   }
 
-  for (int i = 0; i <= MAX_PLY + 2; ++i) 
+  for (int i = 0; i <= MAX_PLY + 2; ++i)
   {
       (ss+i)->ply = i;
       (ss+i)->reduction = 1;
@@ -761,7 +761,6 @@ namespace {
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
-
     redAdj = std::max(1, (ss - 1)->reduction);
     if (eval < alpha - 456 - 252 * redAdj * depth)
     {
