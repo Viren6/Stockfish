@@ -705,6 +705,7 @@ namespace {
     }
 
     CapturePieceToHistory& captureHistory = thisThread->captureHistory;
+    int redAdj;
 
     // Step 6. Static evaluation of the position
     if (ss->inCheck)
@@ -761,7 +762,8 @@ namespace {
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
 
-    if (eval < alpha - 456 * (ss-1)->reduction - 252 * depth * depth)
+    redAdj = std::max(1, (ss - 1)->reduction);
+    if (eval < alpha - 456 - 252 * redAdj * depth)
     {
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
