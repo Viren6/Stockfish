@@ -1161,7 +1161,7 @@ moves_loop: // When in check, search starts here
       r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
 
       if (extension < 0)
-          r += 2;
+          r += 3;
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
