@@ -1161,13 +1161,10 @@ moves_loop: // When in check, search starts here
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
       r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
 
-      if (extension < 0 && r < 0)
-          moreExtension = -r / 3;
+      if(extension < 0)
+        moreExtension = std::max((-r - (extension + 1) * 3) / 3, 0);
 
-      //dbg_hit_on(extension < 0 && r < 0);
       newDepth += moreExtension;
-
-      //dbg_mean_of(r, extension + moreExtension + 5);
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
