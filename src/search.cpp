@@ -1164,10 +1164,7 @@ moves_loop: // When in check, search starts here
       if (extension < 0 && r < 0)
           moreExtension = -r / 3;
 
-      //dbg_hit_on(extension < 0 && r < 0);
       newDepth += moreExtension;
-
-      //dbg_mean_of(r, extension + moreExtension + 5);
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
