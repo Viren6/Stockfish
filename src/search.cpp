@@ -1162,7 +1162,7 @@ moves_loop: // When in check, search starts here
       r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
 
       if(extension < 0)
-        moreExtension = std::max((-r - (extension + 1) * 3) / 3, 0);
+        moreExtension = std::max((-r - extension * 3) / 3, 0);
 
       newDepth += moreExtension;
 
