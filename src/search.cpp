@@ -1074,7 +1074,7 @@ moves_loop: // When in check, search starts here
               else if (singularBeta >= beta)
                   return singularBeta;
 
-              // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
+              // Negative Extensions (~9 Elo)
               else if (cutNode || ttValue >= beta || ttValue <= value)
                   extension = depth < 17 ? -3 : -1;
           }
