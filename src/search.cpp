@@ -543,7 +543,7 @@ namespace {
     TTEntry* tte;
     Key posKey;
     Move ttMove, move, excludedMove, bestMove;
-    Depth extension, newDepth;
+    Depth extension, newDepth, moreExtension;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
@@ -956,6 +956,7 @@ moves_loop: // When in check, search starts here
           (ss+1)->pv = nullptr;
 
       extension = 0;
+      moreExtension = 0;
       capture = pos.capture_stage(move);
       movedPiece = pos.moved_piece(move);
       givesCheck = pos.gives_check(move);
@@ -1160,8 +1161,13 @@ moves_loop: // When in check, search starts here
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
       r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
 
-      if (extension < 0)
-          r += 5;
+      if (extension < 0 && r < 0)
+          moreExtension = -r / 3;
+
+      //dbg_hit_on(extension < 0 && r < 0);
+      newDepth += moreExtension;
+
+      //dbg_mean_of(r, extension + moreExtension + 5);
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
