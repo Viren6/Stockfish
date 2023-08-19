@@ -1164,6 +1164,7 @@ moves_loop: // When in check, search starts here
       if (extension > 0 && r > 0)
           moreExtension = extension * -r / 6;
 
+      r -= moreExtension;
       newDepth += moreExtension;
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
