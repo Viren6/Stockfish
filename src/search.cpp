@@ -1161,8 +1161,8 @@ moves_loop: // When in check, search starts here
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
       r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
 
-      if (extension < 0 && r < 0)
-          moreExtension = -extension * -r / 6;
+      if (extension > 0 && r > 0)
+          moreExtension = extension * -r / 6;
 
       newDepth += moreExtension;
 
