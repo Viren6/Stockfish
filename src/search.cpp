@@ -1160,9 +1160,6 @@ moves_loop: // When in check, search starts here
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
       r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
 
-      if(extension == 2)
-        newDepth -= (r >= 3);
-
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
       // been searched. In general, we would like to reduce them, but there are many
@@ -1173,6 +1170,7 @@ moves_loop: // When in check, search starts here
               || !capture
               || (cutNode && (ss-1)->moveCount > 1)))
       {
+          dbg_hit_on(extension == 2, 0);
           // In general we want to cap the LMR depth search at newDepth, but when
           // reduction is negative, we allow this move a limited search extension
           // beyond the first move depth. This may lead to hidden double extensions.
@@ -1207,6 +1205,7 @@ moves_loop: // When in check, search starts here
       // Step 18. Full-depth search when LMR is skipped. If expected reduction is high, reduce its depth by 1.
       else if (!PvNode || moveCount > 1)
       {
+          dbg_hit_on(extension == 2, 1);
           // Increase reduction for cut nodes and not ttMove (~1 Elo)
           if (!ttMove && cutNode)
               r += 2;
