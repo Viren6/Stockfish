@@ -238,8 +238,6 @@ void MovePicker::score() {
               m.value = (*mainHistory)[pos.side_to_move()][from_to(m)]
               + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)];
       }
-      dbg_mean_of(m.value);
-      
 
       long long adjustment = (long long)(m.value) * (long long)(PolicyMap[int(from_sq(m))][int(to_sq(m))]) / (long long)(131072);
       m.value = m.value - adjustment; 
