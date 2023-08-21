@@ -240,7 +240,7 @@ void MovePicker::score() {
       }
 
       long long adjustment = (long long)(m.value) * (long long)(PolicyMap[int(from_sq(m))][int(to_sq(m))]) / (long long)(131072);
-      m.value = m.value - adjustment; 
+      m.value = m.value + adjustment; 
   }
 }
 
