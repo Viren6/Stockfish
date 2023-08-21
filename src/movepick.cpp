@@ -239,7 +239,7 @@ void MovePicker::score() {
               + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)];
       }
 
-      m.value = m.value * PolicyMap[int(from_sq(m))][int(to_sq(m))] / 1024;
+      m.value = m.value * PolicyMap[int(from_sq(m))][int(to_sq(m))] / 1024; 
   }
 }
 
