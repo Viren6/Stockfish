@@ -702,9 +702,10 @@ namespace {
 
     CapturePieceToHistory& captureHistory = thisThread->captureHistory;
 
-    bool cutNodeLikelyFailLow = cutNode && ttMove
-                            && (tte->bound() & BOUND_UPPER)
-                            && tte->depth() >= depth;
+    bool cutNodeLikelyFailLow =    cutNode 
+                                && ttMove
+                                && (tte->bound() & BOUND_UPPER)
+                                && tte->depth() >= depth;
 
     // Step 6. Static evaluation of the position
     if (ss->inCheck)
