@@ -1175,6 +1175,7 @@ moves_loop: // When in check, search starts here
               || !capture
               || (cutNode && (ss-1)->moveCount > 1)))
       {
+          dbg_hit_on(r < -2, 0);
           // In general we want to cap the LMR depth search at newDepth, but when
           // reduction is negative, we allow this move a limited search extension
           // beyond the first move depth. This may lead to hidden double extensions.
@@ -1193,7 +1194,7 @@ moves_loop: // When in check, search starts here
 
               ss->doubleExtensions = ss->doubleExtensions + doEvenDeeperSearch;
 
-              newDepth += (extension > 0 && !cutNode) + doDeeperSearch - doShallowerSearch + doEvenDeeperSearch;
+              newDepth += doDeeperSearch - doShallowerSearch + doEvenDeeperSearch;
 
               if (newDepth > d)
                   value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth, !cutNode);
@@ -1209,6 +1210,8 @@ moves_loop: // When in check, search starts here
       // Step 18. Full-depth search when LMR is skipped. If expected reduction is high, reduce its depth by 1.
       else if (!PvNode || moveCount > 1)
       {
+          dbg_hit_on(r < -2, 1);
+          dbg_hit_on(r > 3, 3);
           // Increase reduction for cut nodes and not ttMove (~1 Elo)
           if (!ttMove && cutNode)
               r += 2;
@@ -1222,7 +1225,7 @@ moves_loop: // When in check, search starts here
       {
           (ss+1)->pv = pv;
           (ss+1)->pv[0] = MOVE_NONE;
-
+          dbg_hit_on(r < -3, 2);
           value = -search<PV>(pos, ss+1, -beta, -alpha, newDepth, false);
       }
 
