@@ -1223,7 +1223,9 @@ moves_loop: // When in check, search starts here
           (ss+1)->pv = pv;
           (ss+1)->pv[0] = MOVE_NONE;
 
-          value = -search<PV>(pos, ss+1, -beta, -alpha, newDepth + (r <= -3 * (3 + extension)), false);
+          const bool doEvenDeeperSearch = value > alpha + 711;
+
+          value = -search<PV>(pos, ss+1, -beta, -alpha, newDepth + doEvenDeeperSearch, false);
       }
 
       // Step 19. Undo move
