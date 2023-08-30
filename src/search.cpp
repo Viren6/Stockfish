@@ -1213,8 +1213,8 @@ moves_loop: // When in check, search starts here
           if (!ttMove && !PvNode)
               r += 1 + cutNode;
 
-          if ((ss+1)->cutoffCnt > 3 && !ss->ttPv)
-              r += 1 + cutNode;
+          if ((ss+1)->cutoffCnt > 3 && !ss->ttPv && !(!ttMove && cutNode))
+              r++;
 
           value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth - (r > 3), !cutNode);
       }
