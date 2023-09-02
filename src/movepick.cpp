@@ -25,6 +25,9 @@ namespace Stockfish {
 
 namespace {
 
+  int PolicyMap[64][64];
+  TUNE(SetRange(0, 100000), PolicyMap);
+
   enum Stages {
     MAIN_TT, CAPTURE_INIT, GOOD_CAPTURE, REFUTATION, QUIET_INIT, QUIET, BAD_CAPTURE,
     EVASION_TT, EVASION_INIT, EVASION,
@@ -121,6 +124,7 @@ void MovePicker::score() {
   }
 
   for (auto& m : *this)
+  {
       if constexpr (Type == CAPTURES)
           m.value =  (7 * int(PieceValue[pos.piece_on(to_sq(m))])
                    + (*captureHistory)[pos.moved_piece(m)][to_sq(m)][type_of(pos.piece_on(to_sq(m)))]) / 16;
@@ -172,7 +176,10 @@ void MovePicker::score() {
               m.value =  (*mainHistory)[pos.side_to_move()][from_to(m)]
                        + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)];
       }
-}
+
+      m.value += PolicyMap[int(from_sq(m))][int(to_sq(m))];
+  }
+  }
 
 /// MovePicker::select() returns the next move satisfying a predicate function.
 /// It never returns the TT move.
