@@ -25,8 +25,8 @@ namespace Stockfish {
 
 namespace {
 
-  int PolicyMap[64][64];
-  TUNE(SetRange(0, 100000), PolicyMap);
+  int PolicyMap[64][2][6];
+  TUNE(SetRange(0, 200000), PolicyMap);
 
   enum Stages {
     MAIN_TT, CAPTURE_INIT, GOOD_CAPTURE, REFUTATION, QUIET_INIT, QUIET, BAD_CAPTURE,
@@ -177,7 +177,7 @@ void MovePicker::score() {
                        + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)];
       }
 
-      m.value += PolicyMap[int(from_sq(m))][int(to_sq(m))];
+      m.value += PolicyMap[int(from_sq(m))][0][(int(pos.moved_piece(m))-1) % 8] + PolicyMap[int(to_sq(m))][1][(int(pos.moved_piece(m)) - 1) % 8];
   }
   }
 
