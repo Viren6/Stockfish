@@ -164,8 +164,11 @@ Value Eval::evaluate(const Position& pos, Value& positional) {
                                  + abs(pos.this_thread()->bestValue)
                                  + abs(pos.this_thread()->rootSimpleEval);
 
-  if (lazy)
+  if (lazy) 
+  {
       v = Value(simpleEval) + positional;
+      positional = positional * 9 / 10;
+  }
   else
   {
       int nnueComplexity;
