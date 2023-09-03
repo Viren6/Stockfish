@@ -144,7 +144,7 @@ namespace Eval {
 Value Eval::simple_eval(const Position& pos, Color c) {
    return  PawnValue * (pos.count<PAWN>(c)       - pos.count<PAWN>(~c))
            +           (pos.non_pawn_material(c) - pos.non_pawn_material(~c))
-           -           873 * !pos.count<QUEEN>(c);
+           +           873 * pos.count<QUEEN>(c);
 }
 
 
@@ -160,7 +160,7 @@ Value Eval::evaluate(const Position& pos) {
   int shuffling  = pos.rule50_count();
   int simpleEval = simple_eval(pos, stm) + (int(pos.key() & 7) - 3);
 
-  bool lazy = abs(simpleEval) >=   1800
+  bool lazy = abs(simpleEval) >=   2200
                                  + 16 * shuffling * shuffling
                                  + abs(pos.this_thread()->bestValue)
                                  + abs(pos.this_thread()->rootSimpleEval);
