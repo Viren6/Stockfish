@@ -144,7 +144,7 @@ namespace Eval {
 Value Eval::simple_eval(const Position& pos, Color c) {
    return  PawnValue * (pos.count<PAWN>(c)       - pos.count<PAWN>(~c))
            +           (pos.non_pawn_material(c) - pos.non_pawn_material(~c))
-           +           873 * pos.count<QUEEN>(c);
+           +           873 * !pos.count<QUEEN>(~c);
 }
 
 
