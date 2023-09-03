@@ -611,7 +611,7 @@ namespace {
     ss->doubleExtensions = (ss-1)->doubleExtensions;
     Square prevSq        = is_ok((ss-1)->currentMove) ? to_sq((ss-1)->currentMove) : SQ_NONE;
     ss->statScore        = 0;
-    ss->positionalEval   = -(ss-1)->positionalEval;
+    ss->positionalEval   = -(ss-1)->positionalEval / 3;
 
     // Step 4. Transposition table lookup.
     excludedMove = ss->excludedMove;

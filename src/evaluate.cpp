@@ -167,7 +167,6 @@ Value Eval::evaluate(const Position& pos, Value& positional) {
   if (lazy) 
   {
       v = Value(simpleEval) + positional;
-      positional = positional * 9 / 10;
   }
   else
   {
