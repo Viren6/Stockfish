@@ -96,7 +96,7 @@ namespace {
         {{509, 203, 307, 182, 53, 265}, {518, 435, 20, 188, 308, 244}},
         {{64, 416, 274, 441, 164, 477}, {885, 20, 11, 209, 285, 80}},
         {{0, 289, 61, 229, 128, 836}, {514, 13, 297, 110, 304, 507}}
-    };
+    }; 
 
   enum Stages {
     MAIN_TT, CAPTURE_INIT, GOOD_CAPTURE, REFUTATION, QUIET_INIT, QUIET, BAD_CAPTURE,
