@@ -147,7 +147,7 @@ namespace Stockfish::Eval::NNUE {
   }
 
   // Evaluation function. Perform differential calculation.
-  Value evaluate(const Position& pos, bool adjusted, int* complexity) {
+  Value evaluate(Value& positionalEval, const Position& pos, bool adjusted, int* complexity) {
 
     // We manually align the arrays on the stack because with gcc < 9.3
     // overaligning stack variables with alignas() doesn't work correctly.
@@ -174,11 +174,48 @@ namespace Stockfish::Eval::NNUE {
     if (complexity)
         *complexity = abs(psqt - positional) / OutputScale;
 
+    positionalEval = Value(positional);
+
     // Give more value to positional evaluation when adjusted flag is set
     if (adjusted)
         return static_cast<Value>(((1024 - delta) * psqt + (1024 + delta) * positional) / (1024 * OutputScale));
     else
         return static_cast<Value>((psqt + positional) / OutputScale);
+  }
+
+  // Evaluation function. Perform differential calculation.
+  Value evaluate(const Position& pos, bool adjusted, int* complexity) {
+
+      // We manually align the arrays on the stack because with gcc < 9.3
+      // overaligning stack variables with alignas() doesn't work correctly.
+
+      constexpr uint64_t alignment = CacheLineSize;
+      constexpr int delta = 24;
+
+#if defined(ALIGNAS_ON_STACK_VARIABLES_BROKEN)
+      TransformedFeatureType transformedFeaturesUnaligned[
+          FeatureTransformer::BufferSize + alignment / sizeof(TransformedFeatureType)];
+
+      auto* transformedFeatures = align_ptr_up<alignment>(&transformedFeaturesUnaligned[0]);
+#else
+      alignas(alignment)
+          TransformedFeatureType transformedFeatures[FeatureTransformer::BufferSize];
+#endif
+
+      ASSERT_ALIGNED(transformedFeatures, alignment);
+
+      const int bucket = (pos.count<ALL_PIECES>() - 1) / 4;
+      const auto psqt = featureTransformer->transform(pos, transformedFeatures, bucket);
+      const auto positional = network[bucket]->propagate(transformedFeatures);
+
+      if (complexity)
+          *complexity = abs(psqt - positional) / OutputScale;
+
+      // Give more value to positional evaluation when adjusted flag is set
+      if (adjusted)
+          return static_cast<Value>(((1024 - delta) * psqt + (1024 + delta) * positional) / (1024 * OutputScale));
+      else
+          return static_cast<Value>((psqt + positional) / OutputScale);
   }
 
   struct NnueEvalTrace {

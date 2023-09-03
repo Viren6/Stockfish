@@ -150,7 +150,7 @@ Value Eval::simple_eval(const Position& pos, Color c) {
 /// evaluate() is the evaluator for the outer world. It returns a static evaluation
 /// of the position from the point of view of the side to move.
 
-Value Eval::evaluate(const Position& pos) {
+Value Eval::evaluate(const Position& pos, Value& positional) {
 
   assert(!pos.checkers());
 
@@ -165,11 +165,11 @@ Value Eval::evaluate(const Position& pos) {
                                  + abs(pos.this_thread()->rootSimpleEval);
 
   if (lazy)
-      v = Value(simpleEval);
+      v = Value(simpleEval) + positional;
   else
   {
       int nnueComplexity;
-      Value nnue = NNUE::evaluate(pos, true, &nnueComplexity);
+      Value nnue = NNUE::evaluate(positional, pos, true, &nnueComplexity);
 
       Value optimism = pos.this_thread()->optimism[stm];
 
@@ -189,6 +189,47 @@ Value Eval::evaluate(const Position& pos) {
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
 
   return v;
+}
+
+Value Eval::evaluate(const Position& pos) {
+
+    assert(!pos.checkers());
+
+    Value v;
+    Color stm = pos.side_to_move();
+    int shuffling = pos.rule50_count();
+    int simpleEval = simple_eval(pos, stm) + (int(pos.key() & 7) - 3);
+
+    bool lazy = abs(simpleEval) >= RookValue + KnightValue
+        + 16 * shuffling * shuffling
+        + abs(pos.this_thread()->bestValue)
+        + abs(pos.this_thread()->rootSimpleEval);
+
+    if (lazy)
+        v = Value(simpleEval);
+    else
+    {
+        int nnueComplexity;
+        Value nnue = NNUE::evaluate(pos, true, &nnueComplexity);
+
+        Value optimism = pos.this_thread()->optimism[stm];
+
+        // Blend optimism and eval with nnue complexity and material imbalance
+        optimism += optimism * (nnueComplexity + abs(simpleEval - nnue)) / 512;
+        nnue -= nnue * (nnueComplexity + abs(simpleEval - nnue)) / 32768;
+
+        int npm = pos.non_pawn_material() / 64;
+        v = (nnue * (915 + npm + 9 * pos.count<PAWN>())
+            + optimism * (154 + npm + pos.count<PAWN>())) / 1024;
+    }
+
+    // Damp down the evaluation linearly when shuffling
+    v = v * (200 - shuffling) / 214;
+
+    // Guarantee evaluation does not hit the tablebase range
+    v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
+
+    return v;
 }
 
 /// trace() is like evaluate(), but instead of returning a value, it returns
