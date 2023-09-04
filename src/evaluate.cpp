@@ -160,7 +160,7 @@ Value Eval::evaluate(const Position& pos) {
   int simpleEval = simple_eval(pos, stm) + (int(pos.key() & 7) - 3);
   int numPieces = pos.count<ALL_PIECES>();
 
-  bool lazy = abs(simpleEval) >=   PawnValue * numPieces
+  bool lazy = abs(simpleEval) >=   150 * numPieces
                                  + 16 * shuffling * shuffling
                                  + abs(pos.this_thread()->bestValue)
                                  + abs(pos.this_thread()->rootSimpleEval);
