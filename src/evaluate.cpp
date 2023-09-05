@@ -141,9 +141,10 @@ namespace Eval {
 /// from the point of view of the given color. It can be divided by PawnValue to get
 /// an approximation of the material advantage on the board in terms of pawns.
 
-Value Eval::simple_eval(const Position& pos, Color c) {
+Value Eval::simple_eval(const Position& pos, Color c, int shuffling) {
    return  PawnValue * (pos.count<PAWN>(c)       - pos.count<PAWN>(~c))
-           +           (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
+           +           (pos.non_pawn_material(c) - pos.non_pawn_material(~c))
+           -           16 * shuffling * shuffling;
 }
 
 
@@ -157,10 +158,9 @@ Value Eval::evaluate(const Position& pos) {
   Value v;
   Color stm      = pos.side_to_move();
   int shuffling  = pos.rule50_count();
-  int simpleEval = simple_eval(pos, stm) + (int(pos.key() & 7) - 3);
+  int simpleEval = simple_eval(pos, stm, shuffling) + (int(pos.key() & 7) - 3);
 
   bool lazy = abs(simpleEval) >=   RookValue + KnightValue
-                                 + 16 * shuffling * shuffling
                                  + abs(pos.this_thread()->bestValue)
                                  + abs(pos.this_thread()->rootSimpleEval);
 
