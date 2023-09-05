@@ -607,6 +607,7 @@ namespace {
     ss->doubleExtensions = (ss-1)->doubleExtensions;
     Square prevSq        = is_ok((ss-1)->currentMove) ? to_sq((ss-1)->currentMove) : SQ_NONE;
     ss->statScore        = 0;
+    ss->prevFullDepth    = false;
 
     // Step 4. Transposition table lookup.
     excludedMove = ss->excludedMove;
@@ -1165,6 +1166,9 @@ moves_loop: // When in check, search starts here
       else if (move == ttMove)
           r--;
 
+      if ((ss-1)->prevFullDepth)
+          r--;
+
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
                      + (*contHist[1])[movedPiece][to_sq(move)]
@@ -1218,6 +1222,7 @@ moves_loop: // When in check, search starts here
       // Step 18. Full-depth search when LMR is skipped. If expected reduction is high, reduce its depth by 1.
       else if (!PvNode || moveCount > 1)
       {
+          ss->prevFullDepth = true;
           // Increase reduction for cut nodes and not ttMove (~1 Elo)
           if (!ttMove && cutNode)
               r += 2;
