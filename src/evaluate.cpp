@@ -71,7 +71,7 @@ namespace Stockfish {
     int shuffleScale = 200;
     int generalScale = 214;
 
-    TUNE(SetRange(-10000, 10000), x1, SetRange(1000, 3000), threshold, SetRange(5, 25), shuffleThreshold, SetRange(100, 300), shuffleScale, generalScale);
+    TUNE(SetRange(-10000, 10000), x1, SetRange(1000, 3000), threshold, SetRange(5, 25), shuffleThreshold, SetRange(100, 300), shuffleScale, generalScale); 
 
 namespace Eval {
 
