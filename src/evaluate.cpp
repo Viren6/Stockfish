@@ -55,6 +55,24 @@ using namespace std;
 
 namespace Stockfish {
 
+    int x1[7][2] = {
+    {208, 208},
+    {781, 781},
+    {825, 825},
+    {1276, 1276},
+    {2538, 2538},
+    {0, 0},
+    {0, 0}
+    };
+
+    int threshold = 2057;
+    int shuffleThreshold = 16;
+
+    int shuffleScale = 200;
+    int generalScale = 214;
+
+    TUNE(SetRange(-10000, 10000), x1, SetRange(1000, 3000), threshold, SetRange(5, 25), shuffleThreshold, SetRange(100, 300), shuffleScale, generalScale);
+
 namespace Eval {
 
   string currentEvalFileName = "None";
@@ -141,9 +159,20 @@ namespace Eval {
 /// from the point of view of the given color. It can be divided by PawnValue to get
 /// an approximation of the material advantage on the board in terms of pawns.
 
-Value Eval::simple_eval(const Position& pos, Color c) {
-   return  PawnValue * (pos.count<PAWN>(c)       - pos.count<PAWN>(~c))
-           +           (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
+int Eval::simple_eval(const Position& pos, Color c, int shuffling) {
+   return ( x1[0][0] * pos.count<PAWN>(c)       - x1[0][1] * pos.count<PAWN>(~c)
+          + x1[1][0] * pos.count<KNIGHT>(c)     - x1[1][1] * pos.count<KNIGHT>(~c)
+          + x1[2][0] * pos.count<BISHOP>(c)     - x1[2][1] * pos.count<BISHOP>(~c)
+          + x1[3][0] * pos.count<ROOK>(c)       - x1[3][1] * pos.count<ROOK>(~c)
+          + x1[4][0] * pos.count<QUEEN>(c)      - x1[4][1] * pos.count<QUEEN>(~c)
+          
+          //Bishop pair bonus
+          + x1[5][0] * (pos.count<BISHOP>(c) >= 2)      - x1[5][1] * (pos.count<BISHOP>(~c) >= 2)
+          //Number of pieces bonus
+          + x1[6][0] * pos.count<ALL_PIECES>(c)         - x1[6][1] * pos.count<ALL_PIECES>(~c))
+          
+          //Eval scaling based on 50 move rule
+          * (shuffleScale - shuffling) / generalScale;
 }
 
 
@@ -157,10 +186,10 @@ Value Eval::evaluate(const Position& pos) {
   Value v;
   Color stm      = pos.side_to_move();
   int shuffling  = pos.rule50_count();
-  int simpleEval = simple_eval(pos, stm) + (int(pos.key() & 7) - 3);
+  int simpleEval = simple_eval(pos, stm, shuffling) + (int(pos.key() & 7) - 3);
 
-  bool lazy = abs(simpleEval) >=   RookValue + KnightValue
-                                 + 16 * shuffling * shuffling
+  bool lazy = abs(simpleEval) >=   threshold
+                                 + shuffleThreshold * shuffling * shuffling
                                  + abs(pos.this_thread()->bestValue)
                                  + abs(pos.this_thread()->rootSimpleEval);
 
@@ -180,10 +209,10 @@ Value Eval::evaluate(const Position& pos) {
       int npm = pos.non_pawn_material() / 64;
       v = (  nnue     * (915 + npm + 9 * pos.count<PAWN>())
            + optimism * (154 + npm +     pos.count<PAWN>())) / 1024;
-  }
 
-  // Damp down the evaluation linearly when shuffling
-  v = v * (200 - shuffling) / 214;
+      //Damp down the evaluation linearly when shuffling
+      v = v * (200 - shuffling) / 214;
+  }
 
   // Guarantee evaluation does not hit the tablebase range
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
