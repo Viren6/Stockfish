@@ -1126,6 +1126,12 @@ moves_loop: // When in check, search starts here
       // Step 16. Make the move
       pos.do_move(move, st, givesCheck);
 
+      ss->statScore = 2 * thisThread->mainHistory[us][from_to(move)]
+          + (*contHist[0])[movedPiece][to_sq(move)]
+          + (*contHist[1])[movedPiece][to_sq(move)]
+          + (*contHist[3])[movedPiece][to_sq(move)]
+          - 4006;
+
       // Decrease reduction if position is or has been on the PV
       // and node is not likely to fail low. (~3 Elo)
       // Decrease further on cutNodes. (~1 Elo)
@@ -1160,16 +1166,10 @@ moves_loop: // When in check, search starts here
 
       // Increase reduction if next ply has a lot of fail high (~5 Elo)
       if ((ss+1)->cutoffCnt > 3)
-          r++;
+          ss->statScore -= 15000;
 
       else if (move == ttMove)
           r--;
-
-      ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
-                     + (*contHist[0])[movedPiece][to_sq(move)]
-                     + (*contHist[1])[movedPiece][to_sq(move)]
-                     + (*contHist[3])[movedPiece][to_sq(move)]
-                     - 4006;
 
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
       r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
