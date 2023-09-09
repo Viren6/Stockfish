@@ -56,20 +56,20 @@ using namespace std;
 namespace Stockfish {
 
     int x1[7][2] = {
-    {206, 208},
-    {792, 781},
-    {815, 824},
-    {1289, 1268},
-    {2581, 2523},
-    {0, -2},
-    {4, -3}
+    {206, 204},
+    {799, 792},
+    {826, 805},
+    {1318, 1316},
+    {2662, 2673},
+    {-1, 3},
+    {6, 4}
     };
 
-    int threshold = 2090;
-    int shuffleThreshold = 15;
+    int threshold = 2047;
+    int shuffleThreshold = 16;
 
-    int shuffleScale = 199;
-    int generalScale = 216;
+    int shuffleScale = 198;
+    int generalScale = 210;
 
     //TUNE(SetRange(-10000, 10000), x1, SetRange(1000, 3000), threshold, SetRange(5, 25), shuffleThreshold, SetRange(100, 300), shuffleScale, generalScale); 
 
