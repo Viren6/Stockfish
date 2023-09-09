@@ -56,22 +56,22 @@ using namespace std;
 namespace Stockfish {
 
     int x1[7][2] = {
-    {208, 208},
-    {781, 781},
-    {825, 825},
-    {1276, 1276},
-    {2538, 2538},
-    {0, 0},
-    {0, 0}
+    {206, 208},
+    {792, 781},
+    {815, 824},
+    {1289, 1268},
+    {2581, 2523},
+    {0, -2},
+    {4, -3}
     };
 
-    int threshold = 2057;
-    int shuffleThreshold = 16;
+    int threshold = 2090;
+    int shuffleThreshold = 15;
 
-    int shuffleScale = 200;
-    int generalScale = 214;
+    int shuffleScale = 199;
+    int generalScale = 216;
 
-    TUNE(SetRange(-10000, 10000), x1, SetRange(1000, 3000), threshold, SetRange(5, 25), shuffleThreshold, SetRange(100, 300), shuffleScale, generalScale); 
+    //TUNE(SetRange(-10000, 10000), x1, SetRange(1000, 3000), threshold, SetRange(5, 25), shuffleThreshold, SetRange(100, 300), shuffleScale, generalScale); 
 
 namespace Eval {
 
