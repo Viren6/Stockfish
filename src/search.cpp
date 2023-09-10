@@ -1105,7 +1105,7 @@ moves_loop: // When in check, search starts here
           else if (   PvNode
                    && move == ttMove
                    && move == ss->killers[0]
-                   && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
+                   && (*contHist[0])[movedPiece][to_sq(move)] >= 5000 + pos.rule50_count() * pos.rule50_count() * pos.rule50_count())
               extension = 1;
       }
 
