@@ -738,7 +738,7 @@ namespace {
         if (    ttValue != VALUE_NONE
             && (tte->bound() & (ttValue > eval ? BOUND_LOWER : BOUND_UPPER)))
         {
-            int weighting = tte->depth() + 1;
+            int weighting = (tte->depth() + 1) * (tte->depth() + 1);
             eval = (eval + ttValue * weighting) / (1 + weighting);
         }
     }
