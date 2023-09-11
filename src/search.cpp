@@ -737,10 +737,7 @@ namespace {
         // ttValue can be used as a better position evaluation (~7 Elo)
         if (    ttValue != VALUE_NONE
             && (tte->bound() & (ttValue > eval ? BOUND_LOWER : BOUND_UPPER)))
-        {
-            int weighting = tte->depth() * tte->depth();
-            eval = (eval + ttValue * weighting) / (1 + weighting);
-        }
+                eval = ((tte->depth() <= 0) * eval + ttValue * (tte->depth() >= 0)) / (1 + (tte->depth() == 0));
     }
     else
     {
