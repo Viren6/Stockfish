@@ -181,7 +181,7 @@ Value Eval::evaluate(const Position& pos) {
   }
 
   // Damp down the evaluation when shuffling
-  v = v * (6400 - (shuffling - 20) * abs(shuffling - 20)) / 6848;
+  v = v * (14400 - (shuffling + 20) * (shuffling + 20)) / 15408;
 
   // Guarantee evaluation does not hit the tablebase range
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
