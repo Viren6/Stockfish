@@ -53,9 +53,7 @@
 
 namespace Stockfish {
 
-    int x2 = 27356, x3 = 30, x4 = 269, x5 = 149, x6 = 4604, x7 = 30, x8 = 30, x9 = 30;
-
-    TUNE(SetRange(0, 50000), x2, x3, x4, x5, x6, x7, x8, x9);
+    int x2 = 27414, x3 = 30, x4 = 268, x5 = 148, x6 = 4587, x7 = 30, x8 = 32, x9 = 30;
 
 namespace Eval {
 
