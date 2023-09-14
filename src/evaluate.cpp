@@ -177,11 +177,11 @@ Value Eval::evaluate(const Position& pos) {
 
       int npm = pos.non_pawn_material() / 64;
       v = (  nnue     * (915 + npm + 9 * pos.count<PAWN>() - 5 * shuffling)
-           + optimism * (154 + npm +     pos.count<PAWN>() - shuffling)) / 1096;
-  }
+           + optimism * (154 + npm +     pos.count<PAWN>() - 2 * shuffling)) / 1096;
 
-  // Guarantee evaluation does not hit the tablebase range
-  v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
+      // Guarantee evaluation does not hit the tablebase range
+      v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
+  }
 
   return v;
 }
