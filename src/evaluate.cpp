@@ -53,8 +53,6 @@
 
 namespace Stockfish {
 
-    int x2 = 27414, x3 = 30, x4 = 268, x5 = 148, x6 = 4587, x7 = 30, x8 = 32, x9 = 30;
-
 namespace Eval {
 
   std::string currentEvalFileName = "None";
