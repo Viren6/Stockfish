@@ -175,13 +175,10 @@ Value Eval::evaluate(const Position& pos) {
       optimism += optimism * (nnueComplexity + abs(simpleEval - nnue)) / 512;
       nnue     -= nnue     * (nnueComplexity + abs(simpleEval - nnue)) / 32768;
 
-      int npm = pos.non_pawn_material();
+      int npm = pos.non_pawn_material() / 64;
 
-      //Clamp NNUE eval to prevent overflow
-      nnue = std::clamp(nnue, Value(-25000), Value(25000));
-
-      v = (  nnue     * (59294  + npm + 584 * pos.count<PAWN>() - 302 * shuffling)
-           + optimism * (9916   + npm + 90  * pos.count<PAWN>() - 91  * shuffling)) / 71090;
+      v = (  nnue     * (27398  + 28 * npm + 264 * pos.count<PAWN>() - 139 * shuffling)
+           + optimism * (4500   + 28 * npm + 39  * pos.count<PAWN>() - 43  * shuffling)) / 32768;
   }
 
   // Guarantee evaluation does not hit the tablebase range
