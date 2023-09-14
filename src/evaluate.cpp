@@ -177,7 +177,7 @@ Value Eval::evaluate(const Position& pos) {
 
       int npm = pos.non_pawn_material() / 64;
       v = (  nnue     * (915 + npm + 9 * pos.count<PAWN>() - 4 * shuffling)
-           + optimism * (154 + npm +     pos.count<PAWN>() - 2 * shuffling)) / 1096;
+           + optimism * (154 + npm + 2 * pos.count<PAWN>() - 2 * shuffling)) / 1096;
   }
 
   // Guarantee evaluation does not hit the tablebase range
