@@ -53,6 +53,12 @@
 
 namespace Stockfish {
 
+    int x1 = 29280, x2 = 392, x3 = 390, x4 = 412, x5 = 638, x6 = 1269;
+    int y1 = 4928, y2 = 136, y3 = 390, y4 = 412, y5 = 638, y6 = 1269;
+    int z1 = 200, z2 = 214; int a1 = 512, a2 = 32768;
+
+    TUNE(SetRange(0, 50000), x1, x2, x3, x4, x5, x6, y1, y2, y3, y4, y5, y6, z1, z2, a1, a2);
+
 namespace Eval {
 
   std::string currentEvalFileName = "None";
@@ -172,16 +178,15 @@ Value Eval::evaluate(const Position& pos) {
       Value optimism = pos.this_thread()->optimism[stm];
 
       // Blend optimism and eval with nnue complexity and material imbalance
-      optimism += optimism * (nnueComplexity + abs(simpleEval - nnue)) / 512;
-      nnue     -= nnue     * (nnueComplexity + abs(simpleEval - nnue)) / 32768;
+      optimism += optimism * (nnueComplexity + abs(simpleEval - nnue)) / a1;
+      nnue     -= nnue     * (nnueComplexity + abs(simpleEval - nnue)) / a2;
 
-      int npm = pos.non_pawn_material() / 64;
-      v = (  nnue     * (915 + npm + 9 * pos.count<PAWN>())
-           + optimism * (154 + npm +     pos.count<PAWN>())) / 1024;
+      v = (  nnue     * (x1 + x2 * pos.count<PAWN>() + x3 * pos.count<KNIGHT>() + x4 * pos.count<BISHOP>() + x5 * pos.count<ROOK>() + x6 * pos.count<QUEEN>())
+           + optimism * (y1 + y2 * pos.count<PAWN>() + y3 * pos.count<KNIGHT>() + y4 * pos.count<BISHOP>() + y5 * pos.count<ROOK>() + y6 * pos.count<QUEEN>())) / 32768;
   }
 
   // Damp down the evaluation linearly when shuffling
-  v = v * (200 - shuffling) / 214;
+  v = v * (z1 - shuffling) / z2;
 
   // Guarantee evaluation does not hit the tablebase range
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
