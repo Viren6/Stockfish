@@ -175,8 +175,8 @@ Value Eval::evaluate(const Position& pos) {
       optimism += optimism * (nnueComplexity + abs(simpleEval - nnue)) / 512;
       nnue     -= nnue     * (nnueComplexity + abs(simpleEval - nnue)) / 32768;
 
-      v = (  nnue     * (29287 + 389 * pos.count<PAWN>() + 405 * pos.count<KNIGHT>() + 410 * pos.count<BISHOP>() + 626 * pos.count<ROOK>() + 1229 * pos.count<QUEEN>())
-           + optimism * (4964  + 140 * pos.count<PAWN>() + 398 * pos.count<KNIGHT>() + 412 * pos.count<BISHOP>() + 654 * pos.count<ROOK>() + 1295 * pos.count<QUEEN>())) / 32768;
+      v = (  nnue     * (29417 + 387 * pos.count<PAWN>() + 408 * pos.count<KNIGHT>() + 414 * pos.count<BISHOP>() + 675 * pos.count<ROOK>() + 1178 * pos.count<QUEEN>())
+           + optimism * (4915  + 146 * pos.count<PAWN>() + 373 * pos.count<KNIGHT>() + 406 * pos.count<BISHOP>() + 639 * pos.count<ROOK>() + 1331 * pos.count<QUEEN>())) / 32768;
   }
 
   // Damp down the evaluation linearly when shuffling
