@@ -175,12 +175,12 @@ Value Eval::evaluate(const Position& pos) {
       optimism += optimism * (nnueComplexity + abs(simpleEval - nnue)) / 512;
       nnue     -= nnue     * (nnueComplexity + abs(simpleEval - nnue)) / 32768;
 
-      v = (  nnue     * (29431 + 379 * pos.count<PAWN>() + 370 * pos.count<KNIGHT>() + 447 * pos.count<BISHOP>() + 677 * pos.count<ROOK>() + 1132 * pos.count<QUEEN>())
-           + optimism * (4902  + 146 * pos.count<PAWN>() + 387 * pos.count<KNIGHT>() + 406 * pos.count<BISHOP>() + 622 * pos.count<ROOK>() + 1309 * pos.count<QUEEN>())) / 32768; 
+      v = (  nnue     * (29476 + 373 * pos.count<PAWN>() + 376 * pos.count<KNIGHT>() + 449 * pos.count<BISHOP>() + 680 * pos.count<ROOK>() + 1168 * pos.count<QUEEN>())
+           + optimism * (4933  + 144 * pos.count<PAWN>() + 405 * pos.count<KNIGHT>() + 411 * pos.count<BISHOP>() + 629 * pos.count<ROOK>() + 1311 * pos.count<QUEEN>())) / 32768; 
   }
 
   // Damp down the evaluation linearly when shuffling
-  v = v * (200 - shuffling) / 214;
+  v = v * (201 - shuffling) / 215;
 
   // Guarantee evaluation does not hit the tablebase range
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
