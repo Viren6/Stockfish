@@ -1155,7 +1155,7 @@ moves_loop: // When in check, search starts here
           r--;
 
       // Increase reduction on repetition (~1 Elo)
-      if (   move == (ss - 4)->currentMove
+      if (   move == (ss-4)->currentMove
           && pos.has_repeated())
           r += 2 + 2 * (pos.rule50_count() > 15); 
 
