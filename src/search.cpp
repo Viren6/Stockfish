@@ -1157,7 +1157,7 @@ moves_loop: // When in check, search starts here
       // Increase reduction on repetition (~1 Elo)
       if (   move == (ss-4)->currentMove
           && pos.has_repeated())
-          r += 2 + 2 * (pos.rule50_count() > 15); 
+          r += 2 + pos.rule50_count() / 15; 
 
       // Increase reduction if next ply has a lot of fail high (~5 Elo)
       if ((ss+1)->cutoffCnt > 3)
