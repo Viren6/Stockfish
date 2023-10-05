@@ -1161,7 +1161,7 @@ moves_loop: // When in check, search starts here
 
       // Increase reduction if next ply has a lot of fail high (~5 Elo)
       if ((ss+1)->cutoffCnt > 3)
-          r++;
+          r += 1 + (ss->cutoffCnt == 0);
 
       // Decrease reduction for first generated move (ttMove)
       else if (move == ttMove)
