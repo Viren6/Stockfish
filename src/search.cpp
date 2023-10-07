@@ -1161,14 +1161,11 @@ moves_loop: // When in check, search starts here
 
       // Increase reduction if next ply has a lot of fail high (~5 Elo)
       if ((ss+1)->cutoffCnt > 3)
-          r++;
+          r += 1 + (moveCount > 8);
 
       // Decrease reduction for first generated move (ttMove)
       else if (move == ttMove)
           r--;
-
-      if (ss->cutoffCnt == 0 && moveCount > 8)
-          r++;
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
