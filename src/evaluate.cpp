@@ -176,6 +176,8 @@ Value Eval::evaluate(const Position& pos) {
         int   nnueComplexity;
         Value nnue = NNUE::evaluate(pos, true, &nnueComplexity);
 
+        nnueComplexity = (nnueComplexity * (48 * pos.count<ALL_PIECES>())) / 1024;
+
         Value optimism = pos.this_thread()->optimism[stm];
 
         // Blend optimism and eval with nnue complexity and material imbalance
