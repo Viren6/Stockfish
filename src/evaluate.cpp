@@ -150,8 +150,7 @@ void NNUE::verify() {
 // an approximation of the material advantage on the board in terms of pawns.
 Value Eval::simple_eval(const Position& pos, Color c) {
     return PawnValue * (pos.count<PAWN>(c) - pos.count<PAWN>(~c))
-         + (pos.non_pawn_material(c) - pos.non_pawn_material(~c))
-         + 600;
+         + (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
 }
 
 
@@ -166,7 +165,7 @@ Value Eval::evaluate(const Position& pos) {
     int   shuffling  = pos.rule50_count();
     int   simpleEval = simple_eval(pos, stm) + (int(pos.key() & 7) - 3);
 
-    bool lazy = std::abs(simpleEval) >=     QueenValue + 16 * shuffling * shuffling
+    bool lazy = std::abs(simpleEval) >= RookValue + KnightValue + 16 * shuffling * shuffling
                                           + std::abs(pos.this_thread()->bestValue)
                                           + std::abs(pos.this_thread()->rootSimpleEval);
 
