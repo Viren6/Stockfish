@@ -151,7 +151,7 @@ void NNUE::verify() {
 Value Eval::simple_eval(const Position& pos, Color c) {
     return PawnValue * (pos.count<PAWN>(c) - pos.count<PAWN>(~c))
          + (pos.non_pawn_material(c) - pos.non_pawn_material(~c))
-         + 600;
+         - 600;
 }
 
 
@@ -166,7 +166,7 @@ Value Eval::evaluate(const Position& pos) {
     int   shuffling  = pos.rule50_count();
     int   simpleEval = simple_eval(pos, stm) + (int(pos.key() & 7) - 3);
 
-    bool lazy = std::abs(simpleEval) >=     QueenValue + 16 * shuffling * shuffling
+    bool lazy = std::abs(simpleEval) >=     RookValue + 16 * shuffling * shuffling
                                           + std::abs(pos.this_thread()->bestValue)
                                           + std::abs(pos.this_thread()->rootSimpleEval);
 
