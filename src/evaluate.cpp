@@ -176,7 +176,7 @@ Value Eval::evaluate(const Position& pos) {
         int   nnueComplexity;
         Value nnue = NNUE::evaluate(pos, true, &nnueComplexity);
 
-        nnueComplexity = nnueComplexity * (PawnValue * pos.count<PAWN>() + pos.non_pawn_material()) / 16384;
+        nnueComplexity = nnueComplexity * (PawnValue * pos.count<PAWN>() + pos.non_pawn_material()) / 24576;
 
         Value optimism = pos.this_thread()->optimism[stm];
 
