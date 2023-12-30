@@ -1162,7 +1162,7 @@ moves_loop:  // When in check, search starts here
         // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
         // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
         else if (move == ttMove)
-            r = 0 + (cutNode && !ss->ttPv); 
+            r = 0 + 2 * (cutNode && !ss->ttPv && ttCapture);
 
         ss->statScore = 2 * thisThread->mainHistory[us][from_to(move)]
                       + (*contHist[0])[movedPiece][to_sq(move)]
