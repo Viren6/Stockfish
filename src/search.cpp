@@ -1148,6 +1148,10 @@ moves_loop:  // When in check, search starts here
         if (singularQuietLMR)
             r--;
 
+        // Increase reduction on repetition (~1 Elo)
+        if (move == (ss - 4)->currentMove && pos.has_repeated())
+            r += 2;
+
         // Increase reduction if next ply has a lot of fail high (~5 Elo)
         if ((ss + 1)->cutoffCnt > 3)
             r++;
@@ -1155,7 +1159,7 @@ moves_loop:  // When in check, search starts here
         // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
         // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
         else if (move == ttMove)
-            r = 0 + (cutNode && ttCapture); 
+            r = 0 + (cutNode && !ss->ttPv); 
 
         ss->statScore = 2 * thisThread->mainHistory[us][from_to(move)]
                       + (*contHist[0])[movedPiece][to_sq(move)]
