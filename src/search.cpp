@@ -1165,7 +1165,7 @@ moves_loop:  // When in check, search starts here
             r = 0;
 
         ss->statScore = 2 * thisThread->mainHistory[us][from_to(move)]
-                      - cutNode * thisThread->mainHistory[us][from_to(move)] / 4
+                      + cutNode * thisThread->mainHistory[us][from_to(move)] / 4
                       + (*contHist[0])[movedPiece][to_sq(move)]
                       + (*contHist[1])[movedPiece][to_sq(move)]
                       + (*contHist[3])[movedPiece][to_sq(move)] - 3817;
