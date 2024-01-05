@@ -792,7 +792,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
     // Adjust razor margin according to cutoffCnt. (~1 Elo)
-    if (eval < alpha - 472 - (384 - 165 * ((ss + 1)->cutoffCnt > 3) - 120 * (!ttMove || ttCapture)) * depth * depth)
+    if (eval < alpha - 472 - (484 - 165 * ((ss + 1)->cutoffCnt > 3) - 250 * (!ttMove || ttCapture)) * depth * depth)
     {
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
