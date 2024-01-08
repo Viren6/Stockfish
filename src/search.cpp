@@ -1243,9 +1243,6 @@ moves_loop:  // When in check, search starts here
         else if (!PvNode || moveCount > 1)
         {
             // Increase reduction if ttMove is not present (~1 Elo)
-            if (!ttMove)
-                r += 2;
- 
             r += (ss+1)->cutoffCnt / 5;
 
             // Note that if expected reduction is high, we reduce search depth by 1 here (~9 Elo)
