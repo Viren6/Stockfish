@@ -1242,11 +1242,11 @@ moves_loop:  // When in check, search starts here
         // Step 18. Full-depth search when LMR is skipped
         else if (!PvNode || moveCount > 1)
         {
-            // Increase reduction if ttMove is not present (~1 Elo)
-            r += (ss+1)->cutoffCnt / 5; 
+
+            r += std::max(2 * (!ttMove), (ss+1)->cutoffCnt / 4);
 
             // Note that if expected reduction is high, we reduce search depth by 1 here (~9 Elo)
-            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3), !cutNode);
+            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3) - (r > 12), !cutNode);
         }
 
         // For PV nodes only, do a full PV search on the first move or after a fail high,
