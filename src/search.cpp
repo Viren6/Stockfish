@@ -82,6 +82,7 @@ Value futility_margin(Depth d, bool noTtCutNode, bool improving) {
 
 // Reductions lookup table initialized at startup
 int Reductions[MAX_MOVES];  // [depth or moveNumber]
+int cutoffCntReduction[2048];
 
 Depth reduction(bool i, Depth d, int mn, int delta, int rootDelta) {
     int reductionScale = Reductions[d] * Reductions[mn];
@@ -192,6 +193,9 @@ void Search::init() {
 
     for (int i = 1; i < MAX_MOVES; ++i)
         Reductions[i] = int((20.37 + std::log(Threads.size()) / 2) * std::log(i));
+
+    for (int i = 1; i < 2048; ++i)
+        cutoffCntReduction[i] = int(std::log(i + 1) * 14767 / std::log(20));
 }
 
 
@@ -1184,19 +1188,16 @@ moves_loop:  // When in check, search starts here
         if (move == (ss - 4)->currentMove && pos.has_repeated())
             r += 2;
 
-        // Increase reduction if next ply has a lot of fail high (~5 Elo)
-        if ((ss + 1)->cutoffCnt > 3)
-            r++;
-
         // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
         // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
-        else if (move == ttMove)
+        if (move == ttMove && (ss + 1)->cutoffCnt < 4)
             r = 0;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
                       + (*contHist[1])[movedPiece][move.to_sq()]
-                      + (*contHist[3])[movedPiece][move.to_sq()] - 3817;
+                      + (*contHist[3])[movedPiece][move.to_sq()] - 3817 
+                      - cutoffCntReduction[(ss + 1)->cutoffCnt] * (move != ttMove);
 
         // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
         r -= ss->statScore / 14767;
