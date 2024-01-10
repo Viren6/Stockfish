@@ -68,9 +68,6 @@ using namespace Search;
 
 namespace {
 
-    int a1 = 1000; int a2 = 14767; int a3 = 20000; int a4 = 3817; int a5 = 14767; int a6 = 4;
-    TUNE(SetRange(-100000, 100000), a1, a2, a3, a4, a5, SetRange(0, 10), a6);
-
 // Different node types, used as a template parameter
 enum NodeType {
     NonPV,
@@ -198,7 +195,7 @@ void Search::init() {
         Reductions[i] = int((20.37 + std::log(Threads.size()) / 2) * std::log(i));
 
     for (int i = 1; i < 2048; ++i)
-        cutoffCntReduction[i] = int(std::log(double(i) + (double(a1)/1000.0)) * double(a2) / std::log(double(a3)/1000));
+        cutoffCntReduction[i] = int(std::log(double(i) + 1.071) * 15510.2 / std::log(18.627));
 }
 
 
@@ -1193,17 +1190,17 @@ moves_loop:  // When in check, search starts here
 
         // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
         // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
-        if (move == ttMove && (ss + 1)->cutoffCnt < a6)
+        if (move == ttMove && (ss + 1)->cutoffCnt < 3)
             r = 0;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
                       + (*contHist[1])[movedPiece][move.to_sq()]
-                      + (*contHist[3])[movedPiece][move.to_sq()] - a4 
+                      + (*contHist[3])[movedPiece][move.to_sq()] - 4055 
                       - cutoffCntReduction[(ss + 1)->cutoffCnt];
 
         // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
-        r -= ss->statScore / a5;
+        r -= ss->statScore / 15297;
 
         // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
         // We use various heuristics for the sons of a node after the first son has
