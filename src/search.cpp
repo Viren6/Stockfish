@@ -68,7 +68,7 @@ using namespace Search;
 
 namespace {
 
-    int a1 = 1071; int a2 = 15510; int a3 = 18627; int a4 = 4055; int a5 = 15297;
+    int a1 = 1152; int a2 = 15260; int a3 = 18517; int a4 = 3957; int a5 = 15030;
     TUNE(SetRange(-100000, 100000), a1, a2, a3, a4, a5);
 
 // Different node types, used as a template parameter
@@ -1195,7 +1195,7 @@ moves_loop:  // When in check, search starts here
                       + (*contHist[0])[movedPiece][move.to_sq()]
                       + (*contHist[1])[movedPiece][move.to_sq()]
                       + (*contHist[3])[movedPiece][move.to_sq()] - a4 
-                      - cutoffCntReduction[(ss + 1)->cutoffCnt] * (move != ttMove);
+                      - cutoffCntReduction[(ss + 1)->cutoffCnt];
 
         // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
         r -= ss->statScore / a5;
