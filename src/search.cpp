@@ -68,8 +68,8 @@ using namespace Search;
 
 namespace {
 
-    int a1 = 1000; int a2 = 14767; int a3 = 20000; int a4 = 3817; int a5 = 14767; int a6 = 4;
-    TUNE(SetRange(-100000, 100000), a1, a2, a3, a4, a5, SetRange(0, 10), a6);
+    int a1 = 1071; int a2 = 15510; int a3 = 18627; int a4 = 4055; int a5 = 15297;
+    TUNE(SetRange(-100000, 100000), a1, a2, a3, a4, a5);
 
 // Different node types, used as a template parameter
 enum NodeType {
@@ -1191,16 +1191,11 @@ moves_loop:  // When in check, search starts here
         if (move == (ss - 4)->currentMove && pos.has_repeated())
             r += 2;
 
-        // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
-        // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
-        if (move == ttMove && (ss + 1)->cutoffCnt < a6)
-            r = 0;
-
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
                       + (*contHist[1])[movedPiece][move.to_sq()]
                       + (*contHist[3])[movedPiece][move.to_sq()] - a4 
-                      - cutoffCntReduction[(ss + 1)->cutoffCnt];
+                      - cutoffCntReduction[(ss + 1)->cutoffCnt] * (move != ttMove);
 
         // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
         r -= ss->statScore / a5;
