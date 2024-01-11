@@ -195,7 +195,7 @@ void Search::init() {
         Reductions[i] = int((20.37 + std::log(Threads.size()) / 2) * std::log(i));
 
     for (int i = 1; i < 2048; ++i)
-        cutoffCntReduction[i] = int(std::log(double(i) + 1.071) * 15510.2 / std::log(18.627));
+        cutoffCntReduction[i] = int(std::log(double(i) + 1.069) * 16126.05 / std::log(18.482));
 }
 
 
@@ -1188,14 +1188,17 @@ moves_loop:  // When in check, search starts here
         if (move == (ss - 4)->currentMove && pos.has_repeated())
             r += 2;
 
+        if (move == ttMove && (ss + 1)->cutoffCnt < 3)
+            r = 0;
+
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
                       + (*contHist[1])[movedPiece][move.to_sq()]
-                      + (*contHist[3])[movedPiece][move.to_sq()] - 4055 
+                      + (*contHist[3])[movedPiece][move.to_sq()] - 4094 
                       - cutoffCntReduction[(ss + 1)->cutoffCnt];
 
         // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
-        r -= ss->statScore / 15297;
+        r -= ss->statScore / 15268;
 
         // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
         // We use various heuristics for the sons of a node after the first son has
