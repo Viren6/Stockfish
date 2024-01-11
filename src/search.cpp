@@ -68,8 +68,8 @@ using namespace Search;
 
 namespace {
 
-    int a1 = 1152; int a2 = 15260; int a3 = 18517; int a4 = 3957; int a5 = 15030;
-    TUNE(SetRange(-100000, 100000), a1, a2, a3, a4, a5);
+    int a1 = 1244; int a2 = 16085; int a3 = 18946; int a4 = 4091; int a5 = 15828; int a6 = 2;
+    TUNE(SetRange(-100000, 100000), a1, a2, a3, a4, a5, SetRange(0, 10), a6);
 
 // Different node types, used as a template parameter
 enum NodeType {
@@ -1190,6 +1190,9 @@ moves_loop:  // When in check, search starts here
         // Increase reduction on repetition (~1 Elo)
         if (move == (ss - 4)->currentMove && pos.has_repeated())
             r += 2;
+
+        if (move == ttMove && (ss + 1)->cutoffCnt < a6)
+            r = 0;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
