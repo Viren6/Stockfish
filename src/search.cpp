@@ -1195,7 +1195,7 @@ moves_loop:  // When in check, search starts here
                       + (*contHist[0])[movedPiece][move.to_sq()]
                       + (*contHist[1])[movedPiece][move.to_sq()]
                       + (*contHist[3])[movedPiece][move.to_sq()] - 4094 
-                      - cutoffCntReduction[(ss + 1)->cutoffCnt];
+                      - cutoffCntReduction[std::min((ss + 1)->cutoffCnt, 2047)];
 
         // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
         r -= ss->statScore / 15268;
