@@ -236,6 +236,7 @@ class Worker {
 
     // Reductions lookup table initialized at startup
     int reductions[MAX_MOVES];  // [depth or moveNumber]
+    int cutoffCntReduction[2048];
 
     // The main thread has a SearchManager, the others have a NullSearchManager
     std::unique_ptr<ISearchManager> manager;
