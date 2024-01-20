@@ -1106,10 +1106,6 @@ moves_loop:  // When in check, search starts here
                 else if (ttValue >= beta)
                     extension = -2 - !PvNode;
 
-                else if (tte->bound() == BOUND_UPPER && PvNode && ttValue < alpha
-                         && tte->depth() >= depth)
-                    extension = -2;
-
                 // If we are on a cutNode but the ttMove is not assumed to fail high over current beta (~1 Elo)
                 else if (cutNode)
                     extension = depth < 19 ? -2 : -1;
@@ -1134,6 +1130,10 @@ moves_loop:  // When in check, search starts here
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 4146)
                 extension = 1;
+
+            else if (tte->bound() == BOUND_UPPER && PvNode && ttValue < alpha
+                     && tte->depth() >= depth)
+                extension = -2;
         }
 
         // Add extension to new depth
