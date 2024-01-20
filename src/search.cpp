@@ -1131,9 +1131,9 @@ moves_loop:  // When in check, search starts here
                           > 4146)
                 extension = 1;
 
-            else if (tte->bound() == BOUND_UPPER && PvNode && ttValue < alpha
+            else if (tte->bound() == BOUND_UPPER && PvNode && ttValue <= alpha
                      && tte->depth() >= depth)
-                extension = -2;
+                extension = -1;
         }
 
         // Add extension to new depth
