@@ -1115,6 +1115,10 @@ moves_loop:  // When in check, search starts here
                     extension = -1;
             }
 
+            else if (pos.rule50_count() > 40 && type_of(movedPiece) == PAWN && !capture
+                     && move.type_of() != PROMOTION && improving)
+                extension = 2;
+
             // Check extensions (~1 Elo)
             else if (givesCheck && depth > 10)
                 extension = 1;
@@ -1129,10 +1133,6 @@ moves_loop:  // When in check, search starts here
                      && thisThread->captureHistory[movedPiece][move.to_sq()]
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 4146)
-                extension = 1;
-
-            else if (pos.rule50_count() > 40 && type_of(movedPiece) == PAWN && !capture
-                     && move.type_of() != PROMOTION && improving)
                 extension = 1;
         }
 
