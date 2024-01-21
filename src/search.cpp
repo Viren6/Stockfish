@@ -1130,6 +1130,10 @@ moves_loop:  // When in check, search starts here
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 4146)
                 extension = 1;
+
+            else if (pos.rule50_count() > 40 && type_of(movedPiece) == PAWN && !capture
+                     && move.type_of() != PROMOTION && improving)
+                extension = 1;
         }
 
         // Add extension to new depth
