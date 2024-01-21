@@ -1117,7 +1117,7 @@ moves_loop:  // When in check, search starts here
 
             else if (pos.rule50_count() > 40 && type_of(movedPiece) == PAWN && !capture
                      && move.type_of() != PROMOTION && improving)
-                extension = 2;
+                extension = 1 + (pos.rule50_count() > 60);
 
             // Check extensions (~1 Elo)
             else if (givesCheck && depth > 10)
