@@ -1154,7 +1154,7 @@ moves_loop:  // When in check, search starts here
             r -= 1 + (ttValue > alpha) + (ttValue > beta && tte->depth() >= depth);
 
         // Decrease reduction if opponent's move count is high (~1 Elo)
-        if ((ss - 1)->moveCount > 7)
+        if ((ss - 1)->moveCount > (6 + 6 * (tte->bound() == BOUND_UPPER)))
             r--;
 
         // Increase reduction for cut nodes (~4 Elo)
@@ -1170,7 +1170,7 @@ moves_loop:  // When in check, search starts here
             r--;
 
         // Decrease reduction if a quiet ttMove has been singularly extended (~1 Elo)
-        if (singularQuietLMR && tte->bound() != BOUND_UPPER)
+        if (singularQuietLMR)
             r--;
 
         // Increase reduction on repetition (~1 Elo)
