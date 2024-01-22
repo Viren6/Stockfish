@@ -1163,14 +1163,14 @@ moves_loop:  // When in check, search starts here
 
         // Increase reduction if ttMove is a capture (~3 Elo)
         if (ttCapture)
-            r += 1 + (tte->bound() == BOUND_UPPER);
+            r += 1;
 
         // Decrease reduction for PvNodes (~3 Elo)
         if (PvNode && tte->bound() != BOUND_UPPER)
             r--;
 
         // Decrease reduction if a quiet ttMove has been singularly extended (~1 Elo)
-        if (singularQuietLMR)
+        if (singularQuietLMR && tte->bound() != BOUND_UPPER)
             r--;
 
         // Increase reduction on repetition (~1 Elo)
