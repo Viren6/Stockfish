@@ -827,6 +827,9 @@ Value Search::Worker::search(
 
         pos.undo_null_move();
 
+        if (Move((ss - 1)->currentMove.to_sq(), (ss - 1)->currentMove.from_sq()) == (ss + 1)->currentMove && nullValue < beta)
+            nullValue = beta;
+
         // Do not return unproven mate or TB scores
         if (nullValue >= beta && nullValue < VALUE_TB_WIN_IN_MAX_PLY)
         {
