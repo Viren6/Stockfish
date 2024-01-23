@@ -1128,13 +1128,14 @@ moves_loop:  // When in check, search starts here
             // Recapture extensions (~1 Elo)
             else if (PvNode && move == ttMove && move.to_sq() == prevSq
                      && thisThread->captureHistory[movedPiece][move.to_sq()]
-                                                  [type_of(pos.piece_on(move.to_sq()))] > 4484)
+                                                  [type_of(pos.piece_on(move.to_sq()))]
+                          > 4484)
                 extension = 1;
 
-            // Likely fail high extensions (~1 Elo)
-            else if (PvNode && move == ttMove && tte->bound() != BOUND_UPPER && ttValue > beta
-                     && tte->depth() >= depth && (ss + 1)->cutoffCnt < 4 && !ttCapture)
+            else if (pos.rule50_count() > 60 && type_of(movedPiece) == PAWN && 
+                     !capture && move.type_of() != PROMOTION && improving)
                 extension = 1;
+
         }
 
         // Add extension to new depth
