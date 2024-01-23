@@ -986,10 +986,9 @@ moves_loop:  // When in check, search starts here
                 if (lmrDepth < 6 && history < -4195 * depth)
                     continue;
 
-                history += 69 * thisThread->mainHistory[us][move.from_to()] / 32;
+                history += 2 * thisThread->mainHistory[us][move.from_to()];
 
                 lmrDepth += history / 6992;
-                lmrDepth = std::max(lmrDepth, -1);
 
                 // Futility pruning: parent node (~13 Elo)
                 if (!ss->inCheck && lmrDepth < 15
@@ -1021,7 +1020,7 @@ moves_loop:  // When in check, search starts here
             // so changing them requires tests at these types of time controls.
             // Recursive singular search is avoided.
             if (!rootNode && move == ttMove && !excludedMove
-                && depth >= 4 - (thisThread->completedDepth > 31) + 2 * (PvNode && tte->is_pv())
+                && depth >= 4 - (thisThread->completedDepth > 31) + ss->ttPv
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
             {
@@ -1065,16 +1064,12 @@ moves_loop:  // When in check, search starts here
 
                 // If we are on a cutNode but the ttMove is not assumed to fail high over current beta (~1 Elo)
                 else if (cutNode)
-                    extension = depth < 20 ? -2 : -1;
+                    extension = -2;
 
                 // If the ttMove is assumed to fail low over the value of the reduced search (~1 Elo)
                 else if (ttValue <= value)
                     extension = -1;
             }
-
-            // Check extensions (~1 Elo)
-            else if (givesCheck && depth > 10)
-                extension = 1;
 
             // Quiet ttMove extensions (~1 Elo)
             else if (PvNode && move == ttMove && move == ss->killers[0]
@@ -1108,10 +1103,6 @@ moves_loop:  // When in check, search starts here
         // Decrease reduction if position is or has been on the PV (~5 Elo)
         if (ss->ttPv)
             r -= 1 + (ttValue > alpha) + (ttValue > beta && tte->depth() >= depth);
-
-        // Decrease reduction if opponent's move count is high (~1 Elo)
-        if ((ss - 1)->moveCount > 7)
-            r--;
 
         // Increase reduction for cut nodes (~4 Elo)
         if (cutNode)
@@ -1147,11 +1138,7 @@ moves_loop:  // When in check, search starts here
         r -= ss->statScore / 15373;
 
         // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
-        // We use various heuristics for the sons of a node after the first son has
-        // been searched. In general, we would like to reduce them, but there are many
-        // cases where we extend a son if it has good chances to be "interesting".
-        if (depth >= 2 && moveCount > 1 + rootNode
-            && (!ss->ttPv || !capture || (cutNode && (ss - 1)->moveCount > 1)))
+        if (depth >= 2 && moveCount > 1 + rootNode)
         {
             // In general we want to cap the LMR depth search at newDepth, but when
             // reduction is negative, we allow this move a limited search extension
