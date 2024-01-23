@@ -1115,9 +1115,11 @@ moves_loop:  // When in check, search starts here
                 else if (ttValue <= value)
                     extension = -1;
             }
-            else if (PvNode && move == ttMove && tte->bound() != BOUND_UPPER && ttValue >= beta + 72 
-                     && tte->depth() >= depth && (ss + 1)->cutoffCnt < 4 && !ttCapture)
+            else if (PvNode && move == ttMove && tte->bound() != BOUND_UPPER && ttValue >= beta + 72 * depth
+                && tte->depth() >= depth && (ss + 1)->cutoffCnt < 4
+                && !ttCapture)
                 extension = 1;
+
             // Check extensions (~1 Elo)
             else if (givesCheck && depth > 10)
                 extension = 1;
