@@ -1249,7 +1249,8 @@ moves_loop:  // When in check, search starts here
         {
 
             newDepth += (move == ttMove && tte->bound() != BOUND_UPPER && ttValue > beta
-                         && tte->depth() >= depth && (ss + 1)->cutoffCnt < 4 && !ttCapture);
+                         && tte->depth() >= depth && (ss + 1)->cutoffCnt < 4 && !ttCapture
+                         && extension < 1);
 
             (ss + 1)->pv    = pv;
             (ss + 1)->pv[0] = Move::none();
