@@ -1131,11 +1131,6 @@ moves_loop:  // When in check, search starts here
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 4484)
                 extension = 1;
-
-            else if (PvNode && move == ttMove && tte->bound() != BOUND_UPPER && ttValue > beta
-                     && tte->depth() >= depth && (ss + 1)->cutoffCnt < 4 && !ttCapture)
-                extension = 1;
-
         }
 
         // Add extension to new depth
@@ -1252,6 +1247,10 @@ moves_loop:  // When in check, search starts here
         // otherwise let the parent node fail low with value <= alpha and try another move.
         if (PvNode && (moveCount == 1 || value > alpha))
         {
+
+            newDepth += (move == ttMove && tte->bound() != BOUND_UPPER && ttValue > beta
+                         && tte->depth() >= depth && (ss + 1)->cutoffCnt < 4 && !ttCapture);
+
             (ss + 1)->pv    = pv;
             (ss + 1)->pv[0] = Move::none();
 
