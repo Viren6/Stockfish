@@ -1076,15 +1076,15 @@ moves_loop:  // When in check, search starts here
                   search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
                 ss->excludedMove = Move::none();
 
-                if (value < singularBeta + 2)
+                if (value < singularBeta)
                 {
                     extension        = 1;
                     singularQuietLMR = !ttCapture;
 
                     // Avoid search explosion by limiting the number of double extensions
-                    if (!PvNode && value < singularBeta && ss->doubleExtensions <= 15)
+                    if (!PvNode && ss->doubleExtensions <= 15)
                     {
-                        extension = 2;
+                        extension = 2 + (value < singularBeta - 1000);
                         depth += depth < 15;
                     }
                 }
