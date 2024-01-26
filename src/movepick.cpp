@@ -207,7 +207,7 @@ void MovePicker::score() {
                        : 0;
 
             if (pt == PAWN)
-                m.value += pos.rule50_count() * 500 / (depth * depth);
+                m.value += pos.rule50_count() * 250 / (depth * depth);
         }
 
         else  // Type == EVASIONS
