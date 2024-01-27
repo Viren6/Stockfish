@@ -1047,7 +1047,7 @@ moves_loop:  // When in check, search starts here
                     // Avoid search explosion by limiting the number of double extensions
                     if (!PvNode && value < singularBeta - 2 && ss->doubleExtensions <= 12)
                     {
-                        extension = 2 + (value < singularBeta - 1000);
+                        extension = 3;
                         depth += depth < 15;
                     }
                 }
@@ -1098,7 +1098,7 @@ moves_loop:  // When in check, search starts here
 
         // Add extension to new depth
         newDepth += extension;
-        ss->doubleExtensions = (ss - 1)->doubleExtensions + (extension == 2);
+        ss->doubleExtensions = (ss - 1)->doubleExtensions + (extension == 3);
 
         // Speculative prefetch as early as possible
         prefetch(tt.first_entry(pos.key_after(move)));
