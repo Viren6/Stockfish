@@ -1045,9 +1045,9 @@ moves_loop:  // When in check, search starts here
                     singularQuietLMR = !ttCapture;
 
                     // Avoid search explosion by limiting the number of double extensions
-                    if (!PvNode && value < singularBeta - 2 && ss->doubleExtensions <= 12)
+                    if (!PvNode && value < singularBeta - 2 && ss->doubleExtensions <= 15)
                     {
-                        extension = 2;
+                        extension = 2 + (value < singularBeta - (1200 / singularDepth));
                         depth += depth < 15;
                     }
                 }
@@ -1098,7 +1098,7 @@ moves_loop:  // When in check, search starts here
 
         // Add extension to new depth
         newDepth += extension;
-        ss->doubleExtensions = (ss - 1)->doubleExtensions + (extension == 2);
+        ss->doubleExtensions = (ss - 1)->doubleExtensions + (extension >= 2);
 
         // Speculative prefetch as early as possible
         prefetch(tt.first_entry(pos.key_after(move)));
