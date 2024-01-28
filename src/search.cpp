@@ -1029,7 +1029,7 @@ moves_loop:  // When in check, search starts here
             if (!rootNode && move == ttMove && !excludedMove
                 && depth >= 4 - (thisThread->completedDepth > 31) + ss->ttPv
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
-                && tte->depth() >= depth - 3)
+                && tte->depth() >= depth - 4)
             {
                 Value singularBeta  = ttValue - (58 + 52 * (ss->ttPv && !PvNode)) * depth / 64;
                 Depth singularDepth = newDepth / 2;
@@ -1045,9 +1045,9 @@ moves_loop:  // When in check, search starts here
                     singularQuietLMR = !ttCapture;
 
                     // Avoid search explosion by limiting the number of double extensions
-                    if (!PvNode && value < singularBeta - 2 && ss->doubleExtensions <= 12)
+                    if (!PvNode && value < singularBeta - 2 && ss->doubleExtensions <= 15)
                     {
-                        extension = 2 + (value < singularBeta - 200);
+                        extension = 2 + (value < singularBeta - 185 && cutNode);
                         depth += depth < 15;
                     }
                 }
