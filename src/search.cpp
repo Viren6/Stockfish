@@ -1052,7 +1052,6 @@ moves_loop:  // When in check, search starts here
                         if (value < singularBeta - 80 && !ttCapture)
                         { 
                             extension = 3;
-                            singularQuietLMR = false;
                         }
                     }
                 }
