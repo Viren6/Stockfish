@@ -1012,6 +1012,8 @@ moves_loop:  // When in check, search starts here
             }
         }
 
+        bool skipReductions = false;
+
         // Step 15. Extensions (~100 Elo)
         // We take care to not overdo to avoid search getting stuck.
         if (ss->ply < thisThread->rootDepth * 2)
@@ -1052,6 +1054,7 @@ moves_loop:  // When in check, search starts here
                         if (value < singularBeta - 80 && !ttCapture)
                         { 
                             extension = 3;
+                            skipReductions = true;
                         }
                     }
                 }
@@ -1145,7 +1148,7 @@ moves_loop:  // When in check, search starts here
             r += 2;
 
         // Increase reduction if next ply has a lot of fail high (~5 Elo)
-        if ((ss + 1)->cutoffCnt > 3)
+        if ((ss + 1)->cutoffCnt > 3 && skipReductions == false)
             r++;
 
         // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
