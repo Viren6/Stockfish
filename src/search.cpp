@@ -820,8 +820,9 @@ Value Search::Worker::search(
     if (PvNode && !ttMove)
         depth -= 2 + 2 * (ss->ttHit && tte->depth() >= depth);
 
-    if (!PvNode && ttValue < alpha && tte->depth() >= depth && ttCapture)
-        depth -= 1 + 2 * ((ss + 1)->cutoffCnt > 4) + 2 * (tte->bound() == BOUND_UPPER);
+    if (!PvNode && ttValue < alpha && tte->depth() >= depth && ttCapture
+        && ((ss + 1)->cutoffCnt > 4 || tte->bound() == BOUND_UPPER))
+        depth -= 2;
 
     if (depth <= 0)
         return qsearch < PvNode ? PV : NonPV > (pos, ss, alpha, beta);
