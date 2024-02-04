@@ -1045,7 +1045,7 @@ moves_loop:  // When in check, search starts here
                         if (value < singularBeta - 78 && !ttCapture)
                         { 
                             extension = 3;
-                            depth += depth == 8;
+                            depth += depth > 7;
                         }
                     }
                 }
