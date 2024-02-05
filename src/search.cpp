@@ -1037,10 +1037,16 @@ moves_loop:  // When in check, search starts here
                     extension = 1;
 
                     // Avoid search explosion by limiting the number of double extensions
-                    if (!PvNode && ss->doubleExtensions <= 16)
+                    if (!PvNode && ss->doubleExtensions <= 18)
                     {
-                        extension = 2 + (value < singularBeta - 78 && !ttCapture);
-                        depth += (depth < 16 || extension == 3);
+                        extension = 2;
+                        depth++;
+
+                        if (value < singularBeta - 35 && !ttCapture)
+                        { 
+                            extension = 3;
+                            depth += depth < 10;
+                        }
                     }
                 }
 
