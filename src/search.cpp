@@ -1007,6 +1007,7 @@ moves_loop:  // When in check, search starts here
 
         // Step 15. Extensions (~100 Elo)
         // We take care to not overdo to avoid search getting stuck.
+        dbg_hit_on(ttValue > beta && tte->depth() >= depth, 0);
         if (ss->ply < thisThread->rootDepth * 2)
         {
             // Singular extension search (~94 Elo). If all moves but one fail low on a
@@ -1019,6 +1020,7 @@ moves_loop:  // When in check, search starts here
             // scaling. Their values are optimized to time controls of 180+1.8 and longer
             // so changing them requires tests at these types of time controls.
             // Recursive singular search is avoided.
+            dbg_hit_on(ttValue > beta && tte->depth() >= depth, 1);
             if (!rootNode && move == ttMove && !excludedMove
                 && depth >= 4 - (thisThread->completedDepth > 29) + ss->ttPv
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
@@ -1032,15 +1034,20 @@ moves_loop:  // When in check, search starts here
                   search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
                 ss->excludedMove = Move::none();
 
+                dbg_hit_on(ttValue > beta && tte->depth() >= depth, 2);
                 if (value < singularBeta)
                 {
                     extension = 1;
+                    dbg_hit_on(ttValue > beta && tte->depth() >= depth, 3);
 
                     // Avoid search explosion by limiting the number of double extensions
                     if (!PvNode && ss->doubleExtensions <= 16)
                     {
                         extension = 2 + (value < singularBeta - 78 && !ttCapture);
                         depth += depth < 16;
+                        dbg_hit_on(ttValue > beta && tte->depth() >= depth, 4);
+                        if (value < singularBeta - 78 && !ttCapture)
+                            dbg_hit_on(ttValue > beta && tte->depth() >= depth, 5);
                     }
                 }
 
