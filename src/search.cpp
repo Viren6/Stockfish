@@ -1041,6 +1041,8 @@ moves_loop:  // When in check, search starts here
                     {
                         extension = 2 + (value < singularBeta - 78 && !ttCapture);
                         depth += depth < 16;
+                        dbg_hit_on(value < singularBeta - 78 && !ttCapture);
+                        dbg_hit_on(value < singularBeta - 75 - (ss+1)->cutoffCnt && !ttCapture, 1);
                     }
                 }
 
