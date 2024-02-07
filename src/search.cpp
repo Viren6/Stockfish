@@ -1040,10 +1040,9 @@ moves_loop:  // When in check, search starts here
                     if (!PvNode && ss->doubleExtensions <= 16)
                     {
                         extension = 
-                            2 + (value < singularBeta - 82 + ((ss + 1)->cutoffCnt > 3) * 50 && !ttCapture);
+                            2 + (value < singularBeta - 78 && !ttCapture && !ttCapture);
                         depth += depth < 16;
-                        dbg_hit_on(value < singularBeta - 82 + ((ss + 1)->cutoffCnt > 3) * 50
-                                   && !ttCapture, depth);
+                        dbg_hit_on(value < singularBeta - 78 && !ttCapture, depth);
                     }
                 }
 
