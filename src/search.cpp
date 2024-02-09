@@ -1015,32 +1015,12 @@ moves_loop:  // When in check, search starts here
             // a reduced search on the position excluding the ttMove and if the result
             // is lower than ttValue minus a margin, then we will extend the ttMove.
 
-            dbg_hit_on(!rootNode && move == ttMove && !excludedMove
-                         && depth >= 4 - (thisThread->completedDepth > 29) + ss->ttPv
-                         && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY
-                         && (tte->bound() & BOUND_LOWER) && tte->depth() >= depth - 3,
-                       0);
-
-            dbg_hit_on(!rootNode && move == ttMove && !excludedMove
-                         && depth >= 4 - (thisThread->completedDepth > 29)
-                                       - (ss + 1)->cutoffCnt + ss->ttPv
-                         && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY
-                         && (tte->bound() & BOUND_LOWER) && tte->depth() >= depth - 3,
-                       1);
-
-            dbg_hit_on(!rootNode && move == ttMove && !excludedMove
-                         && depth >= 3 - (thisThread->completedDepth > 29) + ttCapture + ss->ttPv
-                         && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY
-                         && (tte->bound() & BOUND_LOWER) && tte->depth() >= depth - 3,
-                       2);
-
-
             // Note: the depth margin and singularBeta margin are known for having non-linear
             // scaling. Their values are optimized to time controls of 180+1.8 and longer
             // so changing them requires tests at these types of time controls.
             // Recursive singular search is avoided.
             if (!rootNode && move == ttMove && !excludedMove
-                && depth >= 4 - (thisThread->completedDepth > 29) + ss->ttPv
+                && depth >= 4 - (thisThread->completedDepth > 29) - (ss + 1)->cutoffCnt + ss->ttPv
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
             {
