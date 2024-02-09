@@ -1023,7 +1023,7 @@ moves_loop:  // When in check, search starts here
 
             dbg_hit_on(!rootNode && move == ttMove && !excludedMove
                          && depth >= 4 - (thisThread->completedDepth > 29)
-                                       - ((ss + 1)->cutoffCnt > 3) + ss->ttPv
+                                       - (ss + 1)->cutoffCnt + ss->ttPv
                          && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY
                          && (tte->bound() & BOUND_LOWER) && tte->depth() >= depth - 3,
                        1);
