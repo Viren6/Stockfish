@@ -1019,7 +1019,7 @@ moves_loop:  // When in check, search starts here
             // scaling. Their values are optimized to time controls of 180+1.8 and longer
             // so changing them requires tests at these types of time controls.
             // Recursive singular search is avoided.
-            if (!rootNode && move == ttMove && !excludedMove
+            if (!rootNode && move == ttMove
                 && depth >= 4 - (thisThread->completedDepth > 29) + ss->ttPv
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
