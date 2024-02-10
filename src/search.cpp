@@ -60,7 +60,7 @@ Value futility_margin(Depth d, bool noTtCutNode, bool improving) {
 }
 
 constexpr int futility_move_count(bool improving, Depth depth, bool noTtCutNode) {
-    return (3 + depth * depth / (1 + 2 * noTtCutNode)) / (2 - improving);
+    return (3 + depth * depth / (1 + 3 * noTtCutNode)) / (2 - improving);
 }
 
 // Add correctionHistory value to raw staticEval and guarantee evaluation does not hit the tablebase range
