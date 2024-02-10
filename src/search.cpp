@@ -1193,7 +1193,7 @@ moves_loop:  // When in check, search starts here
         if (PvNode && (moveCount == 1 || value > alpha))
         {
             // Note that if fullDepth is true, it means value > alpha due to the if conditions
-            newDepth += fullDepth;
+            newDepth += fullDepth; 
 
             (ss + 1)->pv    = pv;
             (ss + 1)->pv[0] = Move::none();
