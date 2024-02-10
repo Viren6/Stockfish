@@ -1033,9 +1033,6 @@ moves_loop:  // When in check, search starts here
                   search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
                 ss->excludedMove = Move::none();
 
-                if (tte->depth() == depth - 4)
-                    extension--;
-
                 if (value < singularBeta)
                 {
                     extension = 1;
@@ -1064,15 +1061,15 @@ moves_loop:  // When in check, search starts here
 
                 // If the ttMove is assumed to fail high over current beta (~7 Elo)
                 else if (ttValue >= beta)
-                    extension += -2 - !PvNode;
+                    extension = -2 - !PvNode;
 
                 // If we are on a cutNode but the ttMove is not assumed to fail high over current beta (~1 Elo)
                 else if (cutNode)
-                    extension += -2;
+                    extension = -2;
 
                 // If the ttMove is assumed to fail low over the value of the reduced search (~1 Elo)
                 else if (ttValue <= value)
-                    extension += -1;
+                    extension = -1;
             }
 
             // Quiet ttMove extensions (~1 Elo)
