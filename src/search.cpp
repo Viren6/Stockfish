@@ -59,8 +59,11 @@ Value futility_margin(Depth d, bool noTtCutNode, bool improving) {
     return (futilityMult * d - 3 * futilityMult / 2 * improving);
 }
 
-constexpr int futility_move_count(bool improving, Depth depth, bool noTtCutNode) {
-    return (2 + depth * depth / (1 + noTtCutNode)) / (2 - improving);
+int x1 = 300; int x2 = 300; int x3 = 100; int x4 = 20; int x5 = 10; int x6 = 10; int x7 = 10;
+TUNE(SetRange(1, 1000), x1, x2, x3, x4, x5, x6, x7);
+
+int futility_move_count(bool improving, Depth depth, bool noTtCutNode) {
+    return ((x1 + x2 * noTtCutNode) + x3 * depth * depth) / ((x4 - x5 * improving) * (x6 + x7 * noTtCutNode));
 }
 
 // Add correctionHistory value to raw staticEval and guarantee evaluation does not hit the tablebase range
@@ -1071,11 +1074,6 @@ moves_loop:  // When in check, search starts here
                     extension = -1;
             }
 
-            // Quiet ttMove extensions (~1 Elo)
-            else if (PvNode && move == ttMove && move == ss->killers[0]
-                     && (*contHist[0])[movedPiece][move.to_sq()] >= 4339)
-                extension = 1;
-
             // Recapture extensions (~1 Elo)
             else if (PvNode && move == ttMove && move.to_sq() == prevSq
                      && thisThread->captureHistory[movedPiece][move.to_sq()]
@@ -1297,6 +1295,11 @@ moves_loop:  // When in check, search starts here
     // return a fail low score.
 
     assert(moveCount || !ss->inCheck || excludedMove || !MoveList<LEGAL>(pos).size());
+
+    // Adjust best value for fail high cases at non-pv nodes
+    if (!PvNode && bestValue >= beta && std::abs(bestValue) < VALUE_TB_WIN_IN_MAX_PLY
+    && std::abs(beta) < VALUE_TB_WIN_IN_MAX_PLY && std::abs(alpha) < VALUE_TB_WIN_IN_MAX_PLY)
+    bestValue = (bestValue * (depth + 2) + beta) / (depth + 3);
 
     if (!moveCount)
         bestValue = excludedMove ? alpha : ss->inCheck ? mated_in(ss->ply) : VALUE_DRAW;
