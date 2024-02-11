@@ -1043,8 +1043,7 @@ moves_loop:  // When in check, search starts here
                         if (value < singularBeta - 78 && !ttCapture)
                         { 
                             extension = 3
-                                      + (value < singularBeta - 300 && ttValue > beta
-                                         && tte->depth() >= depth && (ss + 1)->cutoffCnt == 0);
+                                      + (value < singularBeta - 300 && ttValue > beta && tte->depth() >= depth);
                         }
                         depth += depth < 16;
                     }
