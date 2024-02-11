@@ -59,11 +59,8 @@ Value futility_margin(Depth d, bool noTtCutNode, bool improving) {
     return (futilityMult * d - 3 * futilityMult / 2 * improving);
 }
 
-int x1 = 300; int x2 = 300; int x3 = 100; int x4 = 20; int x5 = 10; int x6 = 10; int x7 = 10;
-TUNE(SetRange(1, 1000), x1, x2, x3, x4, x5, x6, x7);
-
 int futility_move_count(bool improving, Depth depth, bool noTtCutNode) {
-    return ((x1 + x2 * noTtCutNode) + x3 * depth * depth) / ((x4 - x5 * improving) * (x6 + x7 * noTtCutNode));
+    return ((299 + 286 * noTtCutNode) + 100 * depth * depth) / ((21 - 11 * improving) * (9 + 11 * noTtCutNode));
 }
 
 // Add correctionHistory value to raw staticEval and guarantee evaluation does not hit the tablebase range
