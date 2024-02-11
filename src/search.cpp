@@ -711,7 +711,7 @@ Value Search::Worker::search(
 
         // ttValue can be used as a better position evaluation (~7 Elo)
         if (ttValue != VALUE_NONE && (tte->bound() & (ttValue > eval ? BOUND_LOWER : BOUND_UPPER)))
-            eval = ttValue;
+            eval = to_corrected_static_eval(ttValue, *thisThread, pos);
     }
     else
     {
@@ -1444,7 +1444,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
             // ttValue can be used as a better position evaluation (~13 Elo)
             if (ttValue != VALUE_NONE
                 && (tte->bound() & (ttValue > bestValue ? BOUND_LOWER : BOUND_UPPER)))
-                bestValue = ttValue;
+                bestValue = to_corrected_static_eval(ttValue, *thisThread, pos);
         }
         else
         {
