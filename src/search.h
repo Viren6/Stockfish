@@ -47,6 +47,7 @@ enum NodeType {
 class TranspositionTable;
 class ThreadPool;
 class OptionsMap;
+class UCI;
 
 namespace Search {
 
@@ -123,12 +124,10 @@ struct LimitsType {
 // The UCI stores the uci options, thread pool, and transposition table.
 // This struct is used to easily forward data to the Search::Worker class.
 struct SharedState {
-    SharedState(const OptionsMap&   optionsMap,
-                ThreadPool&         threadPool,
-                TranspositionTable& transpositionTable) :
-        options(optionsMap),
-        threads(threadPool),
-        tt(transpositionTable) {}
+    SharedState(const OptionsMap& o, ThreadPool& tp, TranspositionTable& t) :
+        options(o),
+        threads(tp),
+        tt(t) {}
 
     const OptionsMap&   options;
     ThreadPool&         threads;
@@ -211,7 +210,11 @@ class Worker {
     template<NodeType nodeType>
     Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth = 0);
 
-    Depth reduction(bool i, Depth d, int mn, int delta);
+    Depth reduction(bool i, Depth d, int mn, int delta) {
+        int reductionScale = reductions[d] * reductions[mn];
+        return (reductionScale + 1177 - int(delta) * 776 / int(rootDelta)) / 1024
+             + (!i && reductionScale > 842);
+    }
 
     // Get a pointer to the search manager, only allowed to be called by the
     // main thread.
@@ -249,6 +252,7 @@ class Worker {
     TranspositionTable& tt;
 
     friend class Stockfish::ThreadPool;
+    friend class Stockfish::UCI;
     friend class SearchManager;
 };
 
