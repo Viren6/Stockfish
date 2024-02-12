@@ -43,7 +43,7 @@
 #include "uci.h"
 #include "ucioption.h"
 
-namespace Stockfish {
+namespace Stockfish { 
 
 namespace TB = Tablebases;
 
