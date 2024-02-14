@@ -52,6 +52,12 @@ using namespace Search;
 
 namespace {
 
+    int maxR = 14;
+    int maxD = 20;
+    int minR = -10;
+    int fullDepRed[20][25];
+    TUNE(SetRange(1, 20), maxD, SetRange(1, 14), maxR, SetRange(-10, 5), minR, SetRange(-5, 5), fullDepRed);
+
 
 // Futility margin
 Value futility_margin(Depth d, bool noTtCutNode, bool improving) {
@@ -1167,10 +1173,14 @@ moves_loop:  // When in check, search starts here
         {
             // Increase reduction if ttMove is not present (~1 Elo)
             if (!ttMove)
-                r += 2;
+                r += 2; 
 
             // Note that if expected reduction is high, we reduce search depth by 1 here (~9 Elo)
-            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3), !cutNode);
+            int clampedD = std::min(depth, maxD);
+            int clampedR = std::max(minR, std::min(r, maxR));
+            r = fullDepRed[clampedD - 1][clampedR + 10];
+            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - r, !cutNode);
+
         }
 
         // For PV nodes only, do a full PV search on the first move or after a fail high,
