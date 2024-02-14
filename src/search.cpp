@@ -1170,7 +1170,8 @@ moves_loop:  // When in check, search starts here
                 r += 2;
 
             // Note that if expected reduction is high, we reduce search depth by 1 here (~9 Elo)
-            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - std::max(r - 2, 0) / 2, !cutNode);
+            r     = std::max(r - 1, 0) / 3;
+            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - r, !cutNode);
         }
 
         // For PV nodes only, do a full PV search on the first move or after a fail high,
