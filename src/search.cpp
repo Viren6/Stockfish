@@ -534,7 +534,7 @@ Value Search::Worker::search(
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, singularAlphaTT;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -908,7 +908,7 @@ moves_loop:  // When in check, search starts here
                   contHist, &thisThread->pawnHistory, countermove, ss->killers);
 
     value            = bestValue;
-    moveCountPruning = false;
+    moveCountPruning = singularAlphaTT = false;
 
     // Step 13. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
@@ -1049,7 +1049,7 @@ moves_loop:  // When in check, search starts here
                     {
                         extension = 2 + (value < singularBeta - 78 && !ttCapture);
                         depth += depth < 16;
-                        r -= (ttValue > alpha && tte->depth() >= depth);
+                        singularAlphaTT = (ttValue > alpha && tte->depth() >= depth);
                     }
                 }
 
@@ -1113,6 +1113,9 @@ moves_loop:  // When in check, search starts here
         // Increase reduction for cut nodes (~4 Elo)
         if (cutNode)
             r += 2 - (tte->depth() >= depth && ss->ttPv);
+
+        if (singularAlphaTT)
+            r--;
 
         // Increase reduction if ttMove is a capture (~3 Elo)
         if (ttCapture)
