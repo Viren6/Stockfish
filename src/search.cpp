@@ -1120,7 +1120,7 @@ moves_loop:  // When in check, search starts here
             r += 2 - (tte->depth() >= depth && ss->ttPv);
 
         if (singularAlphaTT)
-            r--;
+            r -= 2;
 
         // Increase reduction if ttMove is a capture (~3 Elo)
         if (ttCapture)
