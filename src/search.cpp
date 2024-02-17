@@ -1111,7 +1111,7 @@ moves_loop:  // When in check, search starts here
 
         // Increase reduction for cut nodes (~4 Elo)
         if (cutNode)
-            r += 2 - (ss->ttPv) * (ttValue > beta + (tte->depth() >= depth) * (1 + ttValue > alpha));
+            r += 2 - (ss->ttPv) * ((ttValue > beta) + (tte->depth() >= depth));
 
         // Increase reduction if ttMove is a capture (~3 Elo)
         if (ttCapture)
