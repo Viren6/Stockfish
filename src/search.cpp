@@ -1111,12 +1111,15 @@ moves_loop:  // When in check, search starts here
 
         // Increase reduction for cut nodes (~4 Elo)
         if (cutNode)
-            r += 2 - (tte->depth() >= depth && ss->ttPv)
-               - (ttValue > alpha && tte->depth() >= depth && ss->ttPv);
+            r += 2 - (ss->ttPv) * (ttValue > beta + (tte->depth() >= depth) * (1 + ttValue > alpha));
 
         // Increase reduction if ttMove is a capture (~3 Elo)
         if (ttCapture)
             r++;
+
+        // Decrease reduction for PvNodes (~3 Elo)
+        if (PvNode)
+            r--;
 
         // Increase reduction on repetition (~1 Elo)
         if (move == (ss - 4)->currentMove && pos.has_repeated())
