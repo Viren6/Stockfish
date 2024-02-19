@@ -1045,7 +1045,7 @@ moves_loop:  // When in check, search starts here
                         if (value < singularBeta - 78 && !ttCapture)
                         { 
                             extension = 3;
-                            singularQuietLMR = (value < singularBeta - 200);
+                            singularQuietLMR = !ss->ttPv;
                         }
                     }
                 }
@@ -1104,8 +1104,11 @@ moves_loop:  // When in check, search starts here
         pos.do_move(move, st, givesCheck);
 
         // Decrease reduction if position is or has been on the PV (~7 Elo)
-        if (ss->ttPv || singularQuietLMR)
-            r -= ss->ttPv + (ttValue > alpha) + (tte->depth() >= depth);
+        if (ss->ttPv)
+            r -= 1 + (ttValue > alpha) + (tte->depth() >= depth);
+
+        if (singularQuietLMR)
+            r--;
 
         // Increase reduction for cut nodes (~4 Elo)
         if (cutNode)
