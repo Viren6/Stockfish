@@ -1119,13 +1119,12 @@ moves_loop:  // When in check, search starts here
         else if (move == ttMove)
             r = 1;
 
-        int ttPvRed = 0;
         // Decrease reduction if position is or has been on the PV (~7 Elo)
         if (ss->ttPv)
-            ttPvRed = 1 + PvNode + (ttValue > alpha) + (tte->depth() >= depth) * (1 + cutNode);
+            r -= 1 + PvNode + (ttValue > alpha) + (tte->depth() >= depth) * (1 + cutNode);
 
-        r -= ttPvRed * (1 + (move == ttMove));
-
+        if (move == ttMove)
+            r *= 2;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
