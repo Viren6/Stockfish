@@ -1098,18 +1098,9 @@ moves_loop:  // When in check, search starts here
         thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
         pos.do_move(move, st, givesCheck);
 
-        // Decrease reduction if position is or has been on the PV (~7 Elo)
-        if (ss->ttPv)
-            r -= 1 + PvNode + (ttValue > alpha) + (tte->depth() >= depth) * (1 + cutNode);
-
-        // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
-        // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
-        if (move == ttMove)
-            r = 0;
-
         // Increase reduction for cut nodes (~4 Elo)
         if (cutNode)
-            r += 2 - (move == ttMove);
+            r += 2;
 
         // Increase reduction if ttMove is a capture (~3 Elo)
         if (ttCapture)
@@ -1123,8 +1114,18 @@ moves_loop:  // When in check, search starts here
         if ((ss + 1)->cutoffCnt > 3)
             r++;
 
-        if (move == ttMove)
-            r *= 2;
+        // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
+        // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
+        else if (move == ttMove)
+            r = 1;
+
+        int ttPvRed = 0;
+        // Decrease reduction if position is or has been on the PV (~7 Elo)
+        if (ss->ttPv)
+            ttPvRed = 1 + PvNode + (ttValue > alpha) + (tte->depth() >= depth) * (1 + cutNode);
+
+        r -= ttPvRed * (1 + (move == ttMove));
+
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
