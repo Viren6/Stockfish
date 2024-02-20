@@ -1105,11 +1105,11 @@ moves_loop:  // When in check, search starts here
         // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
         // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
         if (move == ttMove)
-            r = -2;
+            r = 0;
 
         // Increase reduction for cut nodes (~4 Elo)
         if (cutNode)
-            r += 2;
+            r += 2 - (move == ttMove);
 
         // Increase reduction if ttMove is a capture (~3 Elo)
         if (ttCapture)
@@ -1122,6 +1122,9 @@ moves_loop:  // When in check, search starts here
         // Increase reduction if next ply has a lot of fail high (~5 Elo)
         if ((ss + 1)->cutoffCnt > 3)
             r++;
+
+        if (move == ttMove)
+            r *= 2;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
