@@ -1105,7 +1105,7 @@ moves_loop:  // When in check, search starts here
         // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
         // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
         if (move == ttMove)
-            r = 0;
+            r = -1;
 
         // Increase reduction for cut nodes (~4 Elo)
         if (cutNode)
