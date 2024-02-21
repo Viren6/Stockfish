@@ -1117,14 +1117,14 @@ moves_loop:  // When in check, search starts here
         // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
         // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
         else if (move == ttMove)
-            r = 0;
+            r = 1;
 
         // Decrease reduction if position is or has been on the PV (~7 Elo)
         if (ss->ttPv)
             r -= 1 + PvNode + (ttValue > alpha) + (tte->depth() >= depth) * (1 + cutNode);
 
         if (move == ttMove)
-            r = r * 2 + ((ss + 1)->cutoffCnt < 4);
+            r *= 2;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
@@ -1175,8 +1175,10 @@ moves_loop:  // When in check, search starts here
             if (!ttMove)
                 r += 2;
 
+            r = std::max(r / 2 - 1, 0);
+
             // Note that if expected reduction is high, we reduce search depth by 1 here (~9 Elo)
-            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3), !cutNode);
+            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - r, !cutNode);
         }
 
         // For PV nodes only, do a full PV search on the first move or after a fail high,
