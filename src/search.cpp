@@ -1098,41 +1098,96 @@ moves_loop:  // When in check, search starts here
         thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
         pos.do_move(move, st, givesCheck);
 
-        // Increase reduction for cut nodes (~4 Elo)
-        if (cutNode)
-            r += 2;
+        if (move != ttMove)
+        {
+            // Increase reduction for cut nodes (~4 Elo)
+            if (cutNode)
+                r += 2;
 
-        // Increase reduction if ttMove is a capture (~3 Elo)
-        if (ttCapture)
-            r++;
+            // Increase reduction if ttMove is a capture (~3 Elo)
+            if (ttCapture)
+                r++;
 
-        // Increase reduction on repetition (~1 Elo)
-        if (move == (ss - 4)->currentMove && pos.has_repeated())
-            r += 2;
+            // Increase reduction on repetition (~1 Elo)
+            if (move == (ss - 4)->currentMove && pos.has_repeated())
+                r += 2;
 
-        // Increase reduction if next ply has a lot of fail high (~5 Elo)
-        if ((ss + 1)->cutoffCnt > 3)
-            r++;
+            // Increase reduction if next ply has a lot of fail high (~5 Elo)
+            if ((ss + 1)->cutoffCnt > 3)
+                r++;
 
-        // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
-        // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
-        else if (move == ttMove)
-            r = 1;
+            // Decrease reduction if position is or has been on the PV (~7 Elo)
+            if (ss->ttPv)
+            { 
+                r--;
 
-        // Decrease reduction if position is or has been on the PV (~7 Elo)
-        if (ss->ttPv)
-            r -= 1 + PvNode + (ttValue > alpha) + (tte->depth() >= depth) * (1 + cutNode);
+                if (PvNode)
+                    r--;
+
+                if (ttValue > alpha)
+                    r--;
+
+                if (tte->depth() >= depth)
+                    r -= 1 + cutNode;
+            }
+
+            ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
+                          + (*contHist[0])[movedPiece][move.to_sq()]
+                          + (*contHist[1])[movedPiece][move.to_sq()]
+                          + (*contHist[3])[movedPiece][move.to_sq()] - 4392;
+
+            // Decrease/increase reduction for moves with a good/bad history (~8 Elo)
+            r -= ss->statScore / 14189;
+        }
 
         if (move == ttMove)
-            r *= 2;
+        {
+            r *= 2 + (0 * ((ss + 1)->cutoffCnt < 4));
 
-        ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
-                      + (*contHist[0])[movedPiece][move.to_sq()]
-                      + (*contHist[1])[movedPiece][move.to_sq()]
-                      + (*contHist[3])[movedPiece][move.to_sq()] - 4392;
+            if ((ss + 1)->cutoffCnt < 4)
+                r = 0;
 
-        // Decrease/increase reduction for moves with a good/bad history (~8 Elo)
-        r -= ss->statScore / 14189;
+            // Increase reduction for cut nodes (~4 Elo)
+            if (cutNode)
+                r += 4 - (4 * ((ss + 1)->cutoffCnt < 4));
+
+            // Increase reduction if ttMove is a capture (~3 Elo)
+            if (ttCapture)
+                r += 2 - (2 * ((ss + 1)->cutoffCnt < 4));
+
+            // Increase reduction on repetition (~1 Elo)
+            if (move == (ss - 4)->currentMove && pos.has_repeated())
+                r += 4 - (4 * ((ss + 1)->cutoffCnt < 4));
+
+            r += 2 + (0 * ((ss + 1)->cutoffCnt < 4));
+
+            if (ss->ttPv)
+            {
+                r -= 2 + (0 * ((ss + 1)->cutoffCnt < 4));
+
+                if (PvNode)
+                    r -= 2 + (0 * ((ss + 1)->cutoffCnt < 4));
+
+                if (ttValue > alpha)
+                    r -= 2 + (0 * ((ss + 1)->cutoffCnt < 4));
+
+                if (tte->depth() >= depth)
+                { 
+                    r -= 2 + (0 * ((ss + 1)->cutoffCnt < 4));
+
+                    if (cutNode)
+                        r -= 2 + (0 * ((ss + 1)->cutoffCnt < 4));
+                }
+            }
+
+            ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
+                          + (*contHist[0])[movedPiece][move.to_sq()]
+                          + (*contHist[1])[movedPiece][move.to_sq()]
+                          + (*contHist[3])[movedPiece][move.to_sq()] - 4392;
+
+            // Decrease/increase reduction for moves with a good/bad history (~8 Elo)
+            r -= ss->statScore / 14189;
+        }
 
         // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
         if (depth >= 2 && moveCount > 1 + rootNode)
@@ -1175,10 +1230,8 @@ moves_loop:  // When in check, search starts here
             if (!ttMove)
                 r += 2;
 
-            r = std::max(r / 2 - 1, 0);
-
             // Note that if expected reduction is high, we reduce search depth by 1 here (~9 Elo)
-            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - r, !cutNode);
+            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3), !cutNode);
         }
 
         // For PV nodes only, do a full PV search on the first move or after a fail high,
