@@ -53,7 +53,7 @@ using namespace Search;
 
 namespace {
 
-    // Futility margin
+// Futility margin
 Value futility_margin(Depth d, bool noTtCutNode, bool improving) {
     Value futilityMult = 117 - 44 * noTtCutNode;
     return (futilityMult * d - 3 * futilityMult / 2 * improving);
@@ -1097,12 +1097,14 @@ moves_loop:  // When in check, search starts here
         thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
         pos.do_move(move, st, givesCheck);
 
-        bool cutoffCntRed        = ((ss + 1)->cutoffCnt < 4);
+        bool cutoffCntRed = ((ss + 1)->cutoffCnt > 3);
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
                       + (*contHist[1])[movedPiece][move.to_sq()]
                       + (*contHist[3])[movedPiece][move.to_sq()] - 4392;
+
+        int statScoreRed = ss->statScore / 14189;
 
         if (move != ttMove)
         {
@@ -1119,7 +1121,7 @@ moves_loop:  // When in check, search starts here
                 r += 2;
 
             // Increase reduction if next ply has a lot of fail high (~5 Elo)
-            if ((ss + 1)->cutoffCnt > 3)
+            if (cutoffCntRed)
                 r++;
 
             // Decrease reduction if position is or has been on the PV (~7 Elo)
@@ -1138,7 +1140,7 @@ moves_loop:  // When in check, search starts here
             }
 
             // Decrease/increase reduction for moves with a good/bad history (~8 Elo)
-            r -= ss->statScore / 14189;
+            r -= statScoreRed;
         }
 
         // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
@@ -1180,26 +1182,29 @@ moves_loop:  // When in check, search starts here
         {
             if (move == ttMove)
             {
-                r = ((ss + 1)->cutoffCnt > 3);
+                r = cutoffCntRed;
 
-                // Increase reduction for cut nodes (~4 Elo)
-                if (cutNode)
-                    r += 4 - (5 * cutoffCntRed);
+                if (cutoffCntRed)
+                {
+                    // Increase reduction for cut nodes (~4 Elo)
+                    if (cutNode)
+                        r += 4;
 
-                // Increase reduction if ttMove is a capture (~3 Elo)
-                if (ttCapture)
-                    r += 1 - (3 * cutoffCntRed);
+                    // Increase reduction if ttMove is a capture (~3 Elo)
+                    if (ttCapture)
+                        r += 2;
 
-                // Increase reduction on repetition (~1 Elo)
-                if (move == (ss - 4)->currentMove && pos.has_repeated())
-                    r += 4 - (4 * cutoffCntRed);
+                    // Increase reduction on repetition (~1 Elo)
+                    if (move == (ss - 4)->currentMove && pos.has_repeated())
+                        r += 4;
+                }
 
                 if (ss->ttPv)
                 {
                     r -= 2;
 
                     if (ttValue > alpha)
-                        r -= 2 + (1 * cutoffCntRed);
+                        r -= 3 - (cutoffCntRed);
 
                     if (tte->depth() >= depth)
                     {
@@ -1211,7 +1216,7 @@ moves_loop:  // When in check, search starts here
                 }
 
                 // Decrease/increase reduction for moves with a good/bad history (~8 Elo)
-                r -= ss->statScore / 15000;
+                r -= statScoreRed;
             }
 
             // Increase reduction if ttMove is not present (~1 Elo)
