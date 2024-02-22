@@ -53,13 +53,10 @@ using namespace Search;
 
 namespace {
 
-    int a1 = 4392; int a2 = 0;
-
     int b1 = 14189; int b2 = 0;
 
     int c4  = 4; int c5  = 4;
-    int c6  = 2; int c7  = 2; int c8  = 4; int c9  = 4; int c10 = 2;
-    int c11 = 0; int c12 = 2; int c13 = 0; int c14 = 2; int c15 = 0;
+    int c6  = 2; int c7  = 2; int c8  = 4; int c9  = 4; int c12 = 2; int c13 = 0; int c14 = 2; int c15 = 0;
     int c16 = 2; int c17 = 0; int c18 = 2; int c19 = 0;
 
     // Futility margin
@@ -1106,15 +1103,12 @@ moves_loop:  // When in check, search starts here
         thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
         pos.do_move(move, st, givesCheck);
 
-        int statScoreAdjustment = 4392;
-
-        if (move == ttMove)
-            statScoreAdjustment = a1 + (a2 * ((ss + 1)->cutoffCnt < 4));
+        bool cutoffCntRed        = ((ss + 1)->cutoffCnt < 4);
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
-            + (*contHist[0])[movedPiece][move.to_sq()]
-            + (*contHist[1])[movedPiece][move.to_sq()]
-            + (*contHist[3])[movedPiece][move.to_sq()] - statScoreAdjustment;
+                      + (*contHist[0])[movedPiece][move.to_sq()]
+                      + (*contHist[1])[movedPiece][move.to_sq()]
+                      + (*contHist[3])[movedPiece][move.to_sq()] - 4392;
 
         if (move != ttMove)
         {
@@ -1192,39 +1186,38 @@ moves_loop:  // When in check, search starts here
         {
             if (move == ttMove)
             {
+                r = ((ss + 1)->cutoffCnt > 3);
 
                 // Increase reduction for cut nodes (~4 Elo)
                 if (cutNode)
-                    r += c4 - (c5 * ((ss + 1)->cutoffCnt < 4));
+                    r += c4 - (c5 * cutoffCntRed);
 
                 // Increase reduction if ttMove is a capture (~3 Elo)
                 if (ttCapture)
-                    r += c6 - (c7 * ((ss + 1)->cutoffCnt < 4));
+                    r += c6 - (c7 * cutoffCntRed);
 
                 // Increase reduction on repetition (~1 Elo)
                 if (move == (ss - 4)->currentMove && pos.has_repeated())
-                    r += c8 - (c9 * ((ss + 1)->cutoffCnt < 4));
-
-                r += c10 + (c11 * ((ss + 1)->cutoffCnt < 4));
+                    r += c8 - (c9 * cutoffCntRed);
 
                 if (ss->ttPv)
                 {
-                    r -= c12 + (c13 * ((ss + 1)->cutoffCnt < 4));
+                    r -= c12 + (c13 * cutoffCntRed);
 
                     if (ttValue > alpha)
-                        r -= c14 + (c15 * ((ss + 1)->cutoffCnt < 4));
+                        r -= c14 + (c15 * cutoffCntRed);
 
                     if (tte->depth() >= depth)
                     {
-                        r -= c16 + (c17 * ((ss + 1)->cutoffCnt < 4));
+                        r -= c16 + (c17 * cutoffCntRed);
 
                         if (cutNode)
-                            r -= c18 + (c19 * ((ss + 1)->cutoffCnt < 4));
+                            r -= c18 + (c19 * cutoffCntRed);
                     }
                 }
 
                 // Decrease/increase reduction for moves with a good/bad history (~8 Elo)
-                r -= ss->statScore / (b1 + (b2 * ((ss + 1)->cutoffCnt < 4)));
+                r -= ss->statScore / (b1 + (b2 * cutoffCntRed));
             }
 
             // Increase reduction if ttMove is not present (~1 Elo)
