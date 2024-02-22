@@ -1125,7 +1125,7 @@ moves_loop:  // When in check, search starts here
         // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
         // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
         else if (move == ttMove)
-            r = 1 - (ss->ttPv && ttValue > alpha);
+            r = 1;
 
         if (ss->ttPv && tte->depth() >= depth && cutNode)
             r--;
