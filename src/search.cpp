@@ -1123,6 +1123,9 @@ moves_loop:  // When in check, search starts here
         if (ss->ttPv)
             r -= 1 + PvNode + (ttValue > alpha) + (tte->depth() >= depth) * (1 + cutNode);
 
+        if (ss->ttPv && ttValue > alpha && ((ss + 1)->cutoffCnt < 4) && move == ttMove)
+            r--;
+
         if (move == ttMove)
             r *= 2;
 
