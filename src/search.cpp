@@ -1098,6 +1098,15 @@ moves_loop:  // When in check, search starts here
         thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
         pos.do_move(move, st, givesCheck);
 
+        if (ss->ttPv)
+        {
+            if (PvNode)
+                r--;
+
+            if (tte->depth() >= depth)
+                r--;
+        }
+
         // Increase reduction for cut nodes (~4 Elo)
         if (cutNode)
             r += 2 - (tte->depth() >= depth && ss->ttPv);
@@ -1124,14 +1133,8 @@ moves_loop:  // When in check, search starts here
         { 
             r--;
 
-            if (PvNode)
-                r--;
-
             if (ttValue > alpha)
                 r -= 1 + (((ss + 1)->cutoffCnt < 4) && move == ttMove);
-
-            if (tte->depth() >= depth)
-                r--;
         }
 
         if (move == ttMove)
