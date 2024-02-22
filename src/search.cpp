@@ -53,12 +53,6 @@ using namespace Search;
 
 namespace {
 
-    int b1 = 14189; int b2 = 0;
-
-    int c4  = 4; int c5  = 4;
-    int c6  = 2; int c7  = 2; int c8  = 4; int c9  = 4; int c12 = 2; int c13 = 0; int c14 = 2; int c15 = 0;
-    int c16 = 2; int c17 = 0; int c18 = 2; int c19 = 0;
-
     // Futility margin
 Value futility_margin(Depth d, bool noTtCutNode, bool improving) {
     Value futilityMult = 117 - 44 * noTtCutNode;
@@ -1190,34 +1184,34 @@ moves_loop:  // When in check, search starts here
 
                 // Increase reduction for cut nodes (~4 Elo)
                 if (cutNode)
-                    r += c4 - (c5 * cutoffCntRed);
+                    r += 4 - (5 * cutoffCntRed);
 
                 // Increase reduction if ttMove is a capture (~3 Elo)
                 if (ttCapture)
-                    r += c6 - (c7 * cutoffCntRed);
+                    r += 1 - (3 * cutoffCntRed);
 
                 // Increase reduction on repetition (~1 Elo)
                 if (move == (ss - 4)->currentMove && pos.has_repeated())
-                    r += c8 - (c9 * cutoffCntRed);
+                    r += 4 - (4 * cutoffCntRed);
 
                 if (ss->ttPv)
                 {
-                    r -= c12 + (c13 * cutoffCntRed);
+                    r -= 2;
 
                     if (ttValue > alpha)
-                        r -= c14 + (c15 * cutoffCntRed);
+                        r -= 2 + (1 * cutoffCntRed);
 
                     if (tte->depth() >= depth)
                     {
-                        r -= c16 + (c17 * cutoffCntRed);
+                        r -= 2;
 
                         if (cutNode)
-                            r -= c18 + (c19 * cutoffCntRed);
+                            r -= 2;
                     }
                 }
 
                 // Decrease/increase reduction for moves with a good/bad history (~8 Elo)
-                r -= ss->statScore / (b1 + (b2 * cutoffCntRed));
+                r -= ss->statScore / 15000;
             }
 
             // Increase reduction if ttMove is not present (~1 Elo)
