@@ -600,8 +600,11 @@ Value Search::Worker::search(
     // At this point, if excluded, skip straight to step 6, static eval. However,
     // to save indentation, we list the condition in all code between here and there.
     if (!excludedMove)
+    { 
         ss->ttPv = PvNode || (ss->ttHit && tte->is_pv());
-
+        if (PvNode)
+            ss->ext = false;
+    }
     // At non-PV nodes we check for an early TT cutoff
     if (!PvNode && !excludedMove && tte->depth() > depth
         && ttValue != VALUE_NONE  // Possible in case of TT access race or if !ttHit
@@ -1046,7 +1049,8 @@ moves_loop:  // When in check, search starts here
                         if (value < singularBeta - 78 && !ttCapture)
                         { 
                             extension = 3;
-                            ss->ext   = true;
+                            ss->ext   = !ss->ttPv;
+                            ss->ttPv  = true;
                         }
                     }
                 }
@@ -1105,8 +1109,8 @@ moves_loop:  // When in check, search starts here
         pos.do_move(move, st, givesCheck);
 
         // Decrease reduction if position is or has been on the PV (~7 Elo)
-        if (ss->ttPv || ss->ext)
-            r -= ss->ttPv + (ttValue > alpha) + (tte->depth() >= depth);
+        if (ss->ttPv)
+            r -= !ss->ext + (ttValue > alpha) + (tte->depth() >= depth);
 
         // Increase reduction for cut nodes (~4 Elo)
         if (cutNode)
@@ -1334,7 +1338,10 @@ moves_loop:  // When in check, search starts here
     // If no good move is found and the previous position was ttPv, then the previous
     // opponent move is probably good and the new position is added to the search tree. (~7 Elo)
     if (bestValue <= alpha)
-        ss->ttPv = ss->ttPv || ((ss - 1)->ttPv && depth > 3);
+    { 
+        ss->ttPv = ss->ttPv || ((ss - 1)->ttPv && depth > 3); 
+        ss->ext  = ss->ext || ((ss - 1)->ext && depth > 3);
+    }
 
     // Write gathered information in transposition table
     // Static evaluation is saved as it was before correction history
@@ -1470,7 +1477,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
         {
             if (!ss->ttHit)
                 tte->save(posKey, value_to_tt(bestValue, ss->ply), false, BOUND_LOWER, DEPTH_NONE,
-                          Move::none(), unadjustedStaticEval, tt.generation(), ss->ext);
+                          Move::none(), unadjustedStaticEval, tt.generation(), false);
 
             return bestValue;
         }
