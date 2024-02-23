@@ -65,6 +65,7 @@ struct Stack {
     int             moveCount;
     bool            inCheck;
     bool            ttPv;
+    bool            ext;
     bool            ttHit;
     int             multipleExtensions;
     int             cutoffCnt;
