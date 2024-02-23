@@ -1128,11 +1128,6 @@ moves_loop:  // When in check, search starts here
         if ((ss + 1)->cutoffCnt > 3)
             r++;
 
-        // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
-        // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
-        else if (move == ttMove)
-            r = 0;
-
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
                       + (*contHist[1])[movedPiece][move.to_sq()]
@@ -1182,7 +1177,7 @@ moves_loop:  // When in check, search starts here
             if (!ttMove)
                 r += 2;
 
-            bool reduce = (r > 3) || ((ss + 1)->cutoffCnt > 3);
+            bool reduce = ((ss + 1)->cutoffCnt > 3) || ((move == ttMove) ? (ss->statScore < -56755) : (r > 3));
 
             // Note that if expected reduction is high, we reduce search depth by 1 here (~9 Elo)
                 value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - reduce, !cutNode);
