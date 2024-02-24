@@ -596,15 +596,13 @@ Value Search::Worker::search(
                           : Move::none();
     ttCapture = ttMove && pos.capture_stage(ttMove);
     ss->ext      = (ss->ttHit && tte->is_ext());
+    if (PvNode)
+        ss->ext = false;
 
     // At this point, if excluded, skip straight to step 6, static eval. However,
     // to save indentation, we list the condition in all code between here and there.
     if (!excludedMove)
-    { 
         ss->ttPv = PvNode || (ss->ttHit && tte->is_pv());
-        if (PvNode)
-            ss->ext = false;
-    }
     // At non-PV nodes we check for an early TT cutoff
     if (!PvNode && !excludedMove && tte->depth() > depth
         && ttValue != VALUE_NONE  // Possible in case of TT access race or if !ttHit
