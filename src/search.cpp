@@ -595,12 +595,12 @@ Value Search::Worker::search(
               : ss->ttHit ? tte->move()
                           : Move::none();
     ttCapture = ttMove && pos.capture_stage(ttMove);
-    ss->ext      = (ss->ttHit && tte->is_ext());
 
     // At this point, if excluded, skip straight to step 6, static eval. However,
     // to save indentation, we list the condition in all code between here and there.
     if (!excludedMove)
     { 
+        ss->ext  = (ss->ttHit && tte->is_ext());
         ss->ttPv = PvNode || (ss->ttHit && tte->is_pv());
         if (PvNode)
             ss->ext = false;
