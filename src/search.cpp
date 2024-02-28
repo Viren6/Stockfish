@@ -492,9 +492,6 @@ void Search::Worker::clear() {
             for (auto& to : continuationHistory[inCheck][c])
                 for (auto& h : to)
                     h->fill(-71);
-
-    for (size_t i = 1; i < reductions.size(); ++i)
-        reductions[i] = int((18.79 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
 }
 
 
@@ -574,8 +571,6 @@ Value Search::Worker::search(
         if (alpha >= beta)
             return alpha;
     }
-    else
-        thisThread->rootDelta = beta - alpha;
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
@@ -942,9 +937,30 @@ moves_loop:  // When in check, search starts here
         // Calculate new depth for this move
         newDepth = depth - 1;
 
-        int delta = beta - alpha;
+        ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
+                + (*contHist[0])[movedPiece][move.to_sq()]
+                + (*contHist[1])[movedPiece][move.to_sq()]
+                + (*contHist[3])[movedPiece][move.to_sq()];
 
-        Depth r = reduction(improving, depth, moveCount, delta);
+        int reductionConditions[14]= 
+        {{improving},
+         {depth}, //Continuous
+         {moveCount}, //Continuous
+         {ss->ttPv},
+         {(ttValue > alpha)},
+         {(tte->depth() >= depth)},
+         {cutNode}, 
+         {ttCapture},
+         {PvNode},
+         {(move == (ss - 4)->currentMove && pos.has_repeated())},
+         {((ss + 1)->cutoffCnt > 3)},
+         {(move == ttMove)},
+         {ss->statScore}, //Continuous
+         {(!ttMove)}
+        };
+
+        int *r = reductionNN(reductionConditions);
+
 
         // Step 14. Pruning at shallow depth (~120 Elo).
         // Depth conditions are important for mate finding.
@@ -955,7 +971,7 @@ moves_loop:  // When in check, search starts here
                 moveCountPruning = moveCount >= futility_move_count(improving, depth);
 
             // Reduced depth of the next LMR search
-            int lmrDepth = newDepth - r;
+            int lmrDepth = newDepth - *(r + 0);
 
             if (capture || givesCheck)
             {
@@ -1098,43 +1114,6 @@ moves_loop:  // When in check, search starts here
         thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
         pos.do_move(move, st, givesCheck);
 
-        // Decrease reduction if position is or has been on the PV (~7 Elo)
-        if (ss->ttPv)
-            r -= 1 + (ttValue > alpha) + (tte->depth() >= depth);
-
-        // Increase reduction for cut nodes (~4 Elo)
-        if (cutNode)
-            r += 2 - (tte->depth() >= depth && ss->ttPv);
-
-        // Increase reduction if ttMove is a capture (~3 Elo)
-        if (ttCapture)
-            r++;
-
-        // Decrease reduction for PvNodes (~3 Elo)
-        if (PvNode)
-            r--;
-
-        // Increase reduction on repetition (~1 Elo)
-        if (move == (ss - 4)->currentMove && pos.has_repeated())
-            r += 2;
-
-        // Increase reduction if next ply has a lot of fail high (~5 Elo)
-        if ((ss + 1)->cutoffCnt > 3)
-            r++;
-
-        // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
-        // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
-        else if (move == ttMove)
-            r = 0;
-
-        ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
-                      + (*contHist[0])[movedPiece][move.to_sq()]
-                      + (*contHist[1])[movedPiece][move.to_sq()]
-                      + (*contHist[3])[movedPiece][move.to_sq()] - 4392;
-
-        // Decrease/increase reduction for moves with a good/bad history (~8 Elo)
-        r -= ss->statScore / 14189;
-
         // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
         if (depth >= 2 && moveCount > 1 + rootNode)
         {
@@ -1143,8 +1122,7 @@ moves_loop:  // When in check, search starts here
             // beyond the first move depth. This may lead to hidden multiple extensions.
             // To prevent problems when the max value is less than the min value,
             // std::clamp has been replaced by a more robust implementation.
-            Depth d = std::max(1, std::min(newDepth - r, newDepth + 1));
-
+            int d = newDepth - *(r + 1);
             value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, d, true);
 
             // Do a full-depth search when reduced LMR search fails high
@@ -1172,12 +1150,8 @@ moves_loop:  // When in check, search starts here
         // Step 18. Full-depth search when LMR is skipped
         else if (!PvNode || moveCount > 1)
         {
-            // Increase reduction if ttMove is not present (~1 Elo)
-            if (!ttMove)
-                r += 2;
-
             // Note that if expected reduction is high, we reduce search depth by 1 here (~9 Elo)
-            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3), !cutNode);
+            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - *(r + 2), !cutNode);
         }
 
         // For PV nodes only, do a full PV search on the first move or after a fail high,
@@ -1618,11 +1592,57 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     return bestValue;
 }
 
-Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
-    int reductionScale = reductions[d] * reductions[mn];
-    return (reductionScale + 1118 - delta * 793 / rootDelta) / 1024 + (!i && reductionScale > 863);
-}
+//Scale 1024
+int inputWeights[14][15] = {};
+int l1Biases[15]           = {};
+int l1Weights[15][15]      = {};
+int l2Biases[15]             = {};
 
+int l2Weights[15][3] = {};
+int outputBiases[3]   = {1024, 1024, 1024};
+TUNE(SetRange(-3072, 3072), inputWeights, l1Biases, l1Weights, l2Biases, l2Weights, outputBiases);
+
+
+int* Search::Worker::reductionNN(int reductionConditions[14]) {
+
+    static int outputReductions[3] = {};
+    int l1[15]              = {};
+    int l2[15]              = {};
+
+    for (int i = 0; i < 15; i++)
+    {
+        for (int j = 0; j < 14; j++)
+        { 
+            l1[i] += reductionConditions[j] * inputWeights[j][i];  
+        }
+        l1[i] = (l1[i] > 0) ? l1[i] : 0;
+        l1[i] += l1Biases[i];
+    }
+
+    for (int i = 0; i < 15; i++)
+    {
+        for (int j = 0; j < 15; j++)
+        { 
+            l2[i] += l1[j] * l1Weights[j][i] / 1024; 
+        }
+        l2[i] = (l2[i] > 0) ? l2[i] : 0;
+        l2[i] += l2Biases[i];
+    }
+
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 15; j++)
+        { 
+            outputReductions[i] += l2[j] * l2Weights[j][i] / 1024; 
+        }
+        outputReductions[i] = (outputReductions[i] > 0) ? outputReductions[i] : 0;
+        outputReductions[i] += outputBiases[i];
+        outputReductions[i] = outputReductions[i] / 1024;
+    }
+
+    return outputReductions;
+}
+    
 namespace {
 // Adjusts a mate or TB score from "plies to mate from the root"
 // to "plies to mate from the current position". Standard scores are unchanged.

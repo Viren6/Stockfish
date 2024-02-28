@@ -34,6 +34,7 @@
 #include "syzygy/tbprobe.h"
 #include "timeman.h"
 #include "types.h"
+#include "tune.h"
 
 namespace Stockfish {
 
@@ -188,6 +189,7 @@ class Worker {
     // Called when the program receives the UCI 'go' command.
     // It searches from the root position and outputs the "bestmove".
     void start_searching();
+    int* reductionNN(int reductionConditions[14]);
 
     bool is_mainthread() const { return thread_idx == 0; }
 
@@ -210,8 +212,6 @@ class Worker {
     template<NodeType nodeType>
     Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth = 0);
 
-    Depth reduction(bool i, Depth d, int mn, int delta);
-
     // Get a pointer to the search manager, only allowed to be called by the
     // main thread.
     SearchManager* main_manager() const {
@@ -233,12 +233,9 @@ class Worker {
     StateInfo rootState;
     RootMoves rootMoves;
     Depth     rootDepth, completedDepth;
-    Value     rootDelta;
+
 
     size_t thread_idx;
-
-    // Reductions lookup table initialized at startup
-    std::array<int, MAX_MOVES> reductions;  // [depth or moveNumber]
 
     // The main thread has a SearchManager, the others have a NullSearchManager
     std::unique_ptr<ISearchManager> manager;
