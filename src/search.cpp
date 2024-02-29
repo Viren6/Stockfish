@@ -940,7 +940,7 @@ moves_loop:  // When in check, search starts here
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                 + (*contHist[0])[movedPiece][move.to_sq()]
                 + (*contHist[1])[movedPiece][move.to_sq()]
-                + (*contHist[3])[movedPiece][move.to_sq()];
+                + (*contHist[3])[movedPiece][move.to_sq()] - 4392;
 
         int reductionConditions[14]= 
         {{improving},
@@ -1122,7 +1122,7 @@ moves_loop:  // When in check, search starts here
             // beyond the first move depth. This may lead to hidden multiple extensions.
             // To prevent problems when the max value is less than the min value,
             // std::clamp has been replaced by a more robust implementation.
-            int d = newDepth - *(r + 1);
+            Depth d = std::max(1, newDepth - *(r + 1));
             value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, d, true);
 
             // Do a full-depth search when reduced LMR search fails high
@@ -1593,23 +1593,20 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
 }
 
 //Scale 1024
-int inputWeights[14][15] = {};
-int l1Biases[15]           = {};
-int l1Weights[15][15]      = {};
-int l2Biases[15]             = {};
+int inputWeights[14][8] = {};
+int l1Biases[8]           = {};
+int l1Weights[8][3]      = {};
 
-int l2Weights[15][3] = {};
 int outputBiases[3]   = {1024, 1024, 1024};
-TUNE(SetRange(-3072, 3072), inputWeights, l1Biases, l1Weights, l2Biases, l2Weights, outputBiases);
+TUNE(SetRange(-3072, 3072), inputWeights, l1Biases, l1Weights, outputBiases);
 
 
 int* Search::Worker::reductionNN(int reductionConditions[14]) {
 
     static int outputReductions[3] = {};
-    int l1[15]              = {};
-    int l2[15]              = {};
+    int l1[8]              = {};
 
-    for (int i = 0; i < 15; i++)
+    for (int i = 0; i < 8; i++)
     {
         for (int j = 0; j < 14; j++)
         { 
@@ -1619,21 +1616,11 @@ int* Search::Worker::reductionNN(int reductionConditions[14]) {
         l1[i] += l1Biases[i];
     }
 
-    for (int i = 0; i < 15; i++)
-    {
-        for (int j = 0; j < 15; j++)
-        { 
-            l2[i] += l1[j] * l1Weights[j][i] / 1024; 
-        }
-        l2[i] = (l2[i] > 0) ? l2[i] : 0;
-        l2[i] += l2Biases[i];
-    }
-
     for (int i = 0; i < 3; i++)
     {
-        for (int j = 0; j < 15; j++)
+        for (int j = 0; j < 8; j++)
         { 
-            outputReductions[i] += l2[j] * l2Weights[j][i] / 1024; 
+            outputReductions[i] += l1[j] * l1Weights[j][i] / 1024; 
         }
         outputReductions[i] = (outputReductions[i] > 0) ? outputReductions[i] : 0;
         outputReductions[i] += outputBiases[i];
