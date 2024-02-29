@@ -1597,7 +1597,7 @@ int inputWeights[14][8] = {};
 int l1Biases[8]           = {};
 int l1Weights[8][3]      = {};
 
-int outputBiases[3]   = {1024, 1024, 1024};
+int outputBiases[3]   = {1024, 1024, 0};
 TUNE(SetRange(-3072, 3072), inputWeights, l1Biases, l1Weights, outputBiases);
 
 
