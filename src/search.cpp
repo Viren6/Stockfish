@@ -691,7 +691,6 @@ Value Search::Worker::search(
         // Skip early pruning when in check
         ss->staticEval = eval = VALUE_NONE;
         improving             = false;
-        goto moves_loop;
     }
     else if (excludedMove)
     {
@@ -726,7 +725,7 @@ Value Search::Worker::search(
     }
 
     // Use static evaluation difference to improve quiet move ordering (~9 Elo)
-    if (((ss - 1)->currentMove).is_ok() && !(ss - 1)->inCheck && !priorCapture)
+    if (((ss - 1)->currentMove).is_ok() && !(ss - 1)->inCheck && !priorCapture && !ss->inCheck)
     {
         int bonus = std::clamp(-14 * int((ss - 1)->staticEval + ss->staticEval), -1723, 1455);
         bonus     = bonus > 0 ? 2 * bonus : bonus / 2;
@@ -741,9 +740,24 @@ Value Search::Worker::search(
     // check at our previous move we look at static evaluation at move prior to it
     // and if we were in check at move prior to it flag is set to true) and is
     // false otherwise. The improving flag is used in various pruning heuristics.
-    improving = (ss - 2)->staticEval != VALUE_NONE
+    improving = ((ss - 2)->staticEval != VALUE_NONE
                 ? ss->staticEval > (ss - 2)->staticEval
-                : (ss - 4)->staticEval != VALUE_NONE && ss->staticEval > (ss - 4)->staticEval;
+                : (ss - 4)->staticEval != VALUE_NONE && ss->staticEval > (ss - 4)->staticEval) && !ss->inCheck;
+
+    //Set up reduction net
+
+     int reductionConditions[12] = {
+      {depth},      //Continuous
+      {moveCount},  //Continuous
+      {improving}, {ss->ttPv}, {(ttValue > alpha)},         {(tte->depth() >= depth)}, {cutNode},
+      {ttCapture}, {PvNode},   {((ss + 1)->cutoffCnt > 3)},        {(!ttMove)}};
+
+    int* red = reductionNN(reductionConditions);
+
+    if (ss->inCheck)
+        goto moves_loop;
+
+
 
     // Step 7. Razoring (~1 Elo)
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
@@ -775,7 +789,7 @@ Value Search::Worker::search(
         assert(eval - beta >= 0);
 
         // Null move dynamic reduction based on depth and eval
-        Depth R = std::min(int(eval - beta) / 154, 6) + depth / 3 + 4;
+        Depth R = std::min(int(eval - beta) / 154, 6) + depth / 3 + 4 + *(red + 0);
 
         ss->currentMove         = Move::null();
         ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
@@ -955,7 +969,7 @@ moves_loop:  // When in check, search starts here
                 moveCountPruning = moveCount >= futility_move_count(improving, depth);
 
             // Reduced depth of the next LMR search
-            int lmrDepth = newDepth - r;
+            int lmrDepth = newDepth - r - *(red + 1);
 
             if (capture || givesCheck)
             {
@@ -1026,7 +1040,7 @@ moves_loop:  // When in check, search starts here
                 && tte->depth() >= depth - 3)
             {
                 Value singularBeta  = ttValue - (60 + 54 * (ss->ttPv && !PvNode)) * depth / 64;
-                Depth singularDepth = newDepth / 2;
+                Depth singularDepth = newDepth / 2 - *(red + 2);
 
                 ss->excludedMove = move;
                 value =
@@ -1128,9 +1142,9 @@ moves_loop:  // When in check, search starts here
             r = 0;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
-                      + (*contHist[0])[movedPiece][move.to_sq()]
-                      + (*contHist[1])[movedPiece][move.to_sq()]
-                      + (*contHist[3])[movedPiece][move.to_sq()] - 4392;
+            + (*contHist[0])[movedPiece][move.to_sq()]
+            + (*contHist[1])[movedPiece][move.to_sq()]
+            + (*contHist[3])[movedPiece][move.to_sq()] - 4392;
 
         // Decrease/increase reduction for moves with a good/bad history (~8 Elo)
         r -= ss->statScore / 14189;
@@ -1143,7 +1157,7 @@ moves_loop:  // When in check, search starts here
             // beyond the first move depth. This may lead to hidden multiple extensions.
             // To prevent problems when the max value is less than the min value,
             // std::clamp has been replaced by a more robust implementation.
-            Depth d = std::max(1, std::min(newDepth - r, newDepth + 1));
+            Depth d = std::max(1, std::min(newDepth - r - *(red + 3), newDepth + 1));
 
             value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, d, true);
 
@@ -1155,7 +1169,7 @@ moves_loop:  // When in check, search starts here
                 const bool doDeeperSearch    = value > (bestValue + 49 + 2 * newDepth);  // (~1 Elo)
                 const bool doShallowerSearch = value < bestValue + newDepth;             // (~2 Elo)
 
-                newDepth += doDeeperSearch - doShallowerSearch;
+                newDepth += doDeeperSearch - doShallowerSearch - *(red + 4);
 
                 if (newDepth > d)
                     value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth, !cutNode);
@@ -1177,7 +1191,8 @@ moves_loop:  // When in check, search starts here
                 r += 2;
 
             // Note that if expected reduction is high, we reduce search depth by 1 here (~9 Elo)
-            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3), !cutNode);
+            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3) - *(red + 5),
+                                   !cutNode);
         }
 
         // For PV nodes only, do a full PV search on the first move or after a fail high,
@@ -1187,7 +1202,7 @@ moves_loop:  // When in check, search starts here
             (ss + 1)->pv    = pv;
             (ss + 1)->pv[0] = Move::none();
 
-            value = -search<PV>(pos, ss + 1, -beta, -alpha, newDepth, false);
+            value = -search<PV>(pos, ss + 1, -beta, -alpha, newDepth - *(red + 6), false);
         }
 
         // Step 19. Undo move
@@ -1622,6 +1637,50 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
     int reductionScale = reductions[d] * reductions[mn];
     return (reductionScale + 1118 - delta * 793 / rootDelta) / 1024 + (!i && reductionScale > 863);
 }
+
+//Scale 1024
+int inputWeights[12][7] = {};
+int l1Biases[7]         = {};
+int l1Weights[7][7]     = 
+{
+    {1024, 0, 0, 0, 0, 0, 0}, 
+    {0, 1024, 0, 0, 0, 0, 0}, 
+    {0, 0, 1024, 0, 0, 0, 0},
+    {0, 0, 0, 1024, 0, 0, 0}, 
+    {0, 0, 0, 0, 1024, 0, 0}, 
+    {0, 0, 0, 0, 0, 1024, 0},
+    {0, 0, 0, 0, 0, 0, 1024}
+};
+
+int outputBiases[7] = {1000, 1000, 1000, 1000, 1000, 1000, 1000};
+TUNE(SetRange(-3072, 3072), inputWeights, l1Biases, l1Weights, outputBiases);
+
+
+int* Search::Worker::reductionNN(int reductionConditions[12]) {
+
+    static int outputReductions[7] = {};
+    int        l1[7]               = {};
+
+    for (int i = 0; i < 7; i++)
+    {
+        for (int j = 0; j < 12; j++)
+        { l1[i] += reductionConditions[j] * inputWeights[j][i]; }
+        l1[i] = (l1[i] > 0) ? l1[i] : 0;
+        l1[i] += l1Biases[i];
+    }
+
+    for (int i = 0; i < 7; i++)
+    {
+        for (int j = 0; j < 7; j++)
+        { outputReductions[i] += l1[j] * l1Weights[j][i] / 1024; }
+        outputReductions[i] = (outputReductions[i] > 0) ? outputReductions[i] : 0;
+        outputReductions[i] += outputBiases[i];
+        outputReductions[i] = outputReductions[i] / 1024;
+    }
+
+    return outputReductions;
+}
+
 
 namespace {
 // Adjusts a mate or TB score from "plies to mate from the root"
