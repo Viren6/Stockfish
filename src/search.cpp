@@ -1139,9 +1139,9 @@ moves_loop:  // When in check, search starts here
             r = 0;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
-            + (*contHist[0])[movedPiece][move.to_sq()]
-            + (*contHist[1])[movedPiece][move.to_sq()]
-            + (*contHist[3])[movedPiece][move.to_sq()] - 4392;
+                      + (*contHist[0])[movedPiece][move.to_sq()]
+                      + (*contHist[1])[movedPiece][move.to_sq()]
+                      + (*contHist[3])[movedPiece][move.to_sq()] - 4392;
 
         // Decrease/increase reduction for moves with a good/bad history (~8 Elo)
         r -= ss->statScore / 14189;
@@ -1188,8 +1188,7 @@ moves_loop:  // When in check, search starts here
                 r += 2;
 
             // Note that if expected reduction is high, we reduce search depth by 1 here (~9 Elo)
-            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3),
-                                   !cutNode);
+            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3), !cutNode);
         }
 
         // For PV nodes only, do a full PV search on the first move or after a fail high,
@@ -1636,18 +1635,18 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
 }
 
 //Scale 1024
-int inputWeights[12][7] = {{-1, -4, 1, -1, -1, -4, -7},       {4, -2, -11, -3, -7, 0, -5},
-                           {-67, 7, 11, 17, -16, 11, -69},    {70, -21, -14, 15, 65, -7, -87},
-                           {22, -6, -48, -18, 7, 1, -19},     {-62, 9, -45, 21, -45, -25, -1},
-                           {-12, -23, 36, -6, -55, -12, -25}, {-33, -71, 48, -20, 18, 12, 58},
-                           {64, 52, -15, 13, 39, -93, 5},     {18, -29, -92, -19, -11, -48, 9},
-                           {-27, 1, -46, 14, 17, -6, -62},    {-17, 23, 51, -52, 72, 17, -68}};
+int inputWeights[12][7] = {{-1, -4, 1, -1, -1, -3, -7},       {4, -3, -11, -3, -7, 0, -5},
+                           {-68, 4, 11, 17, -15, 14, -66},    {70, -22, -14, 13, 65, -6, -87},
+                           {24, -5, -49, -17, 6, 2, -18},     {-63, 6, -48, 18, -45, -25, -2},
+                           {-14, -23, 37, -5, -52, -11, -26}, {-34, -68, 47, -22, 16, 12, 58},
+                           {62, 53, -15, 13, 40, -92, 3},     {17, -31, -91, -21, -9, -48, 8},
+                           {-29, 2, -46, 14, 19, -9, -62},    {-20, 26, 49, -54, 72, 19, -68}};
 
-int l1Biases[7]         = {-47, -46, -22, -47, -61, -37, -14};
+int l1Biases[7] = {-46, -46, -20, -50, -61, -36, -12};
 
-int l1Weights[7][1]     = {{67}, {-77}, {968}, {-45}, {55}, {97}, {-5}};
+int l1Weights[7][1] = {{71}, {-76}, {965}, {-46}, {55}, {93}, {-6}};
 
-int  outputBiases[1] = {982};
+int outputBiases[1] = {982};
 
 int* Search::Worker::reductionNN(int reductionConditions[12]) {
 
