@@ -495,6 +495,8 @@ void Search::Worker::clear() {
 
     for (size_t i = 1; i < reductions.size(); ++i)
         reductions[i] = int((18.79 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
+
+    SetValues();
 }
 
 
@@ -750,6 +752,12 @@ Value Search::Worker::search(
       {ttCapture}, {PvNode},   {((ss + 1)->cutoffCnt > 3)},        {(!ttMove)}};
 
     int* red = reductionNN(reductionConditions);
+
+    /* std::vector<int> values(red, red + 7);
+    for (int i = 0; i < 7; i++)
+    { 
+        dbg_hit_on(values[i], i);
+    }*/
 
     if (ss->inCheck)
         goto moves_loop;
@@ -1648,8 +1656,156 @@ int l1Weights[7][7]     =
 };
 
 int outputBiases[7] = {1000, 1000, 1000, 1000, 1000, 1000, 1000};
-TUNE(SetRange(-3072, 3072), inputWeights, l1Biases, l1Weights, outputBiases);
 
+void Search::Worker::SetValues() {
+    inputWeights[0][0]  = -1;
+    inputWeights[0][1]  = -7;
+    inputWeights[0][2]  = 1;
+    inputWeights[0][3]  = 2;
+    inputWeights[0][4]  = 1;
+    inputWeights[0][5]  = -5;
+    inputWeights[0][6]  = -9;
+    inputWeights[1][0]  = -1;
+    inputWeights[1][1]  = -2;
+    inputWeights[1][2]  = -12;
+    inputWeights[1][3]  = -4;
+    inputWeights[1][4]  = -6;
+    inputWeights[1][5]  = 0;
+    inputWeights[1][6]  = -5;
+    inputWeights[2][0]  = -42;
+    inputWeights[2][1]  = -5;
+    inputWeights[2][2]  = 14;
+    inputWeights[2][3]  = 16;
+    inputWeights[2][4]  = -18;
+    inputWeights[2][5]  = 17;
+    inputWeights[2][6]  = -60;
+    inputWeights[3][0]  = 57;
+    inputWeights[3][1]  = -13;
+    inputWeights[3][2]  = -19;
+    inputWeights[3][3]  = 20;
+    inputWeights[3][4]  = 67;
+    inputWeights[3][5]  = -25;
+    inputWeights[3][6]  = -76;
+    inputWeights[4][0]  = 14;
+    inputWeights[4][1]  = 1;
+    inputWeights[4][2]  = -33;
+    inputWeights[4][3]  = -10;
+    inputWeights[4][4]  = 15;
+    inputWeights[4][5]  = -4;
+    inputWeights[4][6]  = -28;
+    inputWeights[5][0]  = -46;
+    inputWeights[5][1]  = -7;
+    inputWeights[5][2]  = -27;
+    inputWeights[5][3]  = 12;
+    inputWeights[5][4]  = -26;
+    inputWeights[5][5]  = -43;
+    inputWeights[5][6]  = -20;
+    inputWeights[6][0]  = -5;
+    inputWeights[6][1]  = -37;
+    inputWeights[6][2]  = 22;
+    inputWeights[6][3]  = -10;
+    inputWeights[6][4]  = -46;
+    inputWeights[6][5]  = -10;
+    inputWeights[6][6]  = -16;
+    inputWeights[7][0]  = -16;
+    inputWeights[7][1]  = -45;
+    inputWeights[7][2]  = 30;
+    inputWeights[7][3]  = -25;
+    inputWeights[7][4]  = 21;
+    inputWeights[7][5]  = 0;
+    inputWeights[7][6]  = 68;
+    inputWeights[8][0]  = 70;
+    inputWeights[8][1]  = 81;
+    inputWeights[8][2]  = -20;
+    inputWeights[8][3]  = 34;
+    inputWeights[8][4]  = 51;
+    inputWeights[8][5]  = -92;
+    inputWeights[8][6]  = 6;
+    inputWeights[9][0]  = 25;
+    inputWeights[9][1]  = -39;
+    inputWeights[9][2]  = -78;
+    inputWeights[9][3]  = -46;
+    inputWeights[9][4]  = -10;
+    inputWeights[9][5]  = -43;
+    inputWeights[9][6]  = 21;
+    inputWeights[10][0] = -30;
+    inputWeights[10][1] = 15;
+    inputWeights[10][2] = -21;
+    inputWeights[10][3] = 30;
+    inputWeights[10][4] = 13;
+    inputWeights[10][5] = -16;
+    inputWeights[10][6] = -64;
+    inputWeights[11][0] = -31;
+    inputWeights[11][1] = 12;
+    inputWeights[11][2] = 41;
+    inputWeights[11][3] = -60;
+    inputWeights[11][4] = 77;
+    inputWeights[11][5] = -11;
+    inputWeights[11][6] = -81;
+    l1Biases[0]         = -33;
+    l1Biases[1]         = -57;
+    l1Biases[2]         = -30;
+    l1Biases[3]         = -52;
+    l1Biases[4]         = -51;
+    l1Biases[5]         = -36;
+    l1Biases[6]         = -22;
+    l1Weights[0][0]     = 1010;
+    l1Weights[0][1]     = 28;
+    l1Weights[0][2]     = 66;
+    l1Weights[0][3]     = 54;
+    l1Weights[0][4]     = 48;
+    l1Weights[0][5]     = 70;
+    l1Weights[0][6]     = 12;
+    l1Weights[1][0]     = 24;
+    l1Weights[1][1]     = 1063;
+    l1Weights[1][2]     = -51;
+    l1Weights[1][3]     = -93;
+    l1Weights[1][4]     = -60;
+    l1Weights[1][5]     = 13;
+    l1Weights[1][6]     = 10;
+    l1Weights[2][0]     = 18;
+    l1Weights[2][1]     = -26;
+    l1Weights[2][2]     = 986;
+    l1Weights[2][3]     = 17;
+    l1Weights[2][4]     = -43;
+    l1Weights[2][5]     = -3;
+    l1Weights[2][6]     = 16;
+    l1Weights[3][0]     = 4;
+    l1Weights[3][1]     = 61;
+    l1Weights[3][2]     = -65;
+    l1Weights[3][3]     = 922;
+    l1Weights[3][4]     = 40;
+    l1Weights[3][5]     = 24;
+    l1Weights[3][6]     = -7;
+    l1Weights[4][0]     = 48;
+    l1Weights[4][1]     = -27;
+    l1Weights[4][2]     = 53;
+    l1Weights[4][3]     = -36;
+    l1Weights[4][4]     = 980;
+    l1Weights[4][5]     = 4;
+    l1Weights[4][6]     = -51;
+    l1Weights[5][0]     = 51;
+    l1Weights[5][1]     = -8;
+    l1Weights[5][2]     = 96;
+    l1Weights[5][3]     = 41;
+    l1Weights[5][4]     = -66;
+    l1Weights[5][5]     = 1020;
+    l1Weights[5][6]     = 14;
+    l1Weights[6][0]     = -9;
+    l1Weights[6][1]     = -33;
+    l1Weights[6][2]     = -25;
+    l1Weights[6][3]     = -28;
+    l1Weights[6][4]     = 0;
+    l1Weights[6][5]     = 3;
+    l1Weights[6][6]     = 1018;
+    outputBiases[0]     = 1032;
+    outputBiases[1]     = 969;
+    outputBiases[2]     = 985;
+    outputBiases[3]     = 992;
+    outputBiases[4]     = 976;
+    outputBiases[5]     = 958;
+    outputBiases[6]     = 910;
+}
 
 int* Search::Worker::reductionNN(int reductionConditions[12]) {
 
