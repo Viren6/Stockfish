@@ -189,7 +189,6 @@ class Worker {
     // It searches from the root position and outputs the "bestmove".
     void start_searching();
     int* reductionNN(int reductionConditions[12]);
-    void SetValues();
 
     bool is_mainthread() const { return thread_idx == 0; }
 

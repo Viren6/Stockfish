@@ -495,8 +495,6 @@ void Search::Worker::clear() {
 
     for (size_t i = 1; i < reductions.size(); ++i)
         reductions[i] = int((18.79 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
-
-    SetValues();
 }
 
 
@@ -690,6 +688,7 @@ Value Search::Worker::search(
         // Skip early pruning when in check
         ss->staticEval = eval = VALUE_NONE;
         improving             = false;
+        goto moves_loop;
     }
     else if (excludedMove)
     {
@@ -724,7 +723,7 @@ Value Search::Worker::search(
     }
 
     // Use static evaluation difference to improve quiet move ordering (~9 Elo)
-    if (((ss - 1)->currentMove).is_ok() && !(ss - 1)->inCheck && !priorCapture && !ss->inCheck)
+    if (((ss - 1)->currentMove).is_ok() && !(ss - 1)->inCheck && !priorCapture)
     {
         int bonus = std::clamp(-14 * int((ss - 1)->staticEval + ss->staticEval), -1723, 1455);
         bonus     = bonus > 0 ? 2 * bonus : bonus / 2;
@@ -739,30 +738,9 @@ Value Search::Worker::search(
     // check at our previous move we look at static evaluation at move prior to it
     // and if we were in check at move prior to it flag is set to true) and is
     // false otherwise. The improving flag is used in various pruning heuristics.
-    improving = ((ss - 2)->staticEval != VALUE_NONE
+    improving = (ss - 2)->staticEval != VALUE_NONE
                 ? ss->staticEval > (ss - 2)->staticEval
-                : (ss - 4)->staticEval != VALUE_NONE && ss->staticEval > (ss - 4)->staticEval) && !ss->inCheck;
-
-    //Set up reduction net
-
-     int reductionConditions[12] = {
-      {depth},      //Continuous
-      {moveCount},  //Continuous
-      {improving}, {ss->ttPv}, {(ttValue > alpha)},         {(tte->depth() >= depth)}, {cutNode},
-      {ttCapture}, {PvNode},   {((ss + 1)->cutoffCnt > 3)},        {(!ttMove)}};
-
-    int* red = reductionNN(reductionConditions);
-
-    std::vector<int> values(red, red + 7);
-    for (int i = 0; i < 7; i++)
-    { 
-        dbg_hit_on(values[i], i);
-    }
-
-    if (ss->inCheck)
-        goto moves_loop;
-
-
+                : (ss - 4)->staticEval != VALUE_NONE && ss->staticEval > (ss - 4)->staticEval;
 
     // Step 7. Razoring (~1 Elo)
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
@@ -794,7 +772,7 @@ Value Search::Worker::search(
         assert(eval - beta >= 0);
 
         // Null move dynamic reduction based on depth and eval
-        Depth R = std::min(int(eval - beta) / 154, 6) + depth / 3 + 4 + *(red + 0);
+        Depth R = std::min(int(eval - beta) / 154, 6) + depth / 3 + 4;
 
         ss->currentMove         = Move::null();
         ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
@@ -972,7 +950,7 @@ moves_loop:  // When in check, search starts here
                 moveCountPruning = moveCount >= futility_move_count(improving, depth);
 
             // Reduced depth of the next LMR search
-            int lmrDepth = newDepth - r - *(red + 1);
+            int lmrDepth = newDepth - r;
 
             if (capture || givesCheck)
             {
@@ -1042,8 +1020,24 @@ moves_loop:  // When in check, search starts here
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
             {
+
+                //Set up reduction net
+                int reductionConditions[12] = {{depth},      //Continuous
+                                               {moveCount},  //Continuous
+                                               {improving},
+                                               {ss->ttPv},
+                                               {(ttValue > alpha)},
+                                               {(tte->depth() >= depth)},
+                                               {cutNode},
+                                               {ttCapture},
+                                               {PvNode},
+                                               {((ss + 1)->cutoffCnt > 3)},
+                                               {(!ttMove)}};
+
+                int*  red           = reductionNN(reductionConditions);
+
                 Value singularBeta  = ttValue - (60 + 54 * (ss->ttPv && !PvNode)) * depth / 64;
-                Depth singularDepth = newDepth / 2 - *(red + 2);
+                Depth singularDepth = newDepth / 2 - *(red + 0);
 
                 ss->excludedMove = move;
                 value =
@@ -1160,7 +1154,7 @@ moves_loop:  // When in check, search starts here
             // beyond the first move depth. This may lead to hidden multiple extensions.
             // To prevent problems when the max value is less than the min value,
             // std::clamp has been replaced by a more robust implementation.
-            Depth d = std::max(1, std::min(newDepth - r - *(red + 3), newDepth + 1));
+            Depth d = std::max(1, std::min(newDepth - r, newDepth + 1));
 
             value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, d, true);
 
@@ -1172,7 +1166,7 @@ moves_loop:  // When in check, search starts here
                 const bool doDeeperSearch    = value > (bestValue + 49 + 2 * newDepth);  // (~1 Elo)
                 const bool doShallowerSearch = value < bestValue + newDepth;             // (~2 Elo)
 
-                newDepth += doDeeperSearch - doShallowerSearch - *(red + 4);
+                newDepth += doDeeperSearch - doShallowerSearch;
 
                 if (newDepth > d)
                     value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth, !cutNode);
@@ -1194,7 +1188,7 @@ moves_loop:  // When in check, search starts here
                 r += 2;
 
             // Note that if expected reduction is high, we reduce search depth by 1 here (~9 Elo)
-            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3) - *(red + 5),
+            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3),
                                    !cutNode);
         }
 
@@ -1205,7 +1199,7 @@ moves_loop:  // When in check, search starts here
             (ss + 1)->pv    = pv;
             (ss + 1)->pv[0] = Move::none();
 
-            value = -search<PV>(pos, ss + 1, -beta, -alpha, newDepth - *(red + 6), false);
+            value = -search<PV>(pos, ss + 1, -beta, -alpha, newDepth, false);
         }
 
         // Step 19. Undo move
@@ -1642,174 +1636,22 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
 }
 
 //Scale 1024
-int inputWeights[12][7] = {};
-int l1Biases[7]         = {};
-int l1Weights[7][7]     = 
-{
-    {1024, 0, 0, 0, 0, 0, 0}, 
-    {0, 1024, 0, 0, 0, 0, 0}, 
-    {0, 0, 1024, 0, 0, 0, 0},
-    {0, 0, 0, 1024, 0, 0, 0}, 
-    {0, 0, 0, 0, 1024, 0, 0}, 
-    {0, 0, 0, 0, 0, 1024, 0},
-    {0, 0, 0, 0, 0, 0, 1024}
-};
+int inputWeights[12][7] = {{-1, -4, 1, -1, -1, -4, -7},       {4, -2, -11, -3, -7, 0, -5},
+                           {-67, 7, 11, 17, -16, 11, -69},    {70, -21, -14, 15, 65, -7, -87},
+                           {22, -6, -48, -18, 7, 1, -19},     {-62, 9, -45, 21, -45, -25, -1},
+                           {-12, -23, 36, -6, -55, -12, -25}, {-33, -71, 48, -20, 18, 12, 58},
+                           {64, 52, -15, 13, 39, -93, 5},     {18, -29, -92, -19, -11, -48, 9},
+                           {-27, 1, -46, 14, 17, -6, -62},    {-17, 23, 51, -52, 72, 17, -68}};
 
-int outputBiases[7] = {1000, 1000, 1000, 1000, 1000, 1000, 1000};
+int l1Biases[7]         = {-47, -46, -22, -47, -61, -37, -14};
 
-void Search::Worker::SetValues() {
-    inputWeights[0][0]  = 0;
-    inputWeights[0][1]  = -4;
-    inputWeights[0][2]  = 0;
-    inputWeights[0][3]  = -1;
-    inputWeights[0][4]  = -1;
-    inputWeights[0][5]  = -4;
-    inputWeights[0][6]  = -7;
-    inputWeights[1][0]  = 2;
-    inputWeights[1][1]  = -2;
-    inputWeights[1][2]  = -11;
-    inputWeights[1][3]  = -3;
-    inputWeights[1][4]  = -6;
-    inputWeights[1][5]  = 1;
-    inputWeights[1][6]  = -4;
-    inputWeights[2][0]  = -66;
-    inputWeights[2][1]  = 4;
-    inputWeights[2][2]  = 14;
-    inputWeights[2][3]  = 17;
-    inputWeights[2][4]  = -15;
-    inputWeights[2][5]  = 4;
-    inputWeights[2][6]  = -71;
-    inputWeights[3][0]  = 76;
-    inputWeights[3][1]  = -21;
-    inputWeights[3][2]  = -14;
-    inputWeights[3][3]  = 13;
-    inputWeights[3][4]  = 60;
-    inputWeights[3][5]  = -9;
-    inputWeights[3][6]  = -83;
-    inputWeights[4][0]  = 18;
-    inputWeights[4][1]  = -14;
-    inputWeights[4][2]  = -43;
-    inputWeights[4][3]  = -16;
-    inputWeights[4][4]  = 10;
-    inputWeights[4][5]  = 11;
-    inputWeights[4][6]  = -18;
-    inputWeights[5][0]  = -60;
-    inputWeights[5][1]  = 13;
-    inputWeights[5][2]  = -44;
-    inputWeights[5][3]  = 21;
-    inputWeights[5][4]  = -47;
-    inputWeights[5][5]  = -31;
-    inputWeights[5][6]  = -1;
-    inputWeights[6][0]  = -8;
-    inputWeights[6][1]  = -27;
-    inputWeights[6][2]  = 34;
-    inputWeights[6][3]  = -8;
-    inputWeights[6][4]  = -55;
-    inputWeights[6][5]  = -12;
-    inputWeights[6][6]  = -25;
-    inputWeights[7][0]  = -30;
-    inputWeights[7][1]  = -61;
-    inputWeights[7][2]  = 49;
-    inputWeights[7][3]  = -24;
-    inputWeights[7][4]  = 22;
-    inputWeights[7][5]  = 10;
-    inputWeights[7][6]  = 66;
-    inputWeights[8][0]  = 63;
-    inputWeights[8][1]  = 58;
-    inputWeights[8][2]  = -18;
-    inputWeights[8][3]  = 20;
-    inputWeights[8][4]  = 40;
-    inputWeights[8][5]  = -92;
-    inputWeights[8][6]  = 5;
-    inputWeights[9][0]  = 25;
-    inputWeights[9][1]  = -27;
-    inputWeights[9][2]  = -95;
-    inputWeights[9][3]  = -20;
-    inputWeights[9][4]  = -15;
-    inputWeights[9][5]  = -56;
-    inputWeights[9][6]  = 5;
-    inputWeights[10][0] = -27;
-    inputWeights[10][1] = -1;
-    inputWeights[10][2] = -39;
-    inputWeights[10][3] = 12;
-    inputWeights[10][4] = 22;
-    inputWeights[10][5] = -8;
-    inputWeights[10][6] = -58;
-    inputWeights[11][0] = -20;
-    inputWeights[11][1] = 17;
-    inputWeights[11][2] = 50;
-    inputWeights[11][3] = -51;
-    inputWeights[11][4] = 69;
-    inputWeights[11][5] = 15;
-    inputWeights[11][6] = -63;
-    l1Biases[0]         = -47;
-    l1Biases[1]         = -50;
-    l1Biases[2]         = -20;
-    l1Biases[3]         = -52;
-    l1Biases[4]         = -53;
-    l1Biases[5]         = -41;
-    l1Biases[6]         = -18;
-    l1Weights[0][0]     = 993;
-    l1Weights[0][1]     = 36;
-    l1Weights[0][2]     = 68;
-    l1Weights[0][3]     = 54;
-    l1Weights[0][4]     = 55;
-    l1Weights[0][5]     = 69;
-    l1Weights[0][6]     = -2;
-    l1Weights[1][0]     = 4;
-    l1Weights[1][1]     = 1079;
-    l1Weights[1][2]     = -67;
-    l1Weights[1][3]     = -86;
-    l1Weights[1][4]     = -52;
-    l1Weights[1][5]     = 6;
-    l1Weights[1][6]     = 12;
-    l1Weights[2][0]     = 10;
-    l1Weights[2][1]     = -29;
-    l1Weights[2][2]     = 972;
-    l1Weights[2][3]     = 27;
-    l1Weights[2][4]     = -34;
-    l1Weights[2][5]     = -2;
-    l1Weights[2][6]     = -9;
-    l1Weights[3][0]     = -1;
-    l1Weights[3][1]     = 70;
-    l1Weights[3][2]     = -48;
-    l1Weights[3][3]     = 943;
-    l1Weights[3][4]     = 41;
-    l1Weights[3][5]     = 24;
-    l1Weights[3][6]     = -19;
-    l1Weights[4][0]     = 66;
-    l1Weights[4][1]     = -34;
-    l1Weights[4][2]     = 57;
-    l1Weights[4][3]     = -29;
-    l1Weights[4][4]     = 973;
-    l1Weights[4][5]     = -4;
-    l1Weights[4][6]     = -46;
-    l1Weights[5][0]     = 70;
-    l1Weights[5][1]     = -17;
-    l1Weights[5][2]     = 99;
-    l1Weights[5][3]     = 31;
-    l1Weights[5][4]     = -81;
-    l1Weights[5][5]     = 1010;
-    l1Weights[5][6]     = 14;
-    l1Weights[6][0]     = 1;
-    l1Weights[6][1]     = -28;
-    l1Weights[6][2]     = -6;
-    l1Weights[6][3]     = -40;
-    l1Weights[6][4]     = 3;
-    l1Weights[6][5]     = 10;
-    l1Weights[6][6]     = 1026;
-    outputBiases[0]     = 1047;
-    outputBiases[1]     = 959;
-    outputBiases[2]     = 982;
-    outputBiases[3]     = 993;
-    outputBiases[4]     = 980;
-    outputBiases[5]     = 970;
-    outputBiases[6]     = 927;
-}
+int l1Weights[7][1]     = {{67}, {-77}, {968}, {-45}, {55}, {97}, {-5}};
+
+int  outputBiases[1] = {982};
 
 int* Search::Worker::reductionNN(int reductionConditions[12]) {
 
-    static int outputReductions[7] = {};
+    static int outputReductions[1] = {};
     int        l1[7]               = {};
 
     for (int i = 0; i < 7; i++)
@@ -1820,7 +1662,7 @@ int* Search::Worker::reductionNN(int reductionConditions[12]) {
         l1[i] += l1Biases[i];
     }
 
-    for (int i = 0; i < 7; i++)
+    for (int i = 0; i < 1; i++)
     {
         for (int j = 0; j < 7; j++)
         { outputReductions[i] += l1[j] * l1Weights[j][i] / 1024; }
