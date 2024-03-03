@@ -177,28 +177,19 @@ void NNUE::verify(const OptionsMap&                                        optio
 }
 }
 
-// Returns a static, purely materialistic evaluation of the position from
-// the point of view of the given color. It can be divided by PawnValue to get
-// an approximation of the material advantage on the board in terms of pawns.
-int Eval::simple_eval(const Position& pos, Color c) {
-    return PawnValue * (pos.count<PAWN>(c) - pos.count<PAWN>(~c))
-         + (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
-}
-
-
 // Evaluate is the evaluator for the outer world. It returns a static evaluation
 // of the position from the point of view of the side to move.
 Value Eval::evaluate(const Position& pos, int optimism) {
 
     assert(!pos.checkers());
 
-    int  simpleEval = simple_eval(pos, pos.side_to_move());
+    int nnueComplexity;
+
+    int  simpleEval = NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity, true);
     bool smallNet   = std::abs(simpleEval) > 1050;
     bool psqtOnly   = std::abs(simpleEval) > 2500;
 
-    int nnueComplexity;
-
-    Value nnue = smallNet ? NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity, psqtOnly)
+    Value nnue = psqtOnly ? simpleEval : smallNet ? NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity, false)
                           : NNUE::evaluate<NNUE::Big>(pos, true, &nnueComplexity, false);
 
     // Blend optimism and eval with nnue complexity and material imbalance
