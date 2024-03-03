@@ -1020,24 +1020,20 @@ moves_loop:  // When in check, search starts here
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
             {
+                int conditions[11] = {{depth},      //Continuous
+                                      {improving},
+                                      {ss->ttPv},
+                                      {(ttValue > alpha)},
+                                      {(tte->depth() >= depth)},
+                                      {cutNode},
+                                      {!ttCapture},
+                                      {!PvNode},
+                                      {((ss + 1)->cutoffCnt > 3)}};
 
-                //Set up reduction net
-                int reductionConditions[12] = {{depth},      //Continuous
-                                               {moveCount},  //Continuous
-                                               {improving},
-                                               {ss->ttPv},
-                                               {(ttValue > alpha)},
-                                               {(tte->depth() >= depth)},
-                                               {cutNode},
-                                               {ttCapture},
-                                               {PvNode},
-                                               {((ss + 1)->cutoffCnt > 3)},
-                                               {(!ttMove)}};
+                int*  red           = reductionNN(conditions);
 
-                int*  red           = reductionNN(reductionConditions);
-
-                Value singularBeta  = ttValue - (60 + 54 * (ss->ttPv && !PvNode)) * depth / 64;
-                Depth singularDepth = newDepth / 2 - *(red + 0);
+                Value singularBeta = ttValue - (60 + 54 * (ss->ttPv && !PvNode)) * depth / 64 + *(red + 0) / 512;
+                Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
                 value =
@@ -1051,7 +1047,7 @@ moves_loop:  // When in check, search starts here
                     // We make sure to limit the extensions in some way to avoid a search explosion
                     if (!PvNode && ss->multipleExtensions <= 16)
                     {
-                        extension = 2 + (value < singularBeta - 78 && !ttCapture);
+                        extension = 2 + (value < singularBeta - 78 + *(red + 1) / 512 && !ttCapture);
                         depth += depth < 16;
                     }
                 }
@@ -1634,40 +1630,41 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
     return (reductionScale + 1118 - delta * 793 / rootDelta) / 1024 + (!i && reductionScale > 863);
 }
 
-//Scale 1024
-int inputWeights[12][7] = {{-1, -4, 1, -1, -1, -3, -7},       {4, -3, -11, -3, -7, 0, -5},
-                           {-68, 4, 11, 17, -15, 14, -66},    {70, -22, -14, 13, 65, -6, -87},
-                           {24, -5, -49, -17, 6, 2, -18},     {-63, 6, -48, 18, -45, -25, -2},
-                           {-14, -23, 37, -5, -52, -11, -26}, {-34, -68, 47, -22, 16, 12, 58},
-                           {62, 53, -15, 13, 40, -92, 3},     {17, -31, -91, -21, -9, -48, 8},
-                           {-29, 2, -46, 14, 19, -9, -62},    {-20, 26, 49, -54, 72, 19, -68}};
+//Scale 2048
+int inputWeights[11][4];
 
-int l1Biases[7] = {-46, -46, -20, -50, -61, -36, -12};
+int l1Biases[4];
 
-int l1Weights[7][1] = {{71}, {-76}, {965}, {-46}, {55}, {93}, {-6}};
+int l1Weights[4][2]     = 
+{
+    {512, 0}, 
+    {0, 512}, 
+    {512, 0}, 
+    {0, 512}, 
+};
 
-int outputBiases[1] = {982};
+int outputBiases[2];
+TUNE(SetRange(-16384, 16384), inputWeights, l1Biases, l1Weights, outputBiases);
 
-int* Search::Worker::reductionNN(int reductionConditions[12]) {
+int* Search::Worker::reductionNN(int reductionConditions[11]) {
 
-    static int outputReductions[1] = {};
-    int        l1[7]               = {};
+    static int outputReductions[2] = {};
+    int        l1[4]               = {};
 
-    for (int i = 0; i < 7; i++)
+    for (int i = 0; i < 4; i++)
     {
-        for (int j = 0; j < 12; j++)
+        for (int j = 0; j < 11; j++)
         { l1[i] += reductionConditions[j] * inputWeights[j][i]; }
         l1[i] = (l1[i] > 0) ? l1[i] : 0;
         l1[i] += l1Biases[i];
     }
 
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < 2; i++)
     {
-        for (int j = 0; j < 7; j++)
-        { outputReductions[i] += l1[j] * l1Weights[j][i] / 1024; }
+        for (int j = 0; j < 4; j++)
+        { outputReductions[i] += l1[j] * l1Weights[j][i] / 512; }
         outputReductions[i] = (outputReductions[i] > 0) ? outputReductions[i] : 0;
         outputReductions[i] += outputBiases[i];
-        outputReductions[i] = outputReductions[i] / 1024;
     }
 
     return outputReductions;
