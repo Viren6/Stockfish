@@ -180,7 +180,7 @@ write_parameters(std::ostream& stream, NetSize netSize, const std::string& netDe
 void hint_common_parent_position(const Position& pos) {
 
     int nnueComplexity;
-    int simpleEvalAbs = NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity, true);
+    int simpleEvalAbs = std::abs(NNUE::evaluate<NNUE::Small>(pos, true, &nnueComplexity, true));
     if (simpleEvalAbs > 2500)
         return;
     else if (simpleEvalAbs > 1050)
