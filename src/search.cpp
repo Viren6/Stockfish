@@ -1049,9 +1049,9 @@ moves_loop:  // When in check, search starts here
                     {
                         extension = 2;
                         depth += depth < 16;
-                        if (value < singularBeta - 78 + *(red + 1) / 512 && !ttCapture)
+                        if (value < singularBeta - 78 + *(red + 1) / 128 && !ttCapture)
                         { 
-                            extension = 3 + (value < singularBeta - 500 + *(red + 2) / 512); 
+                            extension = 3 + (value < singularBeta - 400 + *(red + 2) / 32); 
                         }
                     }
                 }
@@ -1655,6 +1655,7 @@ TUNE(SetRange(-32768, 32768), inputWeights, l1Biases, l1Weights, outputBiases);
 int* Search::Worker::reductionNN(int reductionConditions[9]) {
 
     static int outputReductions[3] = {};
+    long long int outputReductionLong[3] = {};
     int        l1[6]               = {};
 
     for (int i = 0; i < 6; i++)
@@ -1668,9 +1669,10 @@ int* Search::Worker::reductionNN(int reductionConditions[9]) {
     for (int i = 0; i < 3; i++)
     {
         for (int j = 0; j < 6; j++)
-        { outputReductions[i] += l1[j] * l1Weights[j][i] / 512; }
-        outputReductions[i] = (outputReductions[i] > 0) ? outputReductions[i] : 0;
-        outputReductions[i] += outputBiases[i];
+        { outputReductionLong[i] += (long long)l1[j] * (long long)l1Weights[j][i] / (long long)512; }
+        outputReductionLong[i] = (outputReductionLong[i] > 0) ? outputReductionLong[i] : 0;
+        outputReductionLong[i] += outputBiases[i];
+        outputReductions[i] = int(outputReductionLong[i]);
     }
 
     return outputReductions;
