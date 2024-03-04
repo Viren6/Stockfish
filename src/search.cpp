@@ -1020,7 +1020,7 @@ moves_loop:  // When in check, search starts here
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
             {
-                int conditions[11] = {{depth},      //Continuous
+                int conditions[9] = {{depth},      //Continuous
                                       {improving},
                                       {ss->ttPv},
                                       {(ttValue > alpha)},
@@ -1047,8 +1047,12 @@ moves_loop:  // When in check, search starts here
                     // We make sure to limit the extensions in some way to avoid a search explosion
                     if (!PvNode && ss->multipleExtensions <= 16)
                     {
-                        extension = 2 + (value < singularBeta - 78 + *(red + 1) / 512 && !ttCapture);
+                        extension = 2;
                         depth += depth < 16;
+                        if (value < singularBeta - 78 + *(red + 1) / 512 && !ttCapture)
+                        { 
+                            extension = 3 + (value < singularBeta - 500 + *(red + 2) / 512); 
+                        }
                     }
                 }
 
@@ -1631,37 +1635,39 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
 }
 
 //Scale 2048
-int inputWeights[11][4];
+int inputWeights[9][6];
 
-int l1Biases[4];
+int l1Biases[6];
 
-int l1Weights[4][2]     = 
+int l1Weights[6][3]     = 
 {
-    {512, 0}, 
-    {0, 512}, 
-    {512, 0}, 
-    {0, 512}, 
+    {512, 0, 0}, 
+    {0, 512, 0}, 
+    {0, 0, 512}, 
+    {-512, 0, 0}, 
+    {0, -512, 0}, 
+    {0, 0, -512}
 };
 
-int outputBiases[2];
-TUNE(SetRange(-16384, 16384), inputWeights, l1Biases, l1Weights, outputBiases);
+int outputBiases[3];
+TUNE(SetRange(-32768, 32768), inputWeights, l1Biases, l1Weights, outputBiases);
 
-int* Search::Worker::reductionNN(int reductionConditions[11]) {
+int* Search::Worker::reductionNN(int reductionConditions[9]) {
 
-    static int outputReductions[2] = {};
-    int        l1[4]               = {};
+    static int outputReductions[3] = {};
+    int        l1[6]               = {};
 
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 6; i++)
     {
-        for (int j = 0; j < 11; j++)
+        for (int j = 0; j < 9; j++)
         { l1[i] += reductionConditions[j] * inputWeights[j][i]; }
         l1[i] = (l1[i] > 0) ? l1[i] : 0;
         l1[i] += l1Biases[i];
     }
 
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < 3; i++)
     {
-        for (int j = 0; j < 4; j++)
+        for (int j = 0; j < 6; j++)
         { outputReductions[i] += l1[j] * l1Weights[j][i] / 512; }
         outputReductions[i] = (outputReductions[i] > 0) ? outputReductions[i] : 0;
         outputReductions[i] += outputBiases[i];
