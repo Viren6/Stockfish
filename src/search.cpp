@@ -1631,20 +1631,17 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
 }
 
 //Scale 2048
-int inputWeights[11][4];
+int inputWeights[11][4] = {{-16, -9, -7, -9},   {-41, 12, -86, -97}, {31, 33, 53, 41},
+                           {-59, -3, -87, -72}, {40, -52, 0, -10},   {-72, -53, -76, 17},
+                           {25, -1, -20, -91},  {83, 22, -27, 104},  {-114, 30, -5, -29},
+                           {136, 7, 118, 78},   {46, -130, 20, 26}};
 
-int l1Biases[4];
 
-int l1Weights[4][2]     = 
-{
-    {512, 0}, 
-    {0, 512}, 
-    {512, 0}, 
-    {0, 512}, 
-};
+int l1Biases[4] = {-157, 13, -186, -84};
 
-int outputBiases[2];
-TUNE(SetRange(-16384, 16384), inputWeights, l1Biases, l1Weights, outputBiases);
+int l1Weights[4][2] = {{429, 51}, {87, 537}, {468, -62}, {8, 501}};
+
+int outputBiases[2] = {15, -65};
 
 int* Search::Worker::reductionNN(int reductionConditions[11]) {
 
