@@ -1031,14 +1031,8 @@ moves_loop:  // When in check, search starts here
                                       {((ss + 1)->cutoffCnt > 3)}};
 
                 int*  red           = reductionNN(conditions);
-                
-                /* std::vector<int> values(red, red + 3);
-                for (int i = 0; i < 3; i++)
-                { 
-                     dbg_hit_on(std::abs(values[i]) > (512 / pow(4, i)), i);
-                }*/
 
-                Value singularBeta = ttValue - (60 + 54 * (ss->ttPv && !PvNode)) * depth / 64 + *(red + 0) / 512;
+                Value singularBeta = ttValue - (60 + 54 * (ss->ttPv && !PvNode)) * depth / 64;
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
@@ -1055,9 +1049,9 @@ moves_loop:  // When in check, search starts here
                     {
                         extension = 2;
                         depth += depth < 16;
-                        if (value < singularBeta - 78 + *(red + 1) / 128 && !ttCapture)
+                        if (value < singularBeta - 78 + *(red + 0) / 128 && !ttCapture)
                         { 
-                            extension = 3 + (value < singularBeta - 400 + *(red + 2) / 32); 
+                            extension = 3 + (value < singularBeta - 400 + *(red + 1) / 32); 
                         }
                     }
                 }
@@ -1641,24 +1635,24 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
 }
 
 //Scale 2048
-int inputWeights[9][6] = {{-46, -32, -86, -22, 36, -60},     {384, 169, -191, 90, 379, -113},
-                          {311, 451, 464, -403, 176, 125},   {608, -392, -759, 459, 747, 99},
-                          {-515, -58, -573, -63, 298, -422}, {210, -398, -160, 129, 168, 486},
-                          {-4, -252, -105, 668, 225, 338},   {255, -24, 133, -375, -68, -370},
-                          {-2, 390, -241, 244, 110, 623}};
+int inputWeights[9][6] = {{-145, -63, -67, -55, 7, -63},      {140, 197, -137, 234, 193, 100},
+                          {534, 282, 731, -253, 471, 73},     {1040, 189, -746, 774, 935, 243},
+                          {-651, -68, -452, -223, 647, -499}, {-136, -124, 239, -61, -277, 640},
+                          {610, -360, 278, 623, 87, 282},     {-103, 62, 87, -759, -60, -754},
+                          {490, 344, -129, -373, 221, 633}};
 
-int l1Biases[6] = {-263, 11, -680, 773, -394, 99};
+int l1Biases[6] = {-279, 276, 188, 374, -323, -54};
 
-int l1Weights[6][3] = {{227, -96, -89},  {-144, 984, 403},   {-119, -373, 258},
-                       {-185, 354, 167}, {-763, -903, -412}, {-233, -638, -286}};
+int l1Weights[6][2] = {{167, -529},  {971, 494},       {-351, 174},
+                       {296, -226}, {-1194, -545}, { -1065, -432}};
 
 
-int outputBiases[3] = {-520, -115, -277};
+int outputBiases[2] = { -110, -231};
 
 int* Search::Worker::reductionNN(int reductionConditions[9]) {
 
-    static int outputReductions[3] = {};
-    long long int outputReductionLong[3] = {};
+    static int outputReductions[2] = {};
+    long long int outputReductionLong[2] = {};
     int        l1[6]               = {};
 
     for (int i = 0; i < 6; i++)
@@ -1669,7 +1663,7 @@ int* Search::Worker::reductionNN(int reductionConditions[9]) {
         l1[i] += l1Biases[i];
     }
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 2; i++)
     {
         for (int j = 0; j < 6; j++)
         {
