@@ -582,7 +582,6 @@ Value Search::Worker::search(
     (ss + 1)->excludedMove = bestMove = Move::none();
     (ss + 2)->killers[0] = (ss + 2)->killers[1] = Move::none();
     (ss + 2)->cutoffCnt                         = 0;
-    ss->multipleExtensions                      = (ss - 1)->multipleExtensions;
     Square prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
     ss->statScore = 0;
 
@@ -1020,19 +1019,8 @@ moves_loop:  // When in check, search starts here
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
             {
-                int conditions[9] = {{depth},      //Continuous
-                                      {improving},
-                                      {ss->ttPv},
-                                      {(ttValue > alpha)},
-                                      {(tte->depth() >= depth)},
-                                      {cutNode},
-                                      {!ttCapture},
-                                      {!PvNode},
-                                      {((ss + 1)->cutoffCnt > 3)}};
 
-                int*  red           = reductionNN(conditions);
-
-                Value singularBeta = ttValue - (60 + 54 * (ss->ttPv && !PvNode)) * depth / 64 + *(red + 0) / 512;
+                Value singularBeta = ttValue - (60 + 54 * (ss->ttPv && !PvNode)) * depth / 64;
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
@@ -1044,14 +1032,28 @@ moves_loop:  // When in check, search starts here
                 {
                     extension = 1;
 
-                    // We make sure to limit the extensions in some way to avoid a search explosion
-                    if (!PvNode && ss->multipleExtensions <= 16)
-                    {
+                    int conditions[8] = {{PvNode},
+                                         {ttCapture},
+                                         {improving},
+                                         {ss->ttPv},
+                                         {(ttValue > alpha)},
+                                         {(tte->depth() >= depth)},
+                                         {cutNode},
+                                         {((ss + 1)->cutoffCnt > 3)}};
+
+                    int* ext = extensionNN(conditions);
+
+                    if (value < singularBeta - *(ext + 0) / 16)
+                    { 
                         extension = 2;
                         depth += depth < 16;
-                        if (value < singularBeta - 78 + *(red + 1) / 128 && !ttCapture)
+                        if (value < singularBeta - *(ext + 1) / 4)
                         { 
-                            extension = 3 + (value < singularBeta - 400 + *(red + 2) / 32); 
+                            extension = 3;
+                            if (value < singularBeta - *(ext + 2))
+                            { 
+                                extension = 4;
+                            }
                         }
                     }
                 }
@@ -1093,7 +1095,6 @@ moves_loop:  // When in check, search starts here
 
         // Add extension to new depth
         newDepth += extension;
-        ss->multipleExtensions = (ss - 1)->multipleExtensions + (extension >= 2);
 
         // Speculative prefetch as early as possible
         prefetch(tt.first_entry(pos.key_after(move)));
@@ -1633,44 +1634,41 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
     int reductionScale = reductions[d] * reductions[mn];
     return (reductionScale + 1118 - delta * 793 / rootDelta) / 1024 + (!i && reductionScale > 863);
 }
-
 //Scale 2048
-int inputWeights[9][6];
+int l1Weights[8][6];
 
 int l1Biases[6];
 
-int l1Weights[6][3]     = 
-{
-    {512, 0, 0}, 
-    {0, 512, 0}, 
-    {0, 0, 512}, 
-    {-512, 0, 0}, 
-    {0, -512, 0}, 
-    {0, 0, -512}
-};
+int outputWeights[6][3] = {{64, 0, 0},  {0, 64, 0},  {0, 0, 64},
+                           {-64, 0, 0}, {0, -64, 0}, {0, 0, -64}};
 
-int outputBiases[3];
-TUNE(SetRange(-32768, 32768), inputWeights, l1Biases, l1Weights, outputBiases);
+int outputBiases[3] = {128, 128, 128};
 
-int* Search::Worker::reductionNN(int reductionConditions[9]) {
+TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
 
-    static int outputReductions[3] = {};
+int* Search::Worker::extensionNN(int reductionConditions[8]) {
+
+    static int    outputReductions[3]    = {};
     long long int outputReductionLong[3] = {};
-    int        l1[6]               = {};
+    int           l1[6]                  = {};
 
     for (int i = 0; i < 6; i++)
     {
-        for (int j = 0; j < 9; j++)
-        { l1[i] += reductionConditions[j] * inputWeights[j][i]; }
-        l1[i] = (l1[i] > 0) ? l1[i] : 0;
+        for (int j = 0; j < 8; j++)
+        { 
+            l1[i] += reductionConditions[j] * l1Weights[j][i]; 
+        }
         l1[i] += l1Biases[i];
+        l1[i] = (l1[i] > 0) ? l1[i] : 0;
     }
 
     for (int i = 0; i < 3; i++)
     {
         for (int j = 0; j < 6; j++)
-        { outputReductionLong[i] += (long long)l1[j] * (long long)l1Weights[j][i] / (long long)512; }
-        outputReductionLong[i] = (outputReductionLong[i] > 0) ? outputReductionLong[i] : 0;
+        {
+            outputReductionLong[i] +=
+              (long long) l1[j] * (long long) outputWeights[j][i] / (long long) 64;
+        }
         outputReductionLong[i] += outputBiases[i];
         outputReductions[i] = int(outputReductionLong[i]);
     }
