@@ -501,6 +501,8 @@ void Search::Worker::clear() {
 
     for (size_t i = 1; i < reductions.size(); ++i)
         reductions[i] = int((18.79 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
+
+    CacheNet();
 }
 
 
@@ -1040,7 +1042,7 @@ moves_loop:  // When in check, search starts here
                 {
                     extension = 1;
 
-                    int conditions[8] = {{PvNode},
+                    bool conditions[8] = {{PvNode},
                                          {ttCapture},
                                          {improving},
                                          {ss->ttPv},
@@ -1049,28 +1051,21 @@ moves_loop:  // When in check, search starts here
                                          {cutNode},
                                          {((ss + 1)->cutoffCnt > 3)}};
 
-                    int* ext = extensionNN(conditions);
+                    uint8_t ind = Pack8Bools(conditions);
 
-                    if (value < singularBeta - *(ext + 0) / 16)
+                    if (value < singularBeta - extMargins[ind][0] / 16)
                     { 
                         extension = 2;
                         depth += depth < 16;
-                        if (value < singularBeta - *(ext + 1) / 4)
+                        if (value < singularBeta - extMargins[ind][1] / 4)
                         { 
                             extension = 3;
-                            if (value < singularBeta - *(ext + 2))
+                            if (value < singularBeta - extMargins[ind][2])
                             { 
                                 extension = 4;
                             }
                         }
                     }
-
-                   /* std::vector<int> values(ext, ext + 3);
-                    for (int i = 0; i < 3; i++)
-                    { 
-                        dbg_stdev_of(values[i], i);
-                    }
-                    dbg_hit_on(true, extension);*/
                 }
 
                 // Multi-cut pruning
@@ -1650,19 +1645,19 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
     return (reductionScale + 1118 - delta * 793 / rootDelta) / 1024 + (!i && reductionScale > 863);
 }
 //Scale 2048
-int l1Weights[8][6] = {{208, 83, 0, -119, 104, 97},         {-27, 0, -35, -79, 96, -25},
-                       {11, -86, 10, 27, -96, 24},          {-120, 141, -103, -42, 102, 82},
-                       {57, 120, 11, 48, 84, -85},          {-167, 54, 58, -88, -41, 79},
-                       {-212, -115, -141, 163, -120, -109}, {69, -163, -12, 24, -76, -121}};
+int l1Weights[8][6] = {{215, 91, 9, -129, 102, 108},        {-31, -5, -50, -72, 100, -31},
+                       {11, -89, -3, 30, -100, 17},         {-125, 143, -104, -38, 88, 77},
+                       {53, 117, 17, 50, 84, -100},         {-173, 55, 67, -82, -39, 86},
+                       {-203, -113, -147, 152, -118, -122}, {65, -160, -11, 22, -80, -120}};
 
-int l1Biases[6] = {18, -70, 20, 12, -49, 16};
+int l1Biases[6] = {15, -67, 22, 5, -61, 20};
 
-int outputWeights[6][3] = {{58, 343, -6},  {86, 243, 83},   {72, 93, 211},
-                           {-181, 15, 19}, {160, -76, 189}, {80, 48, -168}};
+int outputWeights[6][3] = {{62, 352, -6},  {85, 238, 79},   {64, 94, 206},
+                           {-183, 37, 23}, {151, -84, 198}, {84, 44, -164}};
 
-int outputBiases[3] = {86, 197, 321};
+int outputBiases[3] = {84, 192, 309};
 
-int* Search::Worker::extensionNN(int reductionConditions[8]) {
+int* Search::Worker::extensionNN(bool reductionConditions[8]) {
 
     static int    outputReductions[3]    = {};
     long long int outputReductionLong[3] = {};
@@ -1692,6 +1687,32 @@ int* Search::Worker::extensionNN(int reductionConditions[8]) {
     return outputReductions;
 }
 
+inline uint8_t Search::Worker::Pack8Bools(bool* a) {
+    uint8_t ret = 0;
+    for (int i = 0; i < 8; i++)
+        if (a[i])
+            ret |= (1 << i);
+    return ret;
+}
+
+void Search::Worker::Unpack8Bools(uint8_t b, bool* a) {
+    for (int i = 0; i < 8; i++)
+        a[i] = ((b & (1 << i)) != 0);
+}
+
+void Search::Worker::CacheNet() {
+    for (int i = 0; i < 256; i++)
+    { 
+        bool conditions[8];
+        Unpack8Bools(uint8_t(i), conditions);
+        int* ext           = extensionNN(conditions);
+        std::vector<int> values(ext, ext + 3);
+        for (uint8_t j = 0; j < 3; j++)
+        { 
+            extMargins[i][j] = values[j];
+        }
+    }
+}
 
 namespace {
 // Adjusts a mate or TB score from "plies to mate from the root"
