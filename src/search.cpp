@@ -1056,6 +1056,13 @@ moves_loop:  // When in check, search starts here
                             }
                         }
                     }
+
+                   /* std::vector<int> values(ext, ext + 3);
+                    for (int i = 0; i < 3; i++)
+                    { 
+                        dbg_stdev_of(values[i], i);
+                    }
+                    dbg_hit_on(true, extension);*/
                 }
 
                 // Multi-cut pruning
@@ -1635,17 +1642,17 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
     return (reductionScale + 1118 - delta * 793 / rootDelta) / 1024 + (!i && reductionScale > 863);
 }
 //Scale 2048
-int l1Weights[8][6] = {{105, 33, -20, -65, 48, 63},     {-36, 29, -13, -51, 90, -67},
-                       {36, -81, 35, 52, -58, 11},      {-76, 139, -54, -26, 79, 25},
-                       {113, 140, -38, 58, 100, -63},   {-104, 43, 28, -68, -7, 11},
-                       {-119, -83, -56, 113, -39, -88}, {88, -45, 8, -6, -43, -138}};
+int l1Weights[8][6] = {{208, 83, 0, -119, 104, 97},         {-27, 0, -35, -79, 96, -25},
+                       {11, -86, 10, 27, -96, 24},          {-120, 141, -103, -42, 102, 82},
+                       {57, 120, 11, 48, 84, -85},          {-167, 54, 58, -88, -41, 79},
+                       {-212, -115, -141, 163, -120, -109}, {69, -163, -12, 24, -76, -121}};
 
-int l1Biases[6] = {-18, -87, 91, 4, -58, 7};
+int l1Biases[6] = {18, -70, 20, 12, -49, 16};
 
-int outputWeights[6][3] = {{27, 205, 6},  {64, 226, 71},  {30, 69, 187},
-                           {-86, 43, 22}, {97, -62, 186}, {102, 87, -125}};
+int outputWeights[6][3] = {{58, 343, -6},  {86, 243, 83},   {72, 93, 211},
+                           {-181, 15, 19}, {160, -76, 189}, {80, 48, -168}};
 
-int outputBiases[3] = {184, 236, 328};
+int outputBiases[3] = {86, 197, 321};
 
 int* Search::Worker::extensionNN(int reductionConditions[8]) {
 
