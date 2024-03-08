@@ -1030,7 +1030,7 @@ moves_loop:  // When in check, search starts here
                 && tte->depth() >= depth - 3)
             {
 
-                Value singularBeta = ttValue - (60 + 54 * (ss->ttPv && !PvNode)) * depth / 64;
+                Value singularBeta  = ttValue - (60 + 54 * (ss->ttPv && !PvNode)) * depth / 64;
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
@@ -1053,11 +1053,11 @@ moves_loop:  // When in check, search starts here
 
                     uint8_t ind = Pack8Bools(conditions);
 
-                    if (value < singularBeta - extMargins[ind][0] / 16)
+                    if (value < singularBeta - extMargins[ind][0])
                     { 
                         extension = 2;
                         depth += depth < 16;
-                        if (value < singularBeta - extMargins[ind][1] / 4)
+                        if (value < singularBeta - extMargins[ind][1])
                         { 
                             extension = 3;
                             if (value < singularBeta - extMargins[ind][2])
@@ -1645,17 +1645,17 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
     return (reductionScale + 1118 - delta * 793 / rootDelta) / 1024 + (!i && reductionScale > 863);
 }
 //Scale 2048
-int l1Weights[8][6] = {{215, 91, 9, -129, 102, 108},        {-31, -5, -50, -72, 100, -31},
-                       {11, -89, -3, 30, -100, 17},         {-125, 143, -104, -38, 88, 77},
-                       {53, 117, 17, 50, 84, -100},         {-173, 55, 67, -82, -39, 86},
-                       {-203, -113, -147, 152, -118, -122}, {65, -160, -11, 22, -80, -120}};
+int l1Weights[8][6] = {{145, 132, 27, -82, 147, 120},       {-4, -13, -65, -53, 74, -43},
+                       {33, -80, 30, 17, -133, 23},         {-183, 144, -149, -83, 87, 30},
+                       {53, 126, -6, 60, 77, -93},          {-154, 7, 58, -123, -13, 50},
+                       {-243, -155, -129, 200, -176, -174}, {58, -193, -37, 17, -78, -146}};
 
-int l1Biases[6] = {15, -67, 22, 5, -61, 20};
+int l1Biases[6] = {42, -4, 30, 21, -64, 2};
 
-int outputWeights[6][3] = {{62, 352, -6},  {85, 238, 79},   {64, 94, 206},
-                           {-183, 37, 23}, {151, -84, 198}, {84, 44, -164}};
+int outputWeights[6][3] = {{37, 351, 5},   {130, 251, 76},  {77, 54, 218},
+                           {-165, 37, 52}, {157, -68, 178}, {91, 40, -157}};
 
-int outputBiases[3] = {84, 192, 309};
+int outputBiases[3] = {40, 163, 289};
 
 int* Search::Worker::extensionNN(bool reductionConditions[8]) {
 
@@ -1701,6 +1701,7 @@ void Search::Worker::Unpack8Bools(uint8_t b, bool* a) {
 }
 
 void Search::Worker::CacheNet() {
+    int marginDivisors[3] = {16, 4, 1};
     for (int i = 0; i < 256; i++)
     { 
         bool conditions[8];
@@ -1709,7 +1710,7 @@ void Search::Worker::CacheNet() {
         std::vector<int> values(ext, ext + 3);
         for (uint8_t j = 0; j < 3; j++)
         { 
-            extMargins[i][j] = values[j];
+            extMargins[i][j] = values[j] / marginDivisors[j];
         }
     }
 }
