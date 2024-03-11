@@ -1051,7 +1051,7 @@ moves_loop:  // When in check, search starts here
 
                     uint8_t ind = Pack8Bools(conditions);
 
-                    if (value < singularBeta - extMargins[ind][0])
+                    if (!ttCapture && value < singularBeta - extMargins[ind][0])
                     { 
                         extension = 2;
                         depth += depth < 16;
