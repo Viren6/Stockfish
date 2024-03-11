@@ -1049,7 +1049,7 @@ moves_loop:  // When in check, search starts here
                         && value < singularBeta - 50)
                         extension = 2;
                     if (!ss->ttPv && !cutNode && (ttValue > alpha) && (tte->depth() >= depth)
-                        && value < singularBeta - 100)
+                        && !ttCapture)
                         extension = 4;
                 }
 
