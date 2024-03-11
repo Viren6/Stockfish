@@ -1039,15 +1039,14 @@ moves_loop:  // When in check, search starts here
                 {
                     extension = 1;
 
-                    // We make sure to limit the extensions in some way to avoid a search explosion
-                    if (!PvNode && ss->multipleExtensions <= 16)
+                    if (!((ss + 1)->cutoffCnt > 3) && ss->multipleExtensions <= 16)
                     {
-                        extension = 2 + (value < singularBeta - 78 && !ttCapture);
-                        depth += depth < 14;
-                    }
-                    if (PvNode && !ttCapture && ss->multipleExtensions <= 5
-                        && value < singularBeta - 50)
                         extension = 2;
+                        depth += depth < 14;
+
+                        if (!ttCapture && !ss->ttPv && value < singularBeta - 50)
+                            extension = 3;
+                    }
                 }
 
                 // Multi-cut pruning
