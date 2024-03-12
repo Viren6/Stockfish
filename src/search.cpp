@@ -1048,8 +1048,8 @@ moves_loop:  // When in check, search starts here
                     if (PvNode && !ttCapture && ss->multipleExtensions <= 5
                         && value < singularBeta - 50)
                         extension = 2;
-                    if (!ss->ttPv && !cutNode && (tte->depth() >= depth) && !ttCapture
-                        && !((ss + 1)->cutoffCnt > 3) && value < singularBeta - 300)
+                    if (!ss->ttPv && !improving && (tte->depth() >= depth)
+                        && !((ss + 1)->cutoffCnt > 3) && value < singularBeta - 400)
                         extension = 4;
                 }
 
