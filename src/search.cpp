@@ -1049,8 +1049,8 @@ moves_loop:  // When in check, search starts here
                         && value < singularBeta - 50)
                         extension = 2;
                     if (!ss->ttPv && !improving && (tte->depth() >= depth)
-                        && !((ss + 1)->cutoffCnt > 3) && value < singularBeta - 400)
-                        extension = 4;
+                        && !((ss + 1)->cutoffCnt > 3) && value < singularBeta - 200)
+                        extension = 3 + !ttCapture;
                 }
 
                 // Multi-cut pruning
