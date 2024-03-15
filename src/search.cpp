@@ -496,7 +496,7 @@ void Search::Worker::clear() {
                     h->fill(-71);
 
     for (size_t i = 1; i < reductions.size(); ++i)
-        reductions[i] = int((19.80 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
+        reductions[i] = int((0.61875 + std::log(size_t(options["Threads"])) / 64) * std::log(i));
 }
 
 
@@ -577,8 +577,6 @@ Value Search::Worker::search(
         if (alpha >= beta)
             return alpha;
     }
-    else
-        thisThread->rootDelta = beta - alpha;
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
@@ -941,9 +939,7 @@ moves_loop:  // When in check, search starts here
         // Calculate new depth for this move
         newDepth = depth - 1;
 
-        int delta = beta - alpha;
-
-        Depth r = reduction(improving, depth, moveCount, delta);
+        Depth r = reduction(improving, depth, moveCount);
 
         // Step 14. Pruning at shallow depth (~120 Elo).
         // Depth conditions are important for mate finding.
@@ -1621,9 +1617,9 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     return bestValue;
 }
 
-Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
+Depth Search::Worker::reduction(bool i, Depth d, int mn) {
     int reductionScale = reductions[d] * reductions[mn];
-    return (reductionScale + 1091 - delta * 759 / rootDelta) / 1024 + (!i && reductionScale > 950);
+    return reductionScale + 1 + (!i && reductionScale > 0);
 }
 
 namespace {
