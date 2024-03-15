@@ -1126,7 +1126,7 @@ moves_loop:  // When in check, search starts here
 
         // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
         // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
-        else if (move == ttMove)
+        else if (move == ttMove && extension != 3)
             r = 0;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
@@ -1178,8 +1178,10 @@ moves_loop:  // When in check, search starts here
             if (!ttMove)
                 r += 2;
 
+            bool ext = (extension == 3) && (r < -4);
+
             // Note that if expected reduction is high, we reduce search depth by 1 here (~9 Elo)
-            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3), !cutNode);
+            value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth - (r > 3) + ext, !cutNode);
         }
 
         // For PV nodes only, do a full PV search on the first move or after a fail high,
