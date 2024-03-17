@@ -65,6 +65,7 @@ class Network {
 
     // Evaluation function
     AlignedPtr<Arch> network[LayerStacks];
+    bool             write_parameters(std::ostream&, const std::string&) const;
 
    private:
     void load_user_net(const std::string&, const std::string&);
@@ -79,7 +80,6 @@ class Network {
     bool write_header(std::ostream&, std::uint32_t, const std::string&) const;
 
     bool read_parameters(std::istream&, std::string&) const;
-    bool write_parameters(std::ostream&, const std::string&) const;
 
     // Input feature converter
     LargePagePtr<Transformer> featureTransformer;
