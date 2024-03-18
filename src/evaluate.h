@@ -35,7 +35,7 @@ constexpr inline int SmallNetThreshold = 1136, PsqtOnlyThreshold = 2656;
 // for the build process (profile-build and fishtest) to work. Do not change the
 // name of the macro or the location where this macro is defined, as it is used
 // in the Makefile/Fishtest.
-#define EvalFileDefaultNameBig "nn-fea897cc89d3.nnue"
+#define EvalFileDefaultNameBig "nn-a5edbe54458a.nnue"
 #define EvalFileDefaultNameSmall "nn-baff1ede1f90.nnue"
 
 namespace NNUE {
