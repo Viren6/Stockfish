@@ -1069,6 +1069,9 @@ moves_loop:  // When in check, search starts here
                         extension = 1; 
                     }
 
+                    else if (singularBeta2 >= beta)
+                        return singularBeta2;
+
                     // Negative extensions
                     // If other moves failed high over (ttValue - margin) without the ttMove on a reduced search,
                     // but we cannot do multi-cut because (ttValue - margin) is lower than the original beta,
