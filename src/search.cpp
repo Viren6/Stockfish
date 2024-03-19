@@ -1060,7 +1060,7 @@ moves_loop:  // When in check, search starts here
                     Value singularBeta2 = value + 1 - (58 + 55 * (ss->ttPv && !PvNode)) * depth / 64;
 
                     ss->excludedMove = move;
-                    value = search<NonPV>(pos, ss, singularBeta2 - 1, singularBeta2, singularDepth,
+                    value = search<NonPV>(pos, ss, singularBeta2 - 1, singularBeta2, singularDepth * 2,
                                            cutNode);
                     ss->excludedMove = Move::none();
 
