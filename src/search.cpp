@@ -1073,7 +1073,7 @@ moves_loop:  // When in check, search starts here
                 else if (ttValue <= value)
                     extension = -1;
 
-                else
+                else if (!ttCapture && !PvNode)
                 {
                     Value singularBeta2 = value + 1 - (58 + 55 * (ss->ttPv && !PvNode)) * depth / 64;
 
@@ -1083,8 +1083,8 @@ moves_loop:  // When in check, search starts here
                     ss->excludedMove = Move::none();
 
                     if (value < singularBeta2)
-                    { 
-                        extension = 1; 
+                    {
+                        extension = 3;
                     }
                 }
             }
