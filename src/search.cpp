@@ -1084,7 +1084,7 @@ moves_loop:  // When in check, search starts here
 
                     if (value < singularBeta2)
                     {
-                        extension = 3;
+                        extension = 6;
                     }
                 }
             }
