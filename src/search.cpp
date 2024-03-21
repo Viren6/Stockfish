@@ -106,7 +106,7 @@ int oneb [128] = {-2488, 7482,  -2,    384,   6258,  -471,  3297,  -1390, 2853, 
                 2096,  -1022, 625,   1008,  -1459, -2517, -1446, 357};
 
 
-    TUNE(SetRange(-127, 127), ow, SetRange(-20000, 20000), ob, twob, oneb);
+    TUNE(SetRange(-127, 127), ow, SetRange(-20000, 20000), ob, twob, oneb); 
 
 
 // Futility margin
