@@ -1135,7 +1135,7 @@ moves_loop:  // When in check, search starts here
         r -= ss->statScore / 13659;
 
         if (extension == 3)
-            newDepth += (thisThread->mainHistory[us][move.from_to()] > 5000);
+            newDepth += ((*contHist[3])[movedPiece][move.to_sq()] > 7000);
 
         // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
         if (depth >= 2 && moveCount > 1 + rootNode)
