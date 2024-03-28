@@ -142,49 +142,31 @@ Search::Worker::Worker(SharedState&                    sharedState,
 
 void Search::Worker::start_searching() {
 
+    //std::cout << sizeof(networks.big.featureTransformer->weights) / sizeof(int16_t);
 
-    for (size_t j = 0; j < 8; ++j)
-    {
-        for (size_t i = 0; i < 32; ++i)
+    //int count = 0;
+    
+    for (int i = 0; i < 69206016; i++)
+    { 
+        if (std::abs(networks.big.featureTransformer->weights[i]) > 640)
         {
-            std::cout << int(networks.big.network[j]->fc_2.weights[i]);
-            std::cout << ", ";
-        }
-    }
-    std::cout << std::endl;
-
-    for (size_t j = 0; j < 8; ++j)
-    {
-        for (size_t i = 0; i < 1; ++i)
-        {
-            std::cout << int(networks.big.network[j]->fc_2.biases[i]);
+            std::cout << i;
             std::cout << ", ";
         }
     }
 
     std::cout << std::endl;
 
-    for (size_t j = 0; j < 8; ++j)
+    for (int i = 0; i < 69206016; i++)
     {
-        for (size_t i = 0; i < 32; ++i)
+        if (std::abs(networks.big.featureTransformer->weights[i]) > 640)
         {
-            std::cout << int(networks.big.network[j]->fc_1.biases[i]);
+            std::cout << networks.big.featureTransformer->weights[i];
             std::cout << ", ";
         }
     }
 
-    std::cout << std::endl;
-
-    for (size_t j = 0; j < 8; ++j)
-    {
-        for (size_t i = 0; i < 16; ++i)
-        {
-            std::cout << int(networks.big.network[j]->fc_0.biases[i]);
-            std::cout << ", ";
-        }
-    }
-
-    std::cout << networks.big.featureTransformer->weights[0];
+    //std::cout << count;
 
     // Non-main threads go directly to iterative_deepening()
     if (!is_mainthread())
