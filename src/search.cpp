@@ -184,6 +184,7 @@ void Search::Worker::start_searching() {
         }
     }
 
+    std::cout << networks.big.featureTransformer->weights[0];
 
     // Non-main threads go directly to iterative_deepening()
     if (!is_mainthread())
