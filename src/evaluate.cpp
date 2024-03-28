@@ -42,6 +42,18 @@ int Eval::simple_eval(const Position& pos, Color c) {
          + (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
 }
 
+// Function to check if there are two flanked bishops for a given color
+bool Eval::has_fianchettoed_bishops(const Position& pos, Color c) {
+    Square left_bishop_square  = (c == WHITE) ? SQ_C1 : SQ_C8;
+    Square right_bishop_square = (c == WHITE) ? SQ_F1 : SQ_F8;
+
+    return pos.count<BISHOP>(c) >= 2 && pos.piece_on(left_bishop_square) == make_piece(c, BISHOP)
+        && pos.piece_on(right_bishop_square) == make_piece(c, BISHOP);
+}
+
+// Declaration of the function prototype
+int evaluate_bishop_bishop_pair(const Position& pos);
+
 
 // Evaluate is the evaluator for the outer world. It returns a static evaluation
 // of the position from the point of view of the side to move.
@@ -82,10 +94,30 @@ Value Eval::evaluate(const Eval::NNUE::Networks& networks, const Position& pos, 
     else
         adjustEval(499, 32793, 903, 9, 147, 1067, 208, 211);
 
+    // Add the evaluation of the pair of flanked bishops
+    v += evaluate_bishop_bishop_pair(pos);
+
     // Guarantee evaluation does not hit the tablebase range
     v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
 
     return v;
+}
+
+// Function to evaluate the presence of the pair of flanked bishops
+int evaluate_bishop_bishop_pair(const Position& pos) {
+    constexpr int BishopPairBonus = 50;
+
+    int score = 0;
+
+    // Check if white has the flanked bishop pair
+    if (Eval::has_fianchettoed_bishops(pos, WHITE))
+    { score += BishopPairBonus; }
+
+    // Check if black has the flanked bishop pair
+    if (Eval::has_fianchettoed_bishops(pos, BLACK))
+    { score -= BishopPairBonus; }
+
+    return score;
 }
 
 // Like evaluate(), but instead of returning a value, it returns
