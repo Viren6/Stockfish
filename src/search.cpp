@@ -243,10 +243,15 @@ void Search::Worker::iterative_deepening() {
         (ss - i)->continuationHistory =
           &this->continuationHistory[0][0][NO_PIECE][0];  // Use as a sentinel
         (ss - i)->staticEval = VALUE_NONE;
+        (ss - i)->wasThisEvalledAsAPv = false;
     }
 
     for (int i = 0; i <= MAX_PLY + 2; ++i)
+    { 
         (ss + i)->ply = i;
+        (ss + i)->wasThisEvalledAsAPv = false;
+    }
+
 
     ss->pv = pv;
 
@@ -725,10 +730,17 @@ Value Search::Worker::search(
         unadjustedStaticEval = evaluate(networks, pos, thisThread->optimism[us]);
         ss->staticEval = eval = to_corrected_static_eval(unadjustedStaticEval, *thisThread, pos);
 
+        if (PvNode)
+            ss->wasThisEvalledAsAPv = true;
+        dbg_hit_on(PvNode, 1);
+
         // Static evaluation is saved as it was before adjustment by correction history
         tte->save(posKey, VALUE_NONE, ss->ttPv, BOUND_NONE, DEPTH_NONE, Move::none(),
                   unadjustedStaticEval, tt.generation());
     }
+
+    if (ss->staticEval != VALUE_NONE)
+        dbg_hit_on(ss->wasThisEvalledAsAPv, 0);
 
     // Use static evaluation difference to improve quiet move ordering (~9 Elo)
     if (((ss - 1)->currentMove).is_ok() && !(ss - 1)->inCheck && !priorCapture)
@@ -1464,9 +1476,14 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
             unadjustedStaticEval = (ss - 1)->currentMove != Move::null()
                                    ? evaluate(networks, pos, thisThread->optimism[us])
                                    : -(ss - 1)->staticEval;
+            if ((ss - 1)->currentMove != Move::null() && PvNode)
+                ss->wasThisEvalledAsAPv = true;
+            dbg_hit_on((ss - 1)->currentMove != Move::null() && PvNode, 3);
             ss->staticEval       = bestValue =
               to_corrected_static_eval(unadjustedStaticEval, *thisThread, pos);
         }
+
+        dbg_hit_on(ss->wasThisEvalledAsAPv, 2);
 
         // Stand pat. Return immediately if static value is at least beta
         if (bestValue >= beta)
