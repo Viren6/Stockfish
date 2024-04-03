@@ -108,6 +108,8 @@ int oneb [128] = {-2488, 7482,  -2,    384,   6258,  -471,  3297,  -1390, 2853, 
 
     TUNE(SetRange(-127, 127), ow, SetRange(-20000, 20000), ob, twob, oneb); 
 
+static constexpr double EvalLevel[10] = {1.043, 1.017, 0.952, 1.009, 0.971,
+                                         1.002, 0.992, 0.947, 1.046, 1.001};
 
 // Futility margin
 Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool oppWorsening) {
@@ -130,10 +132,10 @@ Value to_corrected_static_eval(Value v, const Worker& w, const Position& pos) {
 }
 
 // History and stats update bonus, based on depth
-int stat_bonus(Depth d) { return std::min(223 * d - 332, 1258); }
+int stat_bonus(Depth d) { return std::clamp(245 * d - 320, 0, 1296); }
 
 // History and stats update malus, based on depth
-int stat_malus(Depth d) { return std::min(536 * d - 299, 1353); }
+int stat_malus(Depth d) { return (d < 4 ? 554 * d - 303 : 1203); }
 
 // Add a small random component to draw evaluations to avoid 3-fold blindness
 Value value_draw(size_t nodes) { return VALUE_DRAW - 1 + Value(nodes & 0x2); }
@@ -525,9 +527,10 @@ void Search::Worker::iterative_deepening() {
             timeReduction    = lastBestMoveDepth + 8 < completedDepth ? 1.495 : 0.687;
             double reduction = (1.48 + mainThread->previousTimeReduction) / (2.17 * timeReduction);
             double bestMoveInstability = 1 + 1.88 * totBestMoveChanges / threads.size();
+            int    el                  = std::clamp((bestValue + 750) / 150, 0, 9);
 
-            double totalTime =
-              mainThread->tm.optimum() * fallingEval * reduction * bestMoveInstability;
+            double totalTime = mainThread->tm.optimum() * fallingEval * reduction
+                             * bestMoveInstability * EvalLevel[el];
 
             // Cap used time in case of a single legal move for a better viewer experience
             if (rootMoves.size() == 1)
@@ -857,8 +860,8 @@ Value Search::Worker::search(
 
     // Step 9. Null move search with verification search (~35 Elo)
     if (!PvNode && (ss - 1)->currentMove != Move::null() && (ss - 1)->statScore < 16878
-        && eval >= beta && eval >= ss->staticEval && ss->staticEval >= beta - 20 * depth + 314
-        && !excludedMove && pos.non_pawn_material(us) && ss->ply >= thisThread->nmpMinPly
+        && eval >= beta && ss->staticEval >= beta - 20 * depth + 314 && !excludedMove
+        && pos.non_pawn_material(us) && ss->ply >= thisThread->nmpMinPly
         && beta > VALUE_TB_LOSS_IN_MAX_PLY)
     {
         assert(eval - beta >= 0);
@@ -1078,12 +1081,17 @@ moves_loop:  // When in check, search starts here
 
                 lmrDepth += history / 5637;
 
+                Value futilityValue =
+                  ss->staticEval + (bestValue < ss->staticEval - 59 ? 141 : 58) + 125 * lmrDepth;
+
                 // Futility pruning: parent node (~13 Elo)
-                if (!ss->inCheck && lmrDepth < 15
-                    && ss->staticEval + (bestValue < ss->staticEval - 59 ? 141 : 58)
-                           + 125 * lmrDepth
-                         <= alpha)
+                if (!ss->inCheck && lmrDepth < 15 && futilityValue <= alpha)
+                {
+                    if (bestValue <= futilityValue && std::abs(bestValue) < VALUE_TB_WIN_IN_MAX_PLY
+                        && futilityValue < VALUE_TB_WIN_IN_MAX_PLY)
+                        bestValue = (bestValue + futilityValue * 3) / 4;
                     continue;
+                }
 
                 lmrDepth = std::max(lmrDepth, 0);
 
@@ -1796,7 +1804,7 @@ void update_all_stats(const Position& pos,
 
     if (!pos.capture_stage(bestMove))
     {
-        int bestMoveBonus = bestValue > beta + 173 ? quietMoveBonus      // larger bonus
+        int bestMoveBonus = bestValue > beta + 168 ? quietMoveBonus      // larger bonus
                                                    : stat_bonus(depth);  // smaller bonus
 
         // Increase stats for the best move in case it was a quiet move
