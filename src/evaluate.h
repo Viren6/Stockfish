@@ -36,7 +36,7 @@ constexpr inline int SmallNetThreshold = 1165, PsqtOnlyThreshold = 2500;
 // name of the macro or the location where this macro is defined, as it is used
 // in the Makefile/Fishtest.
 #define EvalFileDefaultNameBig "nn-ae6a388e4a1a.nnue"
-#define EvalFileDefaultNameSmall "nn-baff1ede1f90.nnue"
+#define EvalFileDefaultNameSmall "nn-ecb35f70ff2a.nnue"
 
 namespace NNUE {
 struct Networks;
@@ -45,7 +45,7 @@ struct Networks;
 std::string trace(Position& pos, const Eval::NNUE::Networks& networks);
 
 int   simple_eval(const Position& pos, Color c);
-Value evaluate(const NNUE::Networks& networks, const Position& pos, int optimism);
+Value evaluate(const NNUE::Networks& networks, const Position& pos, int optimism, bool pv);
 
 
 }  // namespace Eval
