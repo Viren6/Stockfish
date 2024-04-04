@@ -1034,8 +1034,13 @@ moves_loop:  // When in check, search starts here
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
             {
+                int earlyStatScore = 2 * thisThread->mainHistory[us][move.from_to()]
+                              + (*contHist[0])[movedPiece][move.to_sq()]
+                              + (*contHist[1])[movedPiece][move.to_sq()]
+                              + (*contHist[3])[movedPiece][move.to_sq()];
+
                 Value singularBeta  = ttValue - (58 + 58 * (ss->ttPv && !PvNode)) * depth / 64;
-                Depth singularDepth = newDepth / 2;
+                Depth singularDepth = (newDepth + (earlyStatScore / 13659)) / 2;
 
                 ss->excludedMove = move;
                 value =
