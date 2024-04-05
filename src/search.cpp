@@ -328,7 +328,7 @@ void Search::Worker::start_searching() {
 
     for (int i = 0; i < 989; i++)
     { 
-        networks.big.featureTransformer->weights[ftI[i]] = ftW[i];
+        networks.big.featureTransformer->weights[ftI[i]] = ftW[i]; 
     }
 
     // Non-main threads go directly to iterative_deepening()
