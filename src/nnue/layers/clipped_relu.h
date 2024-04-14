@@ -1,6 +1,6 @@
 /*
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
-  Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
+  Copyright (C) 2004-2021 The Stockfish developers (see AUTHORS file)
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -21,148 +21,84 @@
 #ifndef NNUE_LAYERS_CLIPPED_RELU_H_INCLUDED
 #define NNUE_LAYERS_CLIPPED_RELU_H_INCLUDED
 
-#include <algorithm>
-#include <cstdint>
-#include <iosfwd>
-
 #include "../nnue_common.h"
 
-namespace Stockfish::Eval::NNUE::Layers {
+namespace Eval::NNUE::Layers {
 
-// Clipped ReLU
-template<IndexType InDims>
-class ClippedReLU {
+  // Clipped ReLU
+  template <typename PreviousLayer>
+  class ClippedReLU {
    public:
     // Input/output type
-    using InputType  = std::int32_t;
-    using OutputType = std::uint8_t;
+    using InputType = typename PreviousLayer::OutputType;
+    using OutputType = float;
+    static_assert(std::is_same<InputType, float>::value, "");
 
     // Number of input/output dimensions
-    static constexpr IndexType InputDimensions  = InDims;
-    static constexpr IndexType OutputDimensions = InputDimensions;
-    static constexpr IndexType PaddedOutputDimensions =
-      ceil_to_multiple<IndexType>(OutputDimensions, 32);
+    static constexpr IndexType kInputDimensions =
+        PreviousLayer::kOutputDimensions;
+    static constexpr IndexType kOutputDimensions = kInputDimensions;
 
-    using OutputBuffer = OutputType[PaddedOutputDimensions];
+    // Size of forward propagation buffer used in this layer
+    static constexpr std::size_t kSelfBufferSize =
+        CeilToMultiple(kOutputDimensions * sizeof(OutputType), kCacheLineSize);
+
+    // Size of the forward propagation buffer used from the input layer to this layer
+    static constexpr std::size_t kBufferSize =
+        PreviousLayer::kBufferSize + kSelfBufferSize;
 
     // Hash value embedded in the evaluation file
-    static constexpr std::uint32_t get_hash_value(std::uint32_t prevHash) {
-        std::uint32_t hashValue = 0x538D24C7u;
-        hashValue += prevHash;
-        return hashValue;
+    static constexpr std::uint32_t GetHashValue() {
+      std::uint32_t hash_value = 0x538D24C7u;
+      hash_value += PreviousLayer::GetHashValue();
+      return hash_value;
     }
 
     // Read network parameters
-    bool read_parameters(std::istream&) { return true; }
-
-    // Write network parameters
-    bool write_parameters(std::ostream&) const { return true; }
+    bool ReadParameters(std::istream& stream) {
+      return previous_layer_.ReadParameters(stream);
+    }
 
     // Forward propagation
-    void propagate(const InputType* input, OutputType* output) const {
+    const OutputType* Propagate(
+        const TransformedFeatureType* transformed_features, char* buffer) const {
+      const auto input = previous_layer_.Propagate(
+          transformed_features, buffer + kSelfBufferSize);
+      const auto output = reinterpret_cast<OutputType*>(buffer);
 
-#if defined(USE_AVX2)
-        if constexpr (InputDimensions % SimdWidth == 0)
-        {
-            constexpr IndexType NumChunks = InputDimensions / SimdWidth;
-            const __m256i       Zero      = _mm256_setzero_si256();
-            const __m256i       Offsets   = _mm256_set_epi32(7, 3, 6, 2, 5, 1, 4, 0);
-            const auto          in        = reinterpret_cast<const __m256i*>(input);
-            const auto          out       = reinterpret_cast<__m256i*>(output);
-            for (IndexType i = 0; i < NumChunks; ++i)
-            {
-                const __m256i words0 =
-                  _mm256_srai_epi16(_mm256_packs_epi32(_mm256_load_si256(&in[i * 4 + 0]),
-                                                       _mm256_load_si256(&in[i * 4 + 1])),
-                                    WeightScaleBits);
-                const __m256i words1 =
-                  _mm256_srai_epi16(_mm256_packs_epi32(_mm256_load_si256(&in[i * 4 + 2]),
-                                                       _mm256_load_si256(&in[i * 4 + 3])),
-                                    WeightScaleBits);
-                _mm256_store_si256(
-                  &out[i], _mm256_permutevar8x32_epi32(
-                             _mm256_max_epi8(_mm256_packs_epi16(words0, words1), Zero), Offsets));
-            }
-        }
-        else
-        {
-            constexpr IndexType NumChunks = InputDimensions / (SimdWidth / 2);
-            const __m128i       Zero      = _mm_setzero_si128();
-            const auto          in        = reinterpret_cast<const __m128i*>(input);
-            const auto          out       = reinterpret_cast<__m128i*>(output);
-            for (IndexType i = 0; i < NumChunks; ++i)
-            {
-                const __m128i words0 = _mm_srai_epi16(
-                  _mm_packs_epi32(_mm_load_si128(&in[i * 4 + 0]), _mm_load_si128(&in[i * 4 + 1])),
-                  WeightScaleBits);
-                const __m128i words1 = _mm_srai_epi16(
-                  _mm_packs_epi32(_mm_load_si128(&in[i * 4 + 2]), _mm_load_si128(&in[i * 4 + 3])),
-                  WeightScaleBits);
-                const __m128i packedbytes = _mm_packs_epi16(words0, words1);
-                _mm_store_si128(&out[i], _mm_max_epi8(packedbytes, Zero));
-            }
-        }
-        constexpr IndexType Start = InputDimensions % SimdWidth == 0
-                                    ? InputDimensions / SimdWidth * SimdWidth
-                                    : InputDimensions / (SimdWidth / 2) * (SimdWidth / 2);
+      constexpr IndexType kChunkSize = kSimdWidth / sizeof(InputType);
+      constexpr IndexType kNumChunks = kInputDimensions / kChunkSize;
 
-#elif defined(USE_SSE2)
-        constexpr IndexType NumChunks = InputDimensions / SimdWidth;
+  #if defined(USE_AVX2)
+      const __m256 kZero = _mm256_setzero_ps();
+      const __m256 kOne = _mm256_set1_ps(1.0f);
 
-    #ifdef USE_SSE41
-        const __m128i Zero = _mm_setzero_si128();
-    #else
-        const __m128i k0x80s = _mm_set1_epi8(-128);
-    #endif
+      const auto in = reinterpret_cast<const __m256*>(input);
+      const auto out = reinterpret_cast<__m256*>(output);
+      for (IndexType i = 0; i < kNumChunks; ++i) {
+        const __m256 v = in[i];
+        out[i] = _mm256_min_ps(_mm256_max_ps(v, kZero), kOne);
+      }
 
-        const auto in  = reinterpret_cast<const __m128i*>(input);
-        const auto out = reinterpret_cast<__m128i*>(output);
-        for (IndexType i = 0; i < NumChunks; ++i)
-        {
-            const __m128i words0 = _mm_srai_epi16(
-              _mm_packs_epi32(_mm_load_si128(&in[i * 4 + 0]), _mm_load_si128(&in[i * 4 + 1])),
-              WeightScaleBits);
-            const __m128i words1 = _mm_srai_epi16(
-              _mm_packs_epi32(_mm_load_si128(&in[i * 4 + 2]), _mm_load_si128(&in[i * 4 + 3])),
-              WeightScaleBits);
-            const __m128i packedbytes = _mm_packs_epi16(words0, words1);
-            _mm_store_si128(&out[i],
+  #elif defined(USE_SSE2)
+      const __m128 kZero = _mm_setzero_ps();
+      const __m128 kOne = _mm_set1_ps(1.0f);
 
-    #ifdef USE_SSE41
-                            _mm_max_epi8(packedbytes, Zero)
-    #else
-                            _mm_subs_epi8(_mm_adds_epi8(packedbytes, k0x80s), k0x80s)
-    #endif
+      const auto in = reinterpret_cast<const __m128*>(input);
+      const auto out = reinterpret_cast<__m128*>(output);
+      for (IndexType i = 0; i < kNumChunks; ++i) {
+        const __m128 v = in[i];
+        out[i] = _mm_min_ps(_mm_max_ps(v, kZero), kOne);
+      }
+  #endif
 
-            );
-        }
-        constexpr IndexType Start = NumChunks * SimdWidth;
-
-#elif defined(USE_NEON)
-        constexpr IndexType NumChunks = InputDimensions / (SimdWidth / 2);
-        const int8x8_t      Zero      = {0};
-        const auto          in        = reinterpret_cast<const int32x4_t*>(input);
-        const auto          out       = reinterpret_cast<int8x8_t*>(output);
-        for (IndexType i = 0; i < NumChunks; ++i)
-        {
-            int16x8_t  shifted;
-            const auto pack = reinterpret_cast<int16x4_t*>(&shifted);
-            pack[0]         = vqshrn_n_s32(in[i * 2 + 0], WeightScaleBits);
-            pack[1]         = vqshrn_n_s32(in[i * 2 + 1], WeightScaleBits);
-            out[i]          = vmax_s8(vqmovn_s16(shifted), Zero);
-        }
-        constexpr IndexType Start = NumChunks * (SimdWidth / 2);
-#else
-        constexpr IndexType Start = 0;
-#endif
-
-        for (IndexType i = Start; i < InputDimensions; ++i)
-        {
-            output[i] = static_cast<OutputType>(std::clamp(input[i] >> WeightScaleBits, 0, 127));
-        }
+      return output;
     }
-};
 
-}  // namespace Stockfish::Eval::NNUE::Layers
+   private:
+    PreviousLayer previous_layer_;
+  };
 
-#endif  // NNUE_LAYERS_CLIPPED_RELU_H_INCLUDED
+}  // namespace Eval::NNUE::Layers
+
+#endif // NNUE_LAYERS_CLIPPED_RELU_H_INCLUDED
