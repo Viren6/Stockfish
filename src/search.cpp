@@ -1055,14 +1055,12 @@ moves_loop:  // When in check, search starts here
                         && value < singularBeta - 38)
                         extension = 2;
 
-                    if (extension >= 2 && ((ss + 1)->cutoffCnt > 3))
+                    if (extension == 3)
                     {
-                        ss->excludedMove = move;
-                        value            = search<NonPV>(pos, ss, singularBeta - 101, singularBeta - 100,
-                                              newDepth, cutNode);
-                        ss->excludedMove = Move::none();
+                        value            = search<NonPV>(pos, ss, singularBeta - 1001, singularBeta - 1000,
+                                              singularDepth, cutNode);
 
-                        extension += (value < singularBeta - 200);
+                        extension += (value < singularBeta - 2000);
                     }
                 }
 
