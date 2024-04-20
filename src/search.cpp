@@ -1054,6 +1054,16 @@ moves_loop:  // When in check, search starts here
                     if (PvNode && !ttCapture && ss->multipleExtensions <= 5
                         && value < singularBeta - 38)
                         extension = 2;
+
+                    if (extension >= 2 && ((ss + 1)->cutoffCnt > 3))
+                    {
+                        ss->excludedMove = move;
+                        value            = search<NonPV>(pos, ss, singularBeta - 101, singularBeta - 100,
+                                              newDepth, cutNode);
+                        ss->excludedMove = Move::none();
+
+                        extension += (value < singularBeta - 200);
+                    }
                 }
 
                 // Multi-cut pruning
