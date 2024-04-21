@@ -1062,7 +1062,7 @@ moves_loop:  // When in check, search starts here
                                                       newDepth, cutNode);
                                 ss->excludedMove = Move::none();
 
-                                if (value < singularBeta)
+                                if (value < singularBeta - 100)
                                     extension = 5;
                             }
                         }
