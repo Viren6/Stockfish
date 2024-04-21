@@ -1066,7 +1066,7 @@ moves_loop:  // When in check, search starts here
                                 ss->excludedMove = Move::none();
 
                                 if (value < singularBeta)
-                                    extension = 4;
+                                    extension = 6;
                             }
                         }
                     }
