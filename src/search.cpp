@@ -1054,19 +1054,16 @@ moves_loop:  // When in check, search starts here
                         { 
                             extension = 3;
 
-                            if (ttValue > alpha && tte->depth() >= depth)
+                            if (ttValue > alpha && tte->depth() >= depth && value < singularBeta - 100)
                             {
-                                singularBeta -= 100;
-                                singularDepth = newDepth;
-
 
                                 ss->excludedMove = move;
                                 value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta,
-                                                      singularDepth, cutNode);
+                                                      newDepth, cutNode);
                                 ss->excludedMove = Move::none();
 
                                 if (value < singularBeta)
-                                    extension = 6;
+                                    extension = 5;
                             }
                         }
                     }
