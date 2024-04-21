@@ -1037,9 +1037,8 @@ moves_loop:  // When in check, search starts here
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
-                value = search < PvNode
-                                   ? PV
-                                   : NonPV > (pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
+                value =
+                  search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
                 ss->excludedMove = Move::none();
 
                 if (value < singularBeta)
@@ -1049,8 +1048,27 @@ moves_loop:  // When in check, search starts here
                     // We make sure to limit the extensions in some way to avoid a search explosion
                     if (!PvNode && ss->multipleExtensions <= 16)
                     {
-                        extension = 2 + (value < singularBeta - 11 && !ttCapture);
+                        extension = 2;
                         depth += depth < 14;
+                        if (value < singularBeta - 11 && !ttCapture)
+                        { 
+                            extension = 3;
+
+                            if (ttValue > alpha && tte->depth() >= depth)
+                            {
+                                singularBeta -= 30;
+                                singularDepth = newDepth;
+
+
+                                ss->excludedMove = move;
+                                value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta,
+                                                      singularDepth, cutNode);
+                                ss->excludedMove = Move::none();
+
+                                if (value < singularBeta)
+                                    extension = 4;
+                            }
+                        }
                     }
                     if (PvNode && !ttCapture && ss->multipleExtensions <= 5
                         && value < singularBeta - 38)
