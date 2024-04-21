@@ -1056,7 +1056,7 @@ moves_loop:  // When in check, search starts here
 
                             if (ttValue > alpha && tte->depth() >= depth)
                             {
-                                singularBeta -= 30;
+                                singularBeta -= 100;
                                 singularDepth = newDepth;
 
 
