@@ -544,7 +544,7 @@ Value Search::Worker::search(
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, opponentWorsening;
-    bool     capture, moveCountPruning, ttCapture, ttSingular;
+    bool     capture, moveCountPruning, ttCapture, singularQuietLMR;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -606,7 +606,7 @@ Value Search::Worker::search(
                : ss->ttHit ? tte->move()
                            : Move::none();
     ttCapture  = ttMove && pos.capture_stage(ttMove);
-    ttSingular = ttMove && tte->is_singular();
+    singularQuietLMR = ttMove && tte->is_singular();
 
     // At this point, if excluded, skip straight to step 6, static eval. However,
     // to save indentation, we list the condition in all code between here and there.
@@ -877,7 +877,7 @@ Value Search::Worker::search(
                 {
                     // Save ProbCut data into transposition table
                     tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv,
-                              move == ttMove ? ttSingular : false, BOUND_LOWER, depth - 3, move,
+                              move == ttMove ? singularQuietLMR : false, BOUND_LOWER, depth - 3, move,
                               unadjustedStaticEval, tt.generation());
                     return std::abs(value) < VALUE_TB_WIN_IN_MAX_PLY ? value - (probCutBeta - beta)
                                                                      : value;
@@ -1039,7 +1039,6 @@ moves_loop:  // When in check, search starts here
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
             {
-                bool  likelySingular = ttSingular && !PvNode && tte->depth() >= depth + 3;
                 Value singularBeta  = ttValue - (65 + 59 * (ss->ttPv && !PvNode)) * depth / 63;
                 Depth singularDepth = newDepth / 2;
 
@@ -1048,9 +1047,9 @@ moves_loop:  // When in check, search starts here
                   search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
                 ss->excludedMove = Move::none();
 
-                ttSingular = value < singularBeta;
                 if (value < singularBeta)
                 {
+                    singularQuietLMR = !ttCapture;
                     extension = 1;
 
                     // We make sure to limit the extensions in some way to avoid a search explosion
@@ -1092,7 +1091,7 @@ moves_loop:  // When in check, search starts here
             }
             else
             {
-                ttSingular = false;
+                singularQuietLMR = false;
                 // Extension for capturing the previous moved piece (~0 Elo on STC, ~1 Elo on LTC)
                 if (PvNode && move == ttMove && move.to_sq() == prevSq
                     && thisThread->captureHistory[movedPiece][move.to_sq()]
@@ -1121,7 +1120,7 @@ moves_loop:  // When in check, search starts here
         pos.do_move(move, st, givesCheck);
 
         // Decrease reduction if position is or has been on the PV (~7 Elo)
-        if (ss->ttPv)
+        if (ss->ttPv || singularQuietLMR)
             r -= 1 + (ttValue > alpha) + (tte->depth() >= depth);
 
         // Increase reduction for cut nodes (~4 Elo)
@@ -1352,7 +1351,7 @@ moves_loop:  // When in check, search starts here
     // Static evaluation is saved as it was before correction history
     if (!excludedMove && !(rootNode && thisThread->pvIdx))
         tte->save(posKey, value_to_tt(bestValue, ss->ply), ss->ttPv,
-                  bestMove == ttMove ? ttSingular : false,
+                  bestMove == ttMove ? singularQuietLMR : false,
                   bestValue >= beta    ? BOUND_LOWER
                   : PvNode && bestMove ? BOUND_EXACT
                                        : BOUND_UPPER,
