@@ -537,7 +537,7 @@ Value Search::Worker::search(
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, opponentWorsening;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, ttSingular;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -594,11 +594,12 @@ Value Search::Worker::search(
     excludedMove = ss->excludedMove;
     posKey       = pos.key();
     tte          = tt.probe(posKey, ss->ttHit);
-    ttValue   = ss->ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
-    ttMove    = rootNode  ? thisThread->rootMoves[thisThread->pvIdx].pv[0]
-              : ss->ttHit ? tte->move()
-                          : Move::none();
-    ttCapture = ttMove && pos.capture_stage(ttMove);
+    ttValue    = ss->ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
+    ttMove     = rootNode  ? thisThread->rootMoves[thisThread->pvIdx].pv[0]
+               : ss->ttHit ? tte->move()
+                           : Move::none();
+    ttCapture  = ttMove && pos.capture_stage(ttMove);
+    ttSingular = ttMove && tte->is_singular();
 
     // At this point, if excluded, skip straight to step 6, static eval. However,
     // to save indentation, we list the condition in all code between here and there.
@@ -667,7 +668,7 @@ Value Search::Worker::search(
 
                 if (b == BOUND_EXACT || (b == BOUND_LOWER ? value >= beta : value <= alpha))
                 {
-                    tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, b,
+                    tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, false, b,
                               std::min(MAX_PLY - 1, depth + 6), Move::none(), VALUE_NONE,
                               tt.generation());
 
@@ -722,7 +723,7 @@ Value Search::Worker::search(
         ss->staticEval = eval = to_corrected_static_eval(unadjustedStaticEval, *thisThread, pos);
 
         // Static evaluation is saved as it was before adjustment by correction history
-        tte->save(posKey, VALUE_NONE, ss->ttPv, BOUND_NONE, DEPTH_NONE, Move::none(),
+        tte->save(posKey, VALUE_NONE, ss->ttPv, false, BOUND_NONE, DEPTH_NONE, Move::none(),
                   unadjustedStaticEval, tt.generation());
     }
 
@@ -868,8 +869,9 @@ Value Search::Worker::search(
                 if (value >= probCutBeta)
                 {
                     // Save ProbCut data into transposition table
-                    tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, depth - 3,
-                              move, unadjustedStaticEval, tt.generation());
+                    tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv,
+                              move == ttMove ? ttSingular : false, BOUND_LOWER, depth - 3, move,
+                              unadjustedStaticEval, tt.generation());
                     return std::abs(value) < VALUE_TB_WIN_IN_MAX_PLY ? value - (probCutBeta - beta)
                                                                      : value;
                 }
@@ -1030,14 +1032,16 @@ moves_loop:  // When in check, search starts here
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
             {
-                Value singularBeta  = ttValue - (64 + 59 * (ss->ttPv && !PvNode)) * depth / 64;
-                Depth singularDepth = newDepth / 2;
+                bool  likelySingular = ttSingular && !PvNode && tte->depth() >= depth + 3;
+                Value singularBeta   = ttValue - (64 + 59 * (ss->ttPv && !PvNode)) * depth / 64;
+                Depth singularDepth  = newDepth / (2 + likelySingular);
 
                 ss->excludedMove = move;
                 value =
                   search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
                 ss->excludedMove = Move::none();
 
+                ttSingular = value < singularBeta;
                 if (value < singularBeta)
                 {
                     extension = 1;
@@ -1079,13 +1083,16 @@ moves_loop:  // When in check, search starts here
                 else if (ttValue <= value)
                     extension = -1;
             }
-
-            // Extension for capturing the previous moved piece (~0 Elo on STC, ~1 Elo on LTC)
-            else if (PvNode && move == ttMove && move.to_sq() == prevSq
-                     && thisThread->captureHistory[movedPiece][move.to_sq()]
-                                                  [type_of(pos.piece_on(move.to_sq()))]
-                          > 3807)
-                extension = 1;
+            else
+            {
+                ttSingular = false;
+                // Extension for capturing the previous moved piece (~0 Elo on STC, ~1 Elo on LTC)
+                if (PvNode && move == ttMove && move.to_sq() == prevSq
+                    && thisThread->captureHistory[movedPiece][move.to_sq()]
+                                                 [type_of(pos.piece_on(move.to_sq()))]
+                         > 3807)
+                    extension = 1;
+            }
         }
 
         // Add extension to new depth
@@ -1338,6 +1345,7 @@ moves_loop:  // When in check, search starts here
     // Static evaluation is saved as it was before correction history
     if (!excludedMove && !(rootNode && thisThread->pvIdx))
         tte->save(posKey, value_to_tt(bestValue, ss->ply), ss->ttPv,
+                  bestMove == ttMove ? ttSingular : false,
                   bestValue >= beta    ? BOUND_LOWER
                   : PvNode && bestMove ? BOUND_EXACT
                                        : BOUND_UPPER,
@@ -1390,7 +1398,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     Move     ttMove, move, bestMove;
     Depth    ttDepth;
     Value    bestValue, value, ttValue, futilityBase;
-    bool     pvHit, givesCheck, capture;
+    bool     pvHit, givesCheck, capture, ttSingular;
     int      moveCount;
     Color    us = pos.side_to_move();
 
@@ -1422,11 +1430,12 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     ttDepth = ss->inCheck || depth >= DEPTH_QS_CHECKS ? DEPTH_QS_CHECKS : DEPTH_QS_NO_CHECKS;
 
     // Step 3. Transposition table lookup
-    posKey  = pos.key();
-    tte     = tt.probe(posKey, ss->ttHit);
-    ttValue = ss->ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
-    ttMove  = ss->ttHit ? tte->move() : Move::none();
-    pvHit   = ss->ttHit && tte->is_pv();
+    posKey     = pos.key();
+    tte        = tt.probe(posKey, ss->ttHit);
+    ttValue    = ss->ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
+    ttMove     = ss->ttHit ? tte->move() : Move::none();
+    pvHit      = ss->ttHit && tte->is_pv();
+    ttSingular = ttMove && tte->is_singular();
 
     // At non-PV nodes we check for an early TT cutoff
     if (!PvNode && tte->depth() >= ttDepth
@@ -1468,8 +1477,8 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
         if (bestValue >= beta)
         {
             if (!ss->ttHit)
-                tte->save(posKey, value_to_tt(bestValue, ss->ply), false, BOUND_LOWER, DEPTH_NONE,
-                          Move::none(), unadjustedStaticEval, tt.generation());
+                tte->save(posKey, value_to_tt(bestValue, ss->ply), false, false, BOUND_LOWER,
+                          DEPTH_NONE, Move::none(), unadjustedStaticEval, tt.generation());
 
             return bestValue;
         }
@@ -1615,6 +1624,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     // Save gathered info in transposition table
     // Static evaluation is saved as it was before adjustment by correction history
     tte->save(posKey, value_to_tt(bestValue, ss->ply), pvHit,
+              bestMove == ttMove ? ttSingular : false,
               bestValue >= beta ? BOUND_LOWER : BOUND_UPPER, ttDepth, bestMove,
               unadjustedStaticEval, tt.generation());
 
