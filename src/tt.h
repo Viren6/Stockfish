@@ -32,6 +32,7 @@ namespace Stockfish {
 // key        16 bit
 // depth       8 bit
 // generation  5 bit
+// singular    1 bit
 // pv node     1 bit
 // bound type  2 bit
 // move       16 bit
@@ -44,8 +45,9 @@ struct TTEntry {
     Value eval() const { return Value(eval16); }
     Depth depth() const { return Depth(depth8 + DEPTH_OFFSET); }
     bool  is_pv() const { return bool(genBound8 & 0x4); }
+    bool  is_singular() const { return bool(genBound8 & 0x8); }
     Bound bound() const { return Bound(genBound8 & 0x3); }
-    void  save(Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev, uint8_t generation8);
+    void  save(Key k, Value v, bool pv, bool singular, Bound b, Depth d, Move m, Value ev, uint8_t generation8);
     // The returned age is a multiple of TranspositionTable::GENERATION_DELTA
     uint8_t relative_age(const uint8_t generation8) const;
 
@@ -79,9 +81,9 @@ class TranspositionTable {
 
     // Constants used to refresh the hash table periodically
 
-    // We have 8 bits available where the lowest 3 bits are
+    // We have 8 bits available where the lowest 4 bits are
     // reserved for other things.
-    static constexpr unsigned GENERATION_BITS = 3;
+    static constexpr unsigned GENERATION_BITS = 4;
     // increment for generation field
     static constexpr int GENERATION_DELTA = (1 << GENERATION_BITS);
     // cycle length
