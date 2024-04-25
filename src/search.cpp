@@ -1048,6 +1048,7 @@ moves_loop:  // When in check, search starts here
                 if (value < singularBeta)
                 {
                     extension = 1;
+                    r -= (!ss->ttPv && !ttCapture);
 
                     // We make sure to limit the extensions in some way to avoid a search explosion
                     if (!PvNode && ss->multipleExtensions <= 16)
