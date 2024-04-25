@@ -1089,16 +1089,11 @@ moves_loop:  // When in check, search starts here
                 else if (ttValue <= value)
                     extension = -1;
             }
-            else
-            {
-                singularQuietLMR = false;
-                // Extension for capturing the previous moved piece (~0 Elo on STC, ~1 Elo on LTC)
-                if (PvNode && move == ttMove && move.to_sq() == prevSq
+            else if (PvNode && move == ttMove && move.to_sq() == prevSq
                     && thisThread->captureHistory[movedPiece][move.to_sq()]
                                                  [type_of(pos.piece_on(move.to_sq()))]
                          > 3807)
                     extension = 1;
-            }
         }
 
         // Add extension to new depth
@@ -1120,11 +1115,8 @@ moves_loop:  // When in check, search starts here
         pos.do_move(move, st, givesCheck);
 
         // Decrease reduction if position is or has been on the PV (~7 Elo)
-        if (ss->ttPv)
-            r -= 1 + (ttValue > alpha) + (tte->depth() >= depth);
-
-        if (!ss->ttPv && singularQuietLMR)
-            r--;
+        if (ss->ttPv || singularQuietLMR)
+            r -= !singularQuietLMR + (ttValue > alpha) + (tte->depth() >= depth);
 
         // Increase reduction for cut nodes (~4 Elo)
         if (cutNode)
