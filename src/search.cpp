@@ -1049,18 +1049,21 @@ moves_loop:  // When in check, search starts here
 
                 if (value < singularBeta)
                 {
-                    singularQuietLMR = !ttCapture;
                     extension = 1;
 
                     // We make sure to limit the extensions in some way to avoid a search explosion
                     if (!PvNode && ss->multipleExtensions <= 16)
                     {
-                        extension = 2 + (value < singularBeta - 11 && !ttCapture);
+                        extension = 2;
                         depth += depth < 14;
+                        if (value < singularBeta - 11 && !ttCapture)
+                            extension = 3 + (!ss->ttPv && singularQuietLMR && value < singularBeta - 200);
                     }
                     if (PvNode && !ttCapture && ss->multipleExtensions <= 5
                         && value < singularBeta - 38)
                         extension = 2;
+
+                    singularQuietLMR = (value < singularBeta - 200);
                 }
 
                 // Multi-cut pruning
@@ -1090,10 +1093,10 @@ moves_loop:  // When in check, search starts here
                     extension = -1;
             }
             else if (PvNode && move == ttMove && move.to_sq() == prevSq
-                    && thisThread->captureHistory[movedPiece][move.to_sq()]
-                                                 [type_of(pos.piece_on(move.to_sq()))]
-                         > 3807)
-                    extension = 1;
+                     && thisThread->captureHistory[movedPiece][move.to_sq()]
+                                                  [type_of(pos.piece_on(move.to_sq()))]
+                          > 3807)
+                extension = 1;
         }
 
         // Add extension to new depth
@@ -1117,9 +1120,6 @@ moves_loop:  // When in check, search starts here
         // Decrease reduction if position is or has been on the PV (~7 Elo)
         if (ss->ttPv)
             r -= 1 + (ttValue > alpha) + (tte->depth() >= depth);
-
-        if (!ss->ttPv && singularQuietLMR)
-            r--;
 
         // Increase reduction for cut nodes (~4 Elo)
         if (cutNode)
