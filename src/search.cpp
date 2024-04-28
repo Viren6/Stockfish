@@ -47,12 +47,20 @@
 
 namespace Stockfish {
 
+
+
 namespace TB = Tablebases;
 
 using Eval::evaluate;
 using namespace Search;
 
 namespace {
+
+                        int a1 = 500;  int a2 = 500; int a3 = 465; int a4 = 400;
+                        int b1 = 1000; int b2 = 490; int b3 = 490; int b4 = 460;
+                        int c1 = 2000; int c2 = 650; int c3 = 650; int c4 = 650;
+
+                        TUNE(a1, a2, a3, a4, b1, b2, b3, b4, c1, c2, c3, c4, SetRange(-10000, 10000));
 
 static constexpr double EvalLevel[10] = {1.043, 1.017, 0.952, 1.009, 0.971,
                                          1.002, 0.992, 0.947, 1.046, 1.001};
@@ -1046,9 +1054,10 @@ moves_loop:  // When in check, search starts here
 
                 if (value < singularBeta)
                 {
-                        int doubleMargin = 500  - 500 * !PvNode - 465 * !ttCapture - 400 * !ss->ttPv;
-                        int tripleMargin = 1000 - 490 * !PvNode - 490 * !ttCapture - 460 * !ss->ttPv;
-                        int quadMargin   = 2000 - 650 * !PvNode - 650 * !ttCapture - 650 * !ss->ttPv;
+
+                        int doubleMargin = a1  - a2 * !PvNode - a3 * !ttCapture - a4 * !ss->ttPv;
+                        int tripleMargin = b1 - b2 * !PvNode - b3 * !ttCapture - b4 * !ss->ttPv;
+                        int quadMargin   = c1 - c2 * !PvNode - c3 * !ttCapture - c4 * !ss->ttPv;
 
                         extension    = 1 + (value < singularBeta - doubleMargin) 
                                          + (value < singularBeta - tripleMargin)
