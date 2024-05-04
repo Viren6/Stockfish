@@ -1059,7 +1059,7 @@ moves_loop:  // When in check, search starts here
 
                         depth += ((!PvNode) && (depth < 14));
 
-                        ttPvE = (extension >= 3);
+                        ttPvE = (!ttCapture && (depth > 9));
                 }
 
                 // Multi-cut pruning
