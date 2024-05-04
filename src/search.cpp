@@ -544,7 +544,7 @@ Value Search::Worker::search(
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, opponentWorsening;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, ttPvE;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -556,6 +556,7 @@ Value Search::Worker::search(
     moveCount = captureCount = quietCount = ss->moveCount = 0;
     bestValue                                             = -VALUE_INFINITE;
     maxValue                                              = VALUE_INFINITE;
+    ttPvE                                                 = false;
 
     // Check for the available remaining time
     if (is_mainthread())
@@ -1057,6 +1058,8 @@ moves_loop:  // When in check, search starts here
                                          + (value < singularBeta - quadMargin);
 
                         depth += ((!PvNode) && (depth < 14));
+
+                        ttPvE = (extension >= 3);
                 }
 
                 // Multi-cut pruning
@@ -1345,7 +1348,7 @@ moves_loop:  // When in check, search starts here
     // If no good move is found and the previous position was ttPv, then the previous
     // opponent move is probably good and the new position is added to the search tree. (~7 Elo)
     if (bestValue <= alpha)
-        ss->ttPv = ss->ttPv || ((ss - 1)->ttPv && depth > 3);
+        ss->ttPv = ss->ttPv || ((ss - 1)->ttPv && depth > 3) || ttPvE;
 
     // Write gathered information in transposition table
     // Static evaluation is saved as it was before correction history
