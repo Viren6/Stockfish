@@ -55,9 +55,7 @@ using namespace Search;
 namespace {
 
   int margins[3][6] = {
-  {0, 10, 251, 0, 0, 0}, {11, 245, 493, 11, 135, 259}, {147, 707, 1007, 353, 447, 653}};
-
-  TUNE(margins);
+  {0, 10, 250, 0, 0, 0}, {12, 252, 488, 10, 128, 262}, {155, 699, 1025, 347, 457, 603}};
 
 static constexpr double EvalLevel[10] = {0.981, 0.956, 0.895, 0.949, 0.913,
                                          0.942, 0.933, 0.890, 0.984, 0.941};
@@ -1053,18 +1051,11 @@ moves_loop:  // When in check, search starts here
 
                 if (value < singularBeta)
                 {
-                        int index = 0; //!PvNode && !ttCapture && !ss->ttPv
-                        if (PvNode && !ttCapture)
-                            index = 1;
-                        if (PvNode && ttCapture)
-                            index = 2;
-                        if (!PvNode && !ttCapture && ss->ttPv)
-                            index = 3;
-                        if (!PvNode && ttCapture && !ss->ttPv)
-                            index = 4;
-                        if (!PvNode && ttCapture && ss->ttPv)
-                            index = 5;
-
+                        int index = 0 + 3 * (ss->ttPv);
+                        if (PvNode)
+                            index = 1 + (ttCapture);
+                        if (!PvNode && ttCapture)
+                            index = 4 + (ss->ttPv);
 
                         extension = 1 + (value < singularBeta - margins[0][index]) 
                                       + (value < singularBeta - margins[1][index])
