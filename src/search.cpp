@@ -54,6 +54,11 @@ using namespace Search;
 
 namespace {
 
+  int margins[3][6] = {
+  {0, 10, 251, 0, 0, 0}, {11, 245, 493, 11, 135, 259}, {147, 707, 1007, 353, 447, 653}};
+
+  TUNE(margins);
+
 static constexpr double EvalLevel[10] = {0.981, 0.956, 0.895, 0.949, 0.913,
                                          0.942, 0.933, 0.890, 0.984, 0.941};
 
@@ -1048,13 +1053,22 @@ moves_loop:  // When in check, search starts here
 
                 if (value < singularBeta)
                 {
-                        int doubleMargin =        251 *  PvNode - 241 * !ttCapture;
-                        int tripleMargin = 493  - 234 * !PvNode - 248 * !ttCapture - 124 * (!ss->ttPv && ttCapture);
-                        int quadMargin   = 1007 - 354 * !PvNode - 300 * !ttCapture - 206 * !ss->ttPv;
+                        int index = 0; //!PvNode && !ttCapture && !ss->ttPv
+                        if (PvNode && !ttCapture)
+                            index = 1;
+                        if (PvNode && ttCapture)
+                            index = 2;
+                        if (!PvNode && !ttCapture && ss->ttPv)
+                            index = 3;
+                        if (!PvNode && ttCapture && !ss->ttPv)
+                            index = 4;
+                        if (!PvNode && ttCapture && ss->ttPv)
+                            index = 5;
 
-                        extension    = 1 + (value < singularBeta - doubleMargin) 
-                                         + (value < singularBeta - tripleMargin)
-                                         + (value < singularBeta - quadMargin);
+
+                        extension = 1 + (value < singularBeta - margins[0][index]) 
+                                      + (value < singularBeta - margins[1][index])
+                                      + (value < singularBeta - margins[2][index]);
 
                         depth += ((!PvNode) && (depth < 14));
 
