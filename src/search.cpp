@@ -1095,6 +1095,24 @@ moves_loop:  // When in check, search starts here
                     extension = -1;
             }
 
+            else if (!rootNode && move == ttMove && !excludedMove
+                     && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
+                     && tte->depth() > 0 && !ss->ttPv && !ttCapture)
+            { 
+                Value singularBeta  = ttValue - 10 - depth;
+                Depth singularDepth = newDepth / 2;
+
+                ss->excludedMove = move;
+                value =
+                  search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
+                ss->excludedMove = Move::none();
+
+                if (value < singularBeta)
+                    extension = 1 + (value < singularBeta - 150);
+
+                depth += (extension == 2);
+            }
+
             // Extension for capturing the previous moved piece (~0 Elo on STC, ~1 Elo on LTC)
             else if (PvNode && move == ttMove && move.to_sq() == prevSq
                      && thisThread->captureHistory[movedPiece][move.to_sq()]
