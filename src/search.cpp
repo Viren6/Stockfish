@@ -55,7 +55,7 @@ using namespace Search;
 namespace {
 
   int margins[3][6] = {
-  {0, 10, 251, 0, 0, 0}, {11, 245, 493, 11, 135, 259}, {147, 707, 1007, 353, 447, 653}};
+  {0, 10, 251, 0, 0, 0}, {11, 269, 495, 11, 135, 270}, {169, 760, 997, 352, 485, 621}};
 
   TUNE(margins);
 
@@ -1053,18 +1053,11 @@ moves_loop:  // When in check, search starts here
 
                 if (value < singularBeta)
                 {
-                        int index = 0; //!PvNode && !ttCapture && !ss->ttPv
-                        if (PvNode && !ttCapture)
-                            index = 1;
-                        if (PvNode && ttCapture)
-                            index = 2;
-                        if (!PvNode && !ttCapture && ss->ttPv)
-                            index = 3;
-                        if (!PvNode && ttCapture && !ss->ttPv)
-                            index = 4;
-                        if (!PvNode && ttCapture && ss->ttPv)
-                            index = 5;
-
+                        int index = 0 + 3 * (ss->ttPv);
+                        if (PvNode)
+                            index = 1 + (ttCapture);
+                        if (!PvNode && ttCapture)
+                            index = 4 + (ss->ttPv);
 
                         extension = 1 + (value < singularBeta - margins[0][index]) 
                                       + (value < singularBeta - margins[1][index])
