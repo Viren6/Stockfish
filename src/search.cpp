@@ -1099,7 +1099,7 @@ moves_loop:  // When in check, search starts here
                      && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                      && tte->depth() > 0 && !ss->ttPv && !ttCapture)
             { 
-                Value singularBeta  = ttValue - 50;
+                Value singularBeta  = ttValue - depth;
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
