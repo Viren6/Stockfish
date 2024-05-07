@@ -1039,7 +1039,7 @@ moves_loop:  // When in check, search starts here
             if (!rootNode && move == ttMove && !excludedMove
                 && depth >= 5
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
-                && tte->depth() >= depth - 2)
+                && tte->depth() >= depth - 3)
             {
                 Value singularBeta  = ttValue - (65 + 52 * (ss->ttPv && !PvNode)) * depth / 63;
                 Depth singularDepth = newDepth / 2;
@@ -1098,7 +1098,7 @@ moves_loop:  // When in check, search starts here
             else if (!rootNode && move == ttMove && !excludedMove
                      && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                      && tte->depth() > 0 && !ss->ttPv && !ttCapture && depth >= 3
-                     && tte->depth() >= depth - 4)
+                     && tte->depth() >= depth - 3)
             { 
                 Value singularBeta  = ttValue - depth;
                 Depth singularDepth = newDepth / 2;
@@ -1113,7 +1113,7 @@ moves_loop:  // When in check, search starts here
                 else if (singularBeta >= beta)
                     extension = -2;
 
-                depth += ((extension == 2) && (depth < 10));
+                depth += (extension == 2);
 
             }
 
