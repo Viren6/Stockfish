@@ -1099,7 +1099,7 @@ moves_loop:  // When in check, search starts here
                      && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                      && tte->depth() > 0 && !ss->ttPv && !ttCapture)
             { 
-                Value singularBeta  = ttValue - 20 - depth;
+                Value singularBeta  = ttValue - 50;
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
@@ -1109,9 +1109,6 @@ moves_loop:  // When in check, search starts here
 
                 if (value < singularBeta)
                     extension = 1;
-                else if (singularBeta >= beta)
-                    extension = -1;
-
             }
 
             // Extension for capturing the previous moved piece (~0 Elo on STC, ~1 Elo on LTC)
