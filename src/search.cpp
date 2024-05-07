@@ -1037,9 +1037,9 @@ moves_loop:  // When in check, search starts here
             // so changing them requires tests at these types of time controls.
             // Recursive singular search is avoided.
             if (!rootNode && move == ttMove && !excludedMove
-                && depth >= 4 - (thisThread->completedDepth > 32) + ss->ttPv
+                && depth >= 5
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
-                && tte->depth() >= depth - 3)
+                && tte->depth() >= depth - 2)
             {
                 Value singularBeta  = ttValue - (65 + 52 * (ss->ttPv && !PvNode)) * depth / 63;
                 Depth singularDepth = newDepth / 2;
@@ -1097,9 +1097,10 @@ moves_loop:  // When in check, search starts here
 
             else if (!rootNode && move == ttMove && !excludedMove
                      && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
-                     && tte->depth() > 0 && !ss->ttPv && !ttCapture)
+                     && tte->depth() > 0 && !ss->ttPv && !ttCapture && depth >= 3
+                     && tte->depth() >= depth - 4)
             { 
-                Value singularBeta  = ttValue - 20 - depth;
+                Value singularBeta  = ttValue - depth;
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
@@ -1108,9 +1109,11 @@ moves_loop:  // When in check, search starts here
                 ss->excludedMove = Move::none();
 
                 if (value < singularBeta)
-                    extension = 1;
+                    extension = 1 + (value < singularBeta - 150);
                 else if (singularBeta >= beta)
-                    extension = -1;
+                    extension = -2;
+
+                depth += ((extension == 2) && (depth < 10));
 
             }
 
