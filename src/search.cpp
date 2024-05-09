@@ -1049,8 +1049,7 @@ moves_loop:  // When in check, search starts here
 
                 if (value < singularBeta)
                 {
-                    bool cond =
-                      !ttCapture || (!improving && !bool((ss - 1)->excludedMove) && !cutNode);
+                    bool cond = !ttCapture || !cutNode;
                     int doubleMargin = 251 * PvNode - 241 * cond;
                     int tripleMargin = 135 + 234 * PvNode - 248 * cond + 124 * (ss->ttPv || cond);
                     int quadMargin   = 447 + 354 * PvNode - 300 * cond + 206 * ss->ttPv;
