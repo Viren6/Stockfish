@@ -1667,7 +1667,7 @@ int outputBiases[3];
 
 TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
 
-int* Search::Worker::extensionNN(int reductionConditions[8]) {
+int* Search::Worker::extensionNN(int reductionConditions[8]) { 
 
     static int    outputReductions[3]    = {};
     long long int outputReductionLong[3] = {};
