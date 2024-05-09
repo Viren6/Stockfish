@@ -1043,11 +1043,11 @@ moves_loop:  // When in check, search starts here
 
                     int* ext = extensionNN(conditions);
 
-                    if (value < singularBeta - *(ext + 0) / 16)
+                    if (value < singularBeta - *(ext + 0))
                     { 
                         extension = 2;
                         depth += depth < 16;
-                        if (value < singularBeta - *(ext + 1) / 4)
+                        if (value < singularBeta - *(ext + 1))
                         { 
                             extension = 3;
                             if (value < singularBeta - *(ext + 2))
@@ -1639,10 +1639,9 @@ int l1Weights[8][6];
 
 int l1Biases[6];
 
-int outputWeights[6][3] = {{64, 0, 0},  {0, 64, 0},  {0, 0, 64},
-                           {-64, 0, 0}, {0, -64, 0}, {0, 0, -64}};
+int outputWeights[6][3];
 
-int outputBiases[3] = {128, 128, 128};
+int outputBiases[3];
 
 TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
 
@@ -1659,7 +1658,7 @@ int* Search::Worker::extensionNN(int reductionConditions[8]) {
             l1[i] += reductionConditions[j] * l1Weights[j][i]; 
         }
         l1[i] += l1Biases[i];
-        l1[i] = (l1[i] > 0) ? l1[i] : 0;
+        l1[i] = 4096 / ((l1[i] > 0) ? l1[i] : 1);
     }
 
     for (int i = 0; i < 3; i++)
@@ -1667,10 +1666,13 @@ int* Search::Worker::extensionNN(int reductionConditions[8]) {
         for (int j = 0; j < 6; j++)
         {
             outputReductionLong[i] +=
-              (long long) l1[j] * (long long) outputWeights[j][i] / (long long) 64;
+              (long long) l1[j] * (long long) outputWeights[j][i] / (long long) 32;
         }
         outputReductionLong[i] += outputBiases[i];
-        outputReductions[i] = int(outputReductionLong[i]);
+        int outInt = int(outputReductionLong[i]);
+        int outClipped      = (outInt > 0) ? outInt : 1;
+        outputReductions[i] = 4096 / outClipped;
+        //Mapping: E.G value 4 = margin 1024, value 8 = margin 512, value 16 = margin 256
     }
 
     return outputReductions;
