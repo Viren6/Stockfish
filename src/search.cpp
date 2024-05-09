@@ -1052,9 +1052,9 @@ moves_loop:  // When in check, search starts here
                     bool cond         = !improving && !bool((ss - 1)->excludedMove) && !cutNode;
                     int  doubleMargin = 251 * PvNode - 241 * !ttCapture;
                     int  tripleMargin =
-                      135 + 234 * PvNode - 248 * !ttCapture + 124 * (ss->ttPv || !ttCapture) - 60 * (cond && ttCapture);
-                    int quadMargin   = 447 + 354 * PvNode - 300 * !ttCapture + 206 * ss->ttPv - 100 * cond;
-                    int pentaMargin = 2000 - 460 * !PvNode - 460 * !ttCapture - 460 * !ss->ttPv - 460 * cond;
+                      135 + 234 * PvNode - 248 * !ttCapture + 124 * (ss->ttPv || !ttCapture) - 40 * (cond && ttCapture);
+                    int quadMargin   = 447 + 354 * PvNode - 300 * !ttCapture + 206 * ss->ttPv - 60 * cond;
+                    int pentaMargin = 1600 - 350 * !PvNode - 350 * !ttCapture - 350 * !ss->ttPv - 350 * cond;
 
                     extension = 1 + (value < singularBeta - doubleMargin)
                               + (value < singularBeta - tripleMargin)
