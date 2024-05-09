@@ -78,7 +78,7 @@ std::ostream& operator<<(std::ostream& os, const Position& pos) {
        << std::setw(16) << pos.key() << std::setfill(' ') << std::dec << "\nCheckers: ";
 
     for (Bitboard b = pos.checkers(); b;)
-        os << UCI::square(pop_lsb(b)) << " ";
+        os << UCIEngine::square(pop_lsb(b)) << " ";
 
     if (int(Tablebases::MaxCardinality) >= popcount(pos.pieces()) && !pos.can_castle(ANY_CASTLING))
     {
@@ -431,8 +431,8 @@ string Position::fen() const {
     if (!can_castle(ANY_CASTLING))
         ss << '-';
 
-    ss << (ep_square() == SQ_NONE ? " - " : " " + UCI::square(ep_square()) + " ") << st->rule50
-       << " " << 1 + (gamePly - (sideToMove == BLACK)) / 2;
+    ss << (ep_square() == SQ_NONE ? " - " : " " + UCIEngine::square(ep_square()) + " ")
+       << st->rule50 << " " << 1 + (gamePly - (sideToMove == BLACK)) / 2;
 
     return ss.str();
 }
@@ -680,11 +680,8 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
     ++st->pliesFromNull;
 
     // Used by NNUE
-    st->accumulatorBig.computed[WHITE]             = st->accumulatorBig.computed[BLACK] =
-      st->accumulatorBig.computedPSQT[WHITE]       = st->accumulatorBig.computedPSQT[BLACK] =
-        st->accumulatorSmall.computed[WHITE]       = st->accumulatorSmall.computed[BLACK] =
-          st->accumulatorSmall.computedPSQT[WHITE] = st->accumulatorSmall.computedPSQT[BLACK] =
-            false;
+    st->accumulatorBig.computed[WHITE]     = st->accumulatorBig.computed[BLACK] =
+      st->accumulatorSmall.computed[WHITE] = st->accumulatorSmall.computed[BLACK] = false;
 
     auto& dp     = st->dirtyPiece;
     dp.dirty_num = 1;
@@ -744,7 +741,6 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
         // Update board and piece lists
         remove_piece(capsq);
 
-        // Update material hash key and prefetch access to materialTable
         k ^= Zobrist::psq[captured][capsq];
         st->materialKey ^= Zobrist::psq[captured][pieceCount[captured]];
 
@@ -969,13 +965,10 @@ void Position::do_null_move(StateInfo& newSt, TranspositionTable& tt) {
     newSt.previous = st;
     st             = &newSt;
 
-    st->dirtyPiece.dirty_num                 = 0;
-    st->dirtyPiece.piece[0]                  = NO_PIECE;  // Avoid checks in UpdateAccumulator()
-    st->accumulatorBig.computed[WHITE]       = st->accumulatorBig.computed[BLACK] =
-      st->accumulatorBig.computedPSQT[WHITE] = st->accumulatorBig.computedPSQT[BLACK] =
-        st->accumulatorSmall.computed[WHITE] = st->accumulatorSmall.computed[BLACK] =
-          st->accumulatorSmall.computedPSQT[WHITE] = st->accumulatorSmall.computedPSQT[BLACK] =
-            false;
+    st->dirtyPiece.dirty_num               = 0;
+    st->dirtyPiece.piece[0]                = NO_PIECE;  // Avoid checks in UpdateAccumulator()
+    st->accumulatorBig.computed[WHITE]     = st->accumulatorBig.computed[BLACK] =
+      st->accumulatorSmall.computed[WHITE] = st->accumulatorSmall.computed[BLACK] = false;
 
     if (st->epSquare != SQ_NONE)
     {
