@@ -1660,15 +1660,16 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
     return (reductionScale + 1318 - delta * 760 / rootDelta) / 1024 + (!i && reductionScale > 1066);
 }
 //Scale 2048
-int l1Weights[8][6];
+int l1Weights[8][6] = {{16, -5, 7, -10, -5, 12}, {-6, -11, 4, 9, 5, 5},  {0, 0, 3, 5, 4, -7},
+                       {-1, -4, 2, 4, 1, -6},    {7, -11, -2, 2, 6, -1}, {7, 11, 1, -5, -4, 0},
+                       {-15, 5, 1, -4, 8, 13},   {7, -1, 0, 13, -10, 3}};
 
-int l1Biases[6];
+int l1Biases[6] = {-2, -5, 1, 0, 3, 2};
 
-int outputWeights[6][3];
+int outputWeights[6][3] = {{22, -20, -12}, {-7, -10, 2}, {1, -6, -6},
+                           {6, -9, 6},     {-7, -13, 4}, {16, -10, -12}};
 
-int outputBiases[3];
-
-TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
+int outputBiases[3] = {-13, -1, -1};
 
 int* Search::Worker::extensionNN(int reductionConditions[8]) { 
 
