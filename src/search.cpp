@@ -1049,21 +1049,22 @@ moves_loop:  // When in check, search starts here
 
                 if (value < singularBeta)
                 {
-                    int conditions[8] = {{PvNode},
-                                         {ttCapture},
-                                         {improving},
-                                         {ss->ttPv},
-                                         {(ttValue > alpha)},
-                                         {(tte->depth() >= depth)},
-                                         {cutNode},
-                                         {((ss + 1)->cutoffCnt > 3)}};
+                    extension         = 1;
+
+                    int conditions[8] = {PvNode,
+                                         ttCapture,
+                                         improving,
+                                         ss->ttPv,
+                                         (ttValue > alpha),
+                                         (tte->depth() >= depth),
+                                         cutNode,
+                                         ((ss + 1)->cutoffCnt > 3)};
 
                     int* ext = extensionNN(conditions);
 
                     if (value < singularBeta - *(ext + 0))
                     { 
                         extension = 2;
-                        depth += depth < 16;
                         if (value < singularBeta - *(ext + 1))
                         { 
                             extension = 3;
@@ -1073,6 +1074,8 @@ moves_loop:  // When in check, search starts here
                             }
                         }
                     }
+
+                    depth += ((!PvNode) && (depth < 14));
                 }
 
                 // Multi-cut pruning
