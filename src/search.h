@@ -244,7 +244,10 @@ class Worker {
     // Called when the program receives the UCI 'go' command.
     // It searches from the root position and outputs the "bestmove".
     void start_searching();
-    int* extensionNN(int reductionConditions[8]);
+    int* extensionNN(bool reductionConditions[8]);
+    void           Unpack8Bools(uint8_t b, bool* a);
+    inline uint8_t Pack8Bools(bool* a);
+    void           CacheNet();
 
     bool is_mainthread() const { return thread_idx == 0; }
 
@@ -297,6 +300,9 @@ class Worker {
 
     // Reductions lookup table initialized at startup
     std::array<int, MAX_MOVES> reductions;  // [depth or moveNumber]
+
+    // Extensions margin lookup table initialized at startup
+    std::array<std::array<int, 3>, 256> extMargins;
 
     // The main thread has a SearchManager, the others have a NullSearchManager
     std::unique_ptr<ISearchManager> manager;

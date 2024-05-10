@@ -507,6 +507,8 @@ void Search::Worker::clear() {
     for (size_t i = 1; i < reductions.size(); ++i)
         reductions[i] = int((18.93 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
 
+    CacheNet();
+
     refreshTable.clear(networks);
 }
 
@@ -1051,7 +1053,7 @@ moves_loop:  // When in check, search starts here
                 {
                     extension         = 1;
 
-                    int conditions[8] = {PvNode,
+                    bool conditions[8] = {PvNode,
                                          ttCapture,
                                          improving,
                                          ss->ttPv,
@@ -1060,15 +1062,15 @@ moves_loop:  // When in check, search starts here
                                          cutNode,
                                          ((ss + 1)->cutoffCnt > 3)};
 
-                    int* ext = extensionNN(conditions);
+                     uint8_t ind = Pack8Bools(conditions);
 
-                    if (value < singularBeta - *(ext + 0))
+                    if (value < singularBeta - extMargins[ind][0])
                     { 
                         extension = 2;
-                        if (value < singularBeta - *(ext + 1))
+                        if (value < singularBeta - extMargins[ind][1])
                         { 
                             extension = 3;
-                            if (value < singularBeta - *(ext + 2))
+                            if (value < singularBeta - extMargins[ind][2])
                             { 
                                 extension = 4;
                             }
@@ -1671,7 +1673,7 @@ int outputWeights[6][3] = {{22, -20, -12}, {-7, -10, 2}, {1, -6, -6},
 
 int outputBiases[3] = {-13, -1, -1};
 
-int* Search::Worker::extensionNN(int reductionConditions[8]) { 
+int* Search::Worker::extensionNN(bool reductionConditions[8]) { 
 
     static int    outputReductions[3]    = {};
     long long int outputReductionLong[3] = {};
@@ -1702,6 +1704,33 @@ int* Search::Worker::extensionNN(int reductionConditions[8]) {
     }
 
     return outputReductions;
+}
+
+inline uint8_t Search::Worker::Pack8Bools(bool* a) {
+    uint8_t ret = 0;
+    for (int i = 0; i < 8; i++)
+        if (a[i])
+            ret |= (1 << i);
+    return ret;
+}
+
+void Search::Worker::Unpack8Bools(uint8_t b, bool* a) {
+    for (int i = 0; i < 8; i++)
+        a[i] = ((b & (1 << i)) != 0);
+}
+
+void Search::Worker::CacheNet() {
+    for (int i = 0; i < 256; i++)
+    {
+        bool conditions[8];
+        Unpack8Bools(uint8_t(i), conditions);
+        int*             ext = extensionNN(conditions);
+        std::vector<int> values(ext, ext + 3);
+        for (uint8_t j = 0; j < 3; j++)
+        { 
+            extMargins[i][j] = values[j]; 
+        }
+    }
 }
 
 
