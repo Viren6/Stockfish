@@ -1685,7 +1685,7 @@ int* Search::Worker::extensionNN(bool reductionConditions[8]) {
             l1[i] += reductionConditions[j] * l1Weights[j][i]; 
         }
         l1[i] += l1Biases[i];
-        l1[i] = 4096 / ((l1[i] > 0) ? l1[i] : 1);
+        l1[i] = 65536 / ((l1[i] > 0) ? l1[i] : 1);
     }
 
     for (int i = 0; i < 3; i++)
@@ -1693,12 +1693,12 @@ int* Search::Worker::extensionNN(bool reductionConditions[8]) {
         for (int j = 0; j < 8; j++)
         {
             outputReductionLong[i] +=
-              (long long) l1[j] * (long long) outputWeights[j][i] / (long long) 32;
+              (long long) l1[j] * (long long) outputWeights[j][i] / (long long) 512;
         }
         outputReductionLong[i] += outputBiases[i];
         int outInt = int(outputReductionLong[i]);
         int outClipped      = (outInt > 0) ? outInt : 1;
-        outputReductions[i] = 4096 / outClipped;
+        outputReductions[i] = 65536 / outClipped;
         //Mapping: E.G value 4 = margin 1024, value 8 = margin 512, value 16 = margin 256
     }
 
