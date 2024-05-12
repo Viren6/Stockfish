@@ -1675,7 +1675,7 @@ int outputWeights[8][3] = {{15, 44, -8},  {89, 55, -72}, {89, -21, -3}, {121, 9,
 
 int outputBiases[3] = {65, 42, -73};
 
-//TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
+TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
 
 int* Search::Worker::extensionNN(bool reductionConditions[8]) { 
 
