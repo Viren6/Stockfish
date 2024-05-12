@@ -1067,10 +1067,10 @@ moves_loop:  // When in check, search starts here
                     if (value < singularBeta - extMargins[ind][0])
                     { 
                         extension = 2;
-                        if (value < singularBeta - extMargins[ind][1] * 4)
+                        if (value < singularBeta - extMargins[ind][1])
                         { 
                             extension = 3;
-                            if (value < singularBeta - extMargins[ind][2] * 16)
+                            if (value < singularBeta - extMargins[ind][2])
                             { 
                                 extension = 4;
                             }
@@ -1670,8 +1670,6 @@ int outputWeights[6][3];
 
 int outputBiases[3];
 
-TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
-
 int* Search::Worker::extensionNN(bool reductionConditions[8]) { 
 
     static int    outputReductions[3]    = {};
@@ -1719,6 +1717,7 @@ void Search::Worker::Unpack8Bools(uint8_t b, bool* a) {
 }
 
 void Search::Worker::CacheNet() {
+    int marginMultipliers[3] = {1, 4, 16};
     for (int i = 0; i < 256; i++)
     {
         bool conditions[8];
@@ -1727,7 +1726,7 @@ void Search::Worker::CacheNet() {
         std::vector<int> values(ext, ext + 3);
         for (uint8_t j = 0; j < 3; j++)
         { 
-            extMargins[i][j] = values[j]; 
+            extMargins[i][j] = values[j] * marginMultipliers[j]; 
         }
     }
 }
