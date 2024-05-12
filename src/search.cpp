@@ -1662,16 +1662,15 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
     return (reductionScale + 1318 - delta * 760 / rootDelta) / 1024 + (!i && reductionScale > 1066);
 }
 //Scale 2048
-int l1Weights[8][6] = {{38, 17, -1, 12, 14, 10},   {-5, -7, 16, 18, -19, -5}, {-7, 9, 10, 16, 1, 7},
-                       {-3, -4, 9, -1, 12, 32},    {20, 18, 19, -3, 14, -6},  {6, 6, 23, -9, -2, 6},
-                       {-31, -14, 17, 8, 17, -19}, {-3, 18, 9, -10, 5, 36}};
+int l1Weights[8][6];
 
-int l1Biases[6] = {3, 8, -7, 32, 6, 28};
+int l1Biases[6];
 
-int outputWeights[6][3] = {{41, -12, 13}, {24, -5, -7},    {-1, -1, -5},
-                           {4, -11, -12}, {-11, -21, -10}, {-1, 6, 19}};
+int outputWeights[6][3];
 
-int outputBiases[3] = {-12, -1, -17};
+int outputBiases[3];
+
+TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
 
 int* Search::Worker::extensionNN(bool reductionConditions[8]) { 
 
@@ -1720,7 +1719,7 @@ void Search::Worker::Unpack8Bools(uint8_t b, bool* a) {
 }
 
 void Search::Worker::CacheNet() {
-    int marginMultipliers[3] = {1, 4, 16};
+    int marginDivisors[3] = {1, 4, 16};
     for (int i = 0; i < 256; i++)
     {
         bool conditions[8];
@@ -1729,7 +1728,7 @@ void Search::Worker::CacheNet() {
         std::vector<int> values(ext, ext + 3);
         for (uint8_t j = 0; j < 3; j++)
         { 
-            extMargins[i][j] = values[j] * marginMultipliers[j]; 
+            extMargins[i][j] = values[j] / marginDivisors[j]; 
         }
     }
 }
