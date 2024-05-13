@@ -50,8 +50,8 @@ namespace Stockfish {
 
 void initTune();
 
-const int        N_PARAMS = 24;
-const int        N_CONDS  = 4;
+const int        N_PARAMS = 23;
+const int        N_CONDS  = 3;
 int              P[N_PARAMS];
 int              P_SUM;
 std::vector<int> Index;
@@ -1095,25 +1095,19 @@ moves_loop:  // When in check, search starts here
                           improving,
                           priorCapture,
                           ttCapture,
-                          capture,
                           givesCheck,
                           ((ss + 1)->cutoffCnt > 3),
                           type_of(movedPiece) == PAWN,
                           type_of(movedPiece) == KING,
                           (ss - 1)->currentMove == Move::null(),
-                          //move == ttMove,
                           move == ss->killers[0],
                           move == ss->killers[1],
                           move == countermove,
-                          //extension > 0,
-                          //extension < 0,
                           ttValue <= alpha,
-                          //ss->ttHit,
                           (ss - 1)->inCheck,
                           (ss - 1)->ttPv,
                           (ss - 1)->ttHit,
                           bool((ss - 1)->excludedMove),
-                          //bool(excludedMove),
                           ss->inCheck,
                           ttValue < ss->staticEval,
                           alpha < ss->staticEval,
@@ -1130,10 +1124,10 @@ moves_loop:  // When in check, search starts here
                             cond = true;
                     }
 
-                    int doubleMargin = 285 * PvNode - 228 * !ttCapture;
+                    int doubleMargin = 285 * PvNode - 228 * !ttCapture - 20 * cond;
                     int tripleMargin =
-                      121 + 238 * PvNode - 259 * !ttCapture + 117 * (ss->ttPv || !ttCapture);
-                    int quadMargin = 471 + 343 * PvNode - 281 * !ttCapture + 217 * ss->ttPv;
+                      121 + 238 * PvNode - 259 * !ttCapture + 117 * ss->ttPv - 60 * cond;
+                    int quadMargin = 471 + 343 * PvNode - 281 * !ttCapture + 217 * ss->ttPv - 70 * cond;
 
                     extension = 1 + (value < singularBeta - doubleMargin)
                               + (value < singularBeta - tripleMargin)
