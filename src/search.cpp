@@ -434,7 +434,7 @@ void Search::Worker::iterative_deepening() {
         // Do we have time for the next iteration? Can we stop searching now?
         if (limits.use_time_management() && !threads.stop && !mainThread->stopOnPonderhit)
         {
-            double opponentUsedTime = mainThread->previousOpponentTime - limits.time[~us];
+            double opponentUsedTime = mainThread->previousOpponentTime - limits.time[~us] + limits.inc[~us];
             int nodesEffort = rootMoves[0].effort * 100 / std::max(size_t(1), size_t(nodes));
 
             double fallingEval = (1067 + 223 * (mainThread->bestPreviousAverageScore - bestValue)
@@ -452,7 +452,7 @@ void Search::Worker::iterative_deepening() {
             double totalTime = mainThread->tm.optimum() * fallingEval * reduction
                              * bestMoveInstability * EvalLevel[el] * recapture;
 
-            totalTime = (totalTime * 10.0 + opponentUsedTime * 1.2) / 11.0;
+            totalTime = (totalTime * 10.0 + opponentUsedTime * 0.8) / 11.0;
 
             // Cap used time in case of a single legal move for a better viewer experience
             if (rootMoves.size() == 1)
