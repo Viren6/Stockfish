@@ -1058,7 +1058,7 @@ moves_loop:  // When in check, search starts here
                               + (value < singularBeta - tripleMargin)
                               + (value < singularBeta - quadMargin);
 
-                    depth += ((!PvNode) && (depth < 14));
+                    depth += ((extension >= 2) && (depth < 14));
                 }
 
                 // Multi-cut pruning
