@@ -215,6 +215,7 @@ class SearchManager: public ISearchManager {
 
     std::array<Value, 4> iterValue;
     double               previousTimeReduction;
+    double               previousOpponentTime;
     Value                bestPreviousScore;
     Value                bestPreviousAverageScore;
     bool                 stopOnPonderhit;
