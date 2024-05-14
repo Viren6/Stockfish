@@ -453,7 +453,7 @@ void Search::Worker::iterative_deepening() {
                              * bestMoveInstability * EvalLevel[el] * recapture;
 
             if (opponentUsedTime > 0)
-                totalTime = (totalTime * 19.0 + opponentUsedTime) / 20.0;
+                totalTime = (totalTime * 9.0 + opponentUsedTime) / 10.0;
 
             // Cap used time in case of a single legal move for a better viewer experience
             if (rootMoves.size() == 1)
