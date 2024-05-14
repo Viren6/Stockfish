@@ -50,13 +50,13 @@ namespace Stockfish {
 
 void initTune();
 
-const int        N_PARAMS = 23;
-const int        N_CONDS  = 3;
+const int        N_PARAMS = 20;
+const int        N_CONDS  = 2;
 int              P[N_PARAMS];
 int              P_SUM;
 std::vector<int> Index;
 
-TUNE(SetRange(-100, 100), P, initTune);
+TUNE(SetRange(-1000, 1000), P, initTune);
 
 int rand();
 
@@ -1099,15 +1099,12 @@ moves_loop:  // When in check, search starts here
                           ((ss + 1)->cutoffCnt > 3),
                           type_of(movedPiece) == PAWN,
                           type_of(movedPiece) == KING,
-                          (ss - 1)->currentMove == Move::null(),
                           move == ss->killers[0],
                           move == ss->killers[1],
                           move == countermove,
                           ttValue <= alpha,
                           (ss - 1)->inCheck,
                           (ss - 1)->ttPv,
-                          (ss - 1)->ttHit,
-                          bool((ss - 1)->excludedMove),
                           ss->inCheck,
                           ttValue < ss->staticEval,
                           alpha < ss->staticEval,
@@ -1124,10 +1121,10 @@ moves_loop:  // When in check, search starts here
                             cond = true;
                     }
 
-                    int doubleMargin = 285 * PvNode - 228 * !ttCapture - 20 * cond;
+                    int doubleMargin = 285 * PvNode - 228 * !ttCapture;
                     int tripleMargin =
                       121 + 238 * PvNode - 259 * !ttCapture + 117 * ss->ttPv - 60 * cond;
-                    int quadMargin = 471 + 343 * PvNode - 281 * !ttCapture + 217 * ss->ttPv - 70 * cond;
+                    int quadMargin = 471 + 343 * PvNode - 281 * !ttCapture + 217 * ss->ttPv - 150 * cond;
 
                     extension = 1 + (value < singularBeta - doubleMargin)
                               + (value < singularBeta - tripleMargin)
