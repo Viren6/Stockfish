@@ -1049,7 +1049,7 @@ moves_loop:  // When in check, search starts here
 
                 if (value < singularBeta)
                 {
-                    bool cond         = (tte->depth() >= depth);  //P[22]
+                    bool cond         = ((ss + 1)->cutoffCnt > 3);  //P[7]
                     int doubleMargin = 285 * PvNode - 228 * !ttCapture - 20 * cond;
                     int tripleMargin =
                             121 + 238 * PvNode - 259 * !ttCapture + 117 * ss->ttPv - 60 * cond;
