@@ -1049,8 +1049,7 @@ moves_loop:  // When in check, search starts here
 
                 if (value < singularBeta)
                 {
-                    bool cond = (ttValue >= ss->staticEval) && (type_of(movedPiece) != KING)
-                             && (!ss->inCheck) && (!(ss-1)->inCheck) && (improving);  //P[9], P[17], P[16], P[14], P[3]
+                    bool cond = (ttValue >= ss->staticEval) && (!ss->inCheck) && (!(ss-1)->inCheck);  //P[17], P[16], P[14]
                     int doubleMargin = 285 * PvNode - 228 * !ttCapture;
                     int tripleMargin =
                             121 + 238 * PvNode - 259 * !ttCapture + 117 * ss->ttPv;
