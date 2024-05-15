@@ -245,6 +245,7 @@ class Worker {
     // Called when the program receives the UCI 'go' command.
     // It searches from the root position and outputs the "bestmove".
     void start_searching();
+    double* tmNN(int tmConditions[6]);
 
     bool is_mainthread() const { return thread_idx == 0; }
 

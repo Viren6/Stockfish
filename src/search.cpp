@@ -449,21 +449,37 @@ void Search::Worker::iterative_deepening() {
             int    el                  = std::clamp((bestValue + 750) / 150, 0, 9);
             double recapture           = limits.capSq == rootMoves[0].pv[0].to_sq() ? 0.955 : 1.005;
 
-            double totalTime = mainThread->tm.optimum() * fallingEval * reduction
-                             * bestMoveInstability * EvalLevel[el] * recapture;
+            int mul           = 10000000; //Even with 1 year thinking time, we are only 10% of max int value. This scales with natural log.
+
+            double components[6] = {(double)mainThread->tm.optimum(), fallingEval,   reduction,
+                                 bestMoveInstability,      EvalLevel[el], recapture};
+
+            int conditions[6] = {};
+
+            for (size_t i = 0; i < 6; i++)
+            { 
+                conditions[i] = int(round(log(components[i]) * mul));
+            }
+
+            double* totalTime = tmNN(conditions);
 
             // Cap used time in case of a single legal move for a better viewer experience
             if (rootMoves.size() == 1)
-                totalTime = std::min(500.0, totalTime);
+            {
+                for (size_t i = 0; i < 3; i++)
+                { 
+                    *(totalTime + i) = std::min(500.0, *(totalTime + i));
+                }
+            }
 
             auto elapsedTime = elapsed();
 
-            if (completedDepth >= 10 && nodesEffort >= 97 && elapsedTime > totalTime * 0.739
+            if (completedDepth >= 10 && nodesEffort >= 97 && elapsedTime > *(totalTime + 0)
                 && !mainThread->ponder)
                 threads.stop = true;
 
             // Stop the search if we have exceeded the totalTime
-            if (elapsedTime > totalTime)
+            if (elapsedTime > *(totalTime + 1))
             {
                 // If we are allowed to ponder do not stop the search now but
                 // keep pondering until the GUI sends "ponderhit" or "stop".
@@ -473,7 +489,7 @@ void Search::Worker::iterative_deepening() {
                     threads.stop = true;
             }
             else
-                threads.increaseDepth = mainThread->ponder || elapsedTime <= totalTime * 0.506;
+                threads.increaseDepth = mainThread->ponder || elapsedTime <= *(totalTime + 2);
         }
 
         mainThread->iterValue[iterIdx] = bestValue;
@@ -1642,6 +1658,46 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
 Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
     int reductionScale = reductions[d] * reductions[mn];
     return (reductionScale + 1284 - delta * 755 / rootDelta) / 1024 + (!i && reductionScale > 1133);
+}
+
+//Scale 2048
+int l1Weights[6][6];
+
+int l1Biases[6];
+
+int outputWeights[6][3];
+
+int outputBiases[3];
+
+TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
+
+double* Search::Worker::tmNN(int tmConditions[6]) {
+
+    static double outputTM[3]    = {};
+    long long int outputTMLong[3] = {};
+    long long int           l1[6] = {};
+    double        mul             = 10000000;
+
+    for (int i = 0; i < 6; i++)
+    {
+        for (int j = 0; j < 6; j++)
+        { l1[i] += (long long) tmConditions[j] * (long long) l1Weights[j][i]; }
+        l1[i] += (long long) l1Biases[i];
+        l1[i] = ((l1[i] > 0) ? l1[i] : 0);
+    }
+
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 6; j++)
+        {
+            outputTMLong[i] += l1[j] * (long long) outputWeights[j][i] / (long long) 1024;
+        }
+        outputTMLong[i] += outputBiases[i];
+        double outInt          = (outputTMLong[i] / (double) 1024);
+        outputTM[i]         = exp(((outInt > 0) ? outInt : 0) / mul);
+    }
+
+    return outputTM;
 }
 
 // elapsed() returns the time elapsed since the search started. If the
