@@ -1030,11 +1030,14 @@ moves_loop:  // When in check, search starts here
             // then that move is singular and should be extended. To verify this we do
             // a reduced search on the position excluding the ttMove and if the result
             // is lower than ttValue minus a margin, then we will extend the ttMove.
+            // Recursive singular search is avoided.
 
             // Note: the depth margin and singularBeta margin are known for having non-linear
             // scaling. Their values are optimized to time controls of 180+1.8 and longer
             // so changing them requires tests at these types of time controls.
-            // Recursive singular search is avoided.
+            // Generally, higher singularBeta (i.e closer to ttValue) and lower extension
+            // margins scale well.
+
             if (!rootNode && move == ttMove && !excludedMove
                 && depth >= 4 - (thisThread->completedDepth > 33) + ss->ttPv
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
@@ -1115,26 +1118,28 @@ moves_loop:  // When in check, search starts here
         thisThread->nodes.fetch_add(1, std::memory_order_relaxed);
         pos.do_move(move, st, givesCheck);
 
+        // These reduction adjustments have proven non-linear scaling.
+        // They are optimized to time controls of 180 + 1.8 and longer so 
+        // changing them or adding conditions that are similar
+        // requires tests at these types of time controls.
+
         // Decrease reduction if position is or has been on the PV (~7 Elo)
         if (ss->ttPv)
             r -= 1 + (ttValue > alpha) + (tte->depth() >= depth);
-
-        else if (cutNode && move != ttMove && move != ss->killers[0])
-            r++;
-
-        // Increase reduction for cut nodes (~4 Elo)
-        if (cutNode)
-            r += 2 - (tte->depth() >= depth && ss->ttPv);
-
-        // Increase reduction if ttMove is a capture (~3 Elo)
-        if (ttCapture)
-            r++;
 
         // Decrease reduction for PvNodes (~0 Elo on STC, ~2 Elo on LTC)
         if (PvNode)
             r--;
 
-        if (improving && ttValue <= alpha && move != ttMove)
+        // These reduction adjustments have no proven non-linear scaling.
+
+        // Increase reduction for cut nodes (~4 Elo)
+        if (cutNode)
+            r += 2 - (tte->depth() >= depth && ss->ttPv)
+               + (!ss->ttPv && move != ttMove && move != ss->killers[0]);
+
+        // Increase reduction if ttMove is a capture (~3 Elo)
+        if (ttCapture)
             r++;
 
         // Increase reduction if next ply has a lot of fail high (~5 Elo)
