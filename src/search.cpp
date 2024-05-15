@@ -1682,7 +1682,7 @@ double* Search::Worker::tmNN(int tmConditions[6]) {
     {
         for (int j = 0; j < 6; j++)
         { l1[i] += (long long) tmConditions[j] * (long long) l1Weights[j][i]; }
-        l1[i] += (long long) l1Biases[i];
+        l1[i] += (long long) l1Biases[i] * mul;
         l1[i] = ((l1[i] > 0) ? l1[i] : 0);
     }
 
@@ -1692,7 +1692,7 @@ double* Search::Worker::tmNN(int tmConditions[6]) {
         {
             outputTMLong[i] += l1[j] * (long long) outputWeights[j][i] / (long long) 1024;
         }
-        outputTMLong[i] += outputBiases[i];
+        outputTMLong[i] +=  (long long) outputBiases[i] * mul;
         double outInt          = (outputTMLong[i] / (double) 1024);
         outputTM[i]         = exp(((outInt > 0) ? outInt : 0) / mul);
     }
