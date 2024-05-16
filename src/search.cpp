@@ -1668,7 +1668,7 @@ int outputBiases[3];
 
 TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
 
-double* Search::Worker::tmNN(int tmConditions[6]) {
+double* Search::Worker::tmNN(int tmConditions[6]) { 
 
     static double outputTM[3]    = {};
     long long int outputTMLong[3] = {};
