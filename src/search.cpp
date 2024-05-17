@@ -451,12 +451,12 @@ void Search::Worker::iterative_deepening() {
 
             int mul           = 10000000; //Even with 1 year thinking time, we are only 10% of max int value. This scales with natural log.
 
-            double components[6] = {(double)mainThread->tm.optimum(), fallingEval,   reduction,
+            double components[5] = { fallingEval,   reduction,
                                  bestMoveInstability,      EvalLevel[el], recapture};
 
-            int conditions[6] = {};
+            int conditions[5] = {};
 
-            for (size_t i = 0; i < 6; i++)
+            for (size_t i = 0; i < 5; i++)
             { 
                 conditions[i] = int(round(log(components[i]) * mul));
             }
@@ -464,13 +464,15 @@ void Search::Worker::iterative_deepening() {
             double* totalTime = tmNN(conditions);
 
             // Cap used time in case of a single legal move for a better viewer experience
-            if (rootMoves.size() == 1)
-            {
+
                 for (size_t i = 0; i < 3; i++)
                 { 
-                    *(totalTime + i) = std::min(500.0, *(totalTime + i));
+                    *(totalTime + i) = *(totalTime + i) * (double) mainThread->tm.optimum();
+                    if (rootMoves.size() == 1)
+                    {
+                        *(totalTime + i) = std::min(500.0, *(totalTime + i)); 
+                    }
                 }
-            }
 
             auto elapsedTime = elapsed();
 
@@ -1658,26 +1660,26 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
 }
 
 //Scale 2048
-int l1Weights[6][6];
+int l1Weights[5][5];
 
-int l1Biases[6];
+int l1Biases[5];
 
-int outputWeights[6][3];
+int outputWeights[5][3];
 
 int outputBiases[3];
 
 TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
 
-double* Search::Worker::tmNN(int tmConditions[6]) { 
+double* Search::Worker::tmNN(int tmConditions[5]) { 
 
     static double outputTM[3]    = {};
     long long int outputTMLong[3] = {};
-    long long int           l1[6] = {};
+    long long int           l1[5] = {};
     double        mul             = 10000000;
 
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < 5; i++)
     {
-        for (int j = 0; j < 6; j++)
+        for (int j = 0; j < 5; j++)
         { l1[i] += (long long) tmConditions[j] * (long long) l1Weights[j][i]; }
         l1[i] += (long long) l1Biases[i] * mul;
         l1[i] = ((l1[i] > 0) ? l1[i] : 0);
@@ -1685,7 +1687,7 @@ double* Search::Worker::tmNN(int tmConditions[6]) {
 
     for (int i = 0; i < 3; i++)
     {
-        for (int j = 0; j < 6; j++)
+        for (int j = 0; j < 5; j++)
         {
             outputTMLong[i] += l1[j] * (long long) outputWeights[j][i] / (long long) 8192;
         }
