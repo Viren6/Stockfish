@@ -1660,15 +1660,20 @@ Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
 }
 
 //Scale 2048
-int l1Weights[5][5];
+int l1Weights[5][5] = {{-388, 1035, 678, 427, 470},
+                       {-67, 628, 125, -239, 1507},
+                       {374, 76, -16, 483, 866},
+                       {179, -425, -452, -620, -262},
+                       {-1035, 508, -891, 54, -127}};
 
-int l1Biases[5];
+int l1Biases[5] = {50, 206, 381, -186, -235};
 
-int outputWeights[5][3];
+int outputWeights[5][3] = {
+  {-86, 601, 265}, {-32, -371, 32}, {-119, 300, 132}, {136, -316, -685}, {-228, 672, -130}};
 
-int outputBiases[3];
+int outputBiases[3] = {-321, 758, -910};
 
-TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
+//TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
 
 double* Search::Worker::tmNN(int tmConditions[5]) { 
 
