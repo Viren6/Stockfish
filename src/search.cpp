@@ -1673,7 +1673,7 @@ int outputWeights[5][3] = {
 
 int outputBiases[3] = {-321, 758, -910};
 
-//TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
+TUNE(SetRange(-32768, 32768), l1Weights, l1Biases, outputWeights, outputBiases);
 
 double* Search::Worker::tmNN(int tmConditions[5]) { 
 
