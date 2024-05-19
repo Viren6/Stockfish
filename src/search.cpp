@@ -828,7 +828,8 @@ Value Search::Worker::search(
     if (depth <= 0)
         return qsearch<PV>(pos, ss, alpha, beta);
 
-    // For cutNodes without a ttMove, we decrease depth by 2 if depth is high enough.
+    // For cutNodes, if depth is high enough, decrease depth by 2 if there is no ttMove, or
+    // by 1 if there is a ttMove with an upper bound.
     if (cutNode && depth >= 8 && (!ttMove || tte->bound() == BOUND_UPPER))
         depth -= 1 + !ttMove;
 
@@ -1054,11 +1055,12 @@ moves_loop:  // When in check, search starts here
                 if (value < singularBeta)
                 {
                     int doubleMargin = 298 * PvNode - 209 * !ttCapture;
-                    int tripleMargin =
-                      117 + 252 * PvNode - 270 * !ttCapture + 111 * (ss->ttPv || !ttCapture);
+                    int tripleMargin = 117 + 252 * PvNode - 270 * !ttCapture + 111 * ss->ttPv;
+                    int quadMargin = 471 + 343 * PvNode - 281 * !ttCapture + 217 * ss->ttPv;
 
                     extension = 1 + (value < singularBeta - doubleMargin)
-                              + (value < singularBeta - tripleMargin);
+                              + (value < singularBeta - tripleMargin)
+                              + (value < singularBeta - quadMargin);
 
                     depth += ((!PvNode) && (depth < 15));
                 }
