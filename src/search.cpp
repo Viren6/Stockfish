@@ -1200,7 +1200,9 @@ moves_loop:  // When in check, search starts here
             (ss + 1)->pv    = pv;
             (ss + 1)->pv[0] = Move::none();
 
-            value = -search<PV>(pos, ss + 1, -beta, -alpha, newDepth, false);
+            bool ext = (moveCount == 1) && (value > alpha);
+
+            value = -search<PV>(pos, ss + 1, -beta, -alpha, newDepth + ext, false);
         }
 
         // Step 19. Undo move
