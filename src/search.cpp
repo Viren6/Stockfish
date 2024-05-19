@@ -1059,6 +1059,8 @@ moves_loop:  // When in check, search starts here
                               + (value < singularBeta - tripleMargin)
                               + (value < singularBeta - quadMargin);
 
+                    extension += (value >= beta);
+
                     depth += ((!PvNode) && (depth < 15));
                 }
 
