@@ -819,17 +819,8 @@ Value Search::Worker::search(
         }
     }
 
-    // Step 10. Internal iterative reductions (~9 Elo)
-    // For PV nodes without a ttMove, we decrease depth by 3.
-    if (PvNode && !ttMove)
-        depth -= 3;
-
-    // Use qsearch if depth <= 0.
-    if (depth <= 0)
-        return qsearch<PV>(pos, ss, alpha, beta);
-
     // For cutNodes without a ttMove, we decrease depth by 2 if depth is high enough.
-    if (cutNode && depth >= 8 && (!ttMove || tte->bound() == BOUND_UPPER))
+    if ((cutNode || PvNode) && depth >= 8 && (!ttMove || tte->bound() == BOUND_UPPER))
         depth -= 1 + !ttMove;
 
     // Step 11. ProbCut (~10 Elo)
