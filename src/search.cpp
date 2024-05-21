@@ -954,7 +954,7 @@ moves_loop:  // When in check, search starts here
 
         int delta = beta - alpha;
 
-        Depth r = reduction(improving, depth, moveCount, delta);
+        Depth r = reduction(improving, depth, moveCount, delta, (ss + 1)->cutoffCnt);
 
         // Step 14. Pruning at shallow depth (~120 Elo).
         // Depth conditions are important for mate finding.
@@ -1134,13 +1134,9 @@ moves_loop:  // When in check, search starts here
         if (PvNode)
             r--;
 
-        // Increase reduction if next ply has a lot of fail high (~5 Elo)
-        if ((ss + 1)->cutoffCnt > 3)
-            r++;
-
         // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
         // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
-        else if (move == ttMove)
+        if (move == ttMove && (ss + 1)->cutoffCnt < 4)
             r = 0;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
@@ -1636,8 +1632,9 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     return bestValue;
 }
 
-Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
-    int reductionScale = reductions[d] * reductions[mn];
+Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta, int cutoffCnt) {
+    int cutoffCntLim   = std::min(cutoffCnt, 768);
+    int reductionScale = reductions[d + cutoffCntLim] * reductions[mn + cutoffCntLim];
     return (reductionScale + 1147 - delta * 755 / rootDelta) / 1024 + (!i && reductionScale > 1125);
 }
 
