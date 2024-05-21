@@ -1646,7 +1646,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
 
 Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta, int cutoffCnt) {
     int cutoffCntLim   = std::min(cutoffCnt, 768);
-    int reductionScale = reductions[d] * reductions[mn + cutoffCntLim];
+    int reductionScale = reductions[d] * reductions[mn + cutoffCntLim]; 
     return (reductionScale + 1147 - delta * 755 / rootDelta) / 1024 + (!i && reductionScale > 1125);
 }
 
