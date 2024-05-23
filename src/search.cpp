@@ -841,6 +841,9 @@ Value Search::Worker::search(
     if (cutNode && depth >= 8 && (!ttMove || tte->bound() == BOUND_UPPER))
         depth -= 1 + !ttMove;
 
+    if (ttMove && !PvNode && !ttCapture)
+        depth++;
+
     // Step 11. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
     // much above beta, we can (almost) safely prune the previous move.
@@ -959,7 +962,7 @@ moves_loop:  // When in check, search starts here
         givesCheck = pos.gives_check(move);
 
         // Calculate new depth for this move
-        newDepth = depth - 1;
+        newDepth = depth - 1 - (ttMove && !PvNode && !ttCapture);
 
         int delta = beta - alpha;
 
@@ -1068,7 +1071,6 @@ moves_loop:  // When in check, search starts here
                               + (value < singularBeta - tripleMargin)
                               + (value < singularBeta - quadMargin);
 
-                    depth += ((!PvNode) && (depth < 15));
                 }
 
                 // Multi-cut pruning
