@@ -599,6 +599,7 @@ Value Search::Worker::search(
     bestMove             = Move::none();
     (ss + 2)->killers[0] = (ss + 2)->killers[1] = Move::none();
     (ss + 2)->cutoffCnt                         = 0;
+    (ss + 2)->extensions                        = 0;
     Square prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
     ss->statScore = 0;
 
@@ -1108,6 +1109,7 @@ moves_loop:  // When in check, search starts here
 
         // Add extension to new depth
         newDepth += extension;
+        ss->extensions += extension;
 
         // Speculative prefetch as early as possible
         prefetch(tt.first_entry(pos.key_after(move)));
@@ -1155,6 +1157,9 @@ moves_loop:  // When in check, search starts here
         // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
         else if (move == ttMove)
             r = 0;
+
+        if((ss + 1)->extensions > 3)
+            r++;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
