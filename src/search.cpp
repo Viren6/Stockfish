@@ -1393,7 +1393,7 @@ moves_loop:  // When in check, search starts here
                     }
 
 
-                    ss->cutoffCnt += 1 + !ttMove - (extension >= 2) - CC;
+                    ss->cutoffCnt += 1 + !ttMove - (extension >= 2) + CC;
                     assert(value >= beta);  // Fail high
                     break;
                 }
