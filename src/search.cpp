@@ -1289,7 +1289,7 @@ moves_loop:  // When in check, search starts here
 
                 if (value >= beta)
                 {
-                    ss->cutoffCnt += 1 + !ttMove - (extension >= 2) - (bool((ss - 2)->excludedMove));
+                    ss->cutoffCnt += 1 + !ttMove - (extension >= 2) - (ss->inCheck);
                     assert(value >= beta);  // Fail high
                     break;
                 }
