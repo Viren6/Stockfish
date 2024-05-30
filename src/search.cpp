@@ -252,10 +252,15 @@ void Search::Worker::iterative_deepening() {
         (ss - i)->continuationHistory =
           &this->continuationHistory[0][0][NO_PIECE][0];  // Use as a sentinel
         (ss - i)->staticEval = VALUE_NONE;
+        (ss - i)->cutoffCnt  = 0;
     }
 
     for (int i = 0; i <= MAX_PLY + 2; ++i)
+    { 
         (ss + i)->ply = i;
+        (ss + i)->cutoffCnt = 0;
+    }
+
 
     ss->pv = pv;
 
@@ -1289,7 +1294,7 @@ moves_loop:  // When in check, search starts here
 
                 if (value >= beta)
                 {
-                    ss->cutoffCnt += 1 + !ttMove - (move == ttMove);
+                    ss->cutoffCnt += 1 + !ttMove - (extension >= 2) + ((ss - 1)->cutoffCnt > 3);
                     assert(value >= beta);  // Fail high
                     break;
                 }
