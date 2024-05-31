@@ -1290,7 +1290,7 @@ moves_loop:  // When in check, search starts here
                 if (value >= beta)
                 {
                     ss->cutoffCnt += 1 + !ttMove - (extension >= 2)
-                                   + (type_of(movedPiece) == KNIGHT) - (move == ttMove);
+                                   + (type_of(movedPiece) == KNIGHT) - (move == ttMove); 
                     assert(value >= beta);  // Fail high
                     break;
                 }
