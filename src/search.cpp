@@ -55,6 +55,10 @@ using namespace Search;
 
 namespace {
 
+int x1 = 200; int x2 = 40; int x3 = 200;
+
+TUNE(SetRange(-1000, 1000), x1, x2, x3);
+
 static constexpr double EvalLevel[10] = {0.981, 0.956, 0.895, 0.949, 0.913,
                                          0.942, 0.933, 0.890, 0.984, 0.941};
 
@@ -1070,20 +1074,21 @@ moves_loop:  // When in check, search starts here
                     extension = 1 + (value < singularBeta - doubleMargin)
                               + (value < singularBeta - tripleMargin);
 
-                    if (!PvNode && !ttCapture && value < singularBeta - 200)
+                    if (!PvNode && !ttCapture && value < singularBeta - x1)
                     {
-                        singularBeta += 80;
+                        singularBeta += x2;
                         ss->excludedMove = move;
                         value            = search<NonPV>(pos, ss, singularBeta - 1, singularBeta,
                                               newDepth / 4, cutNode);
                         ss->excludedMove = Move::none();
 
-                        if (value < singularBeta - 200)
+                        if (value < singularBeta - x3)
                         { 
                             extension = 4;
                         }
                     }
 
+                    dbg_hit_on(true, extension);
                     depth += ((!PvNode) && (depth < 16));
                 }
 
