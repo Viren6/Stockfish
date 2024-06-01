@@ -1070,15 +1070,15 @@ moves_loop:  // When in check, search starts here
                     extension = 1 + (value < singularBeta - doubleMargin)
                               + (value < singularBeta - tripleMargin);
 
-                    if (!PvNode && !ttCapture && value < singularBeta - 200)
+                    if (!PvNode && !ttCapture && value < singularBeta - 242)
                     {
-                        singularBeta += 80;
+                        singularBeta += 29;
                         ss->excludedMove = move;
                         value            = search<NonPV>(pos, ss, singularBeta - 1, singularBeta,
                                               newDepth / 4, cutNode);
                         ss->excludedMove = Move::none();
 
-                        if (value < singularBeta - 200)
+                        if (value < singularBeta - 166)
                         { 
                             extension = 4;
                         }
