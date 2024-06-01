@@ -1072,7 +1072,6 @@ moves_loop:  // When in check, search starts here
 
                     if (!PvNode && !ttCapture && value < singularBeta - 200)
                     {
-                        singularBeta += 20;
                         ss->excludedMove = move;
                         value            = search<NonPV>(pos, ss, singularBeta - 1, singularBeta,
                                               newDepth / 4, cutNode);
