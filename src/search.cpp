@@ -55,14 +55,23 @@ using namespace Search;
 
 namespace {
 
+    int x1 = 129;
+    int x2 = 43; 
+    int x3 = 56;
+    int x4 = 336;
+    int x5 = 501;
+    int x6 = 32;
+
+    TUNE(x1, x2, x3, x4, x5, x6);
+
 static constexpr double EvalLevel[10] = {0.981, 0.956, 0.895, 0.949, 0.913,
                                          0.942, 0.933, 0.890, 0.984, 0.941};
 
 // Futility margin
 Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool oppWorsening) {
-    Value futilityMult       = 129 - 43 * noTtCutNode;
-    Value improvingDeduction = 56 * improving * futilityMult / 32;
-    Value worseningDeduction = 336 * oppWorsening * futilityMult / 1024;
+    Value futilityMult       = x1 - x2 * noTtCutNode;
+    Value improvingDeduction = x3 * improving * futilityMult / 32;
+    Value worseningDeduction = x4 * oppWorsening * futilityMult / 1024;
 
     return futilityMult * d - improvingDeduction - worseningDeduction;
 }
@@ -766,7 +775,7 @@ Value Search::Worker::search(
     // Step 7. Razoring (~1 Elo)
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
-    if (eval < alpha - 501 - futMargin * depth)
+    if (eval < alpha - x5 - futMargin * depth * x6 / 32)
     {
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
