@@ -1189,6 +1189,17 @@ moves_loop:  // When in check, search starts here
 
                 newDepth += doDeeperSearch - doShallowerSearch;
 
+                Value singularBeta  = value;
+                Depth singularDepth = newDepth / 2;
+
+                ss->excludedMove = move;
+                value            =
+                  search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
+                ss->excludedMove = Move::none();
+
+                if (value < singularBeta)
+                    newDepth++;
+
                 if (newDepth > d)
                     value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth, !cutNode);
 
