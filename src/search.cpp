@@ -1190,7 +1190,7 @@ moves_loop:  // When in check, search starts here
                 newDepth += doDeeperSearch - doShallowerSearch;
 
                 Value singularBeta  = value;
-                Depth singularDepth = newDepth / 2;
+                Depth singularDepth = newDepth / 4;
 
                 ss->excludedMove = move;
                 Value singValue =
