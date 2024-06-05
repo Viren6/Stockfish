@@ -1189,16 +1189,22 @@ moves_loop:  // When in check, search starts here
 
                 newDepth += doDeeperSearch - doShallowerSearch;
 
-                Value singularBeta  = value;
-                Depth singularDepth = newDepth / 4;
+                if (!rootNode && !excludedMove
+                    && depth >= 4 - (thisThread->completedDepth > 35) + ss->ttPv
+                    && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
+                    && tte->depth() >= depth - 3)
+                {
+                    Value singularBeta  = value;
+                    Depth singularDepth = newDepth / 2;
 
-                ss->excludedMove = move;
-                Value singValue =
-                  search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
-                ss->excludedMove = Move::none();
+                    ss->excludedMove = move;
+                    Value singValue  = search<NonPV>(pos, ss, singularBeta - 1, singularBeta,
+                                                    singularDepth, cutNode);
+                    ss->excludedMove = Move::none();
 
-                if (singValue < singularBeta - 200)
-                    newDepth++;
+                    if (singValue < singularBeta)
+                        newDepth++;
+                }
 
                 if (newDepth > d)
                     value = -search<NonPV>(pos, ss + 1, -(alpha + 1), -alpha, newDepth, !cutNode);
