@@ -1193,11 +1193,11 @@ moves_loop:  // When in check, search starts here
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
-                value            =
+                Value singValue =
                   search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
                 ss->excludedMove = Move::none();
 
-                if (value < singularBeta)
+                if (singValue < singularBeta)
                     newDepth++;
 
                 if (newDepth > d)
