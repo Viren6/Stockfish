@@ -59,12 +59,11 @@ static constexpr double EvalLevel[10] = {0.981, 0.956, 0.895, 0.949, 0.913,
                                          0.942, 0.933, 0.890, 0.984, 0.941};
 
 // Futility margin
-Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool oppWorsening) {
+Value futility_margin(Depth d, bool noTtCutNode, bool improving) {
     Value futilityMult       = 109 - 40 * noTtCutNode;
     Value improvingDeduction = 59 * improving * futilityMult / 32;
-    Value worseningDeduction = 328 * oppWorsening * futilityMult / 1024;
 
-    return futilityMult * d - improvingDeduction - worseningDeduction;
+    return futilityMult * d - improvingDeduction;
 }
 
 constexpr int futility_move_count(bool improving, Depth depth) {
@@ -550,8 +549,8 @@ Value Search::Worker::search(
     Key      posKey;
     Move     ttMove, move, excludedMove, bestMove;
     Depth    extension, newDepth;
-    Value    bestValue, value, ttValue, eval, maxValue, probCutBeta, singularValue;
-    bool     givesCheck, improving, priorCapture, opponentWorsening;
+    Value bestValue, value, ttValue, eval, maxValue, probCutBeta, singularValue;
+    bool     givesCheck, improving, priorCapture;
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount, futilityMargin;
@@ -760,9 +759,7 @@ Value Search::Worker::search(
                 ? ss->staticEval > (ss - 2)->staticEval
                 : (ss - 4)->staticEval != VALUE_NONE && ss->staticEval > (ss - 4)->staticEval;
 
-    opponentWorsening = ss->staticEval + (ss - 1)->staticEval > 2;
-
-    futilityMargin = futility_margin(depth, cutNode && !ss->ttHit, improving, opponentWorsening);
+    futilityMargin = futility_margin(depth, cutNode && !ss->ttHit, improving);
 
     // Step 7. Razoring (~1 Elo)
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
