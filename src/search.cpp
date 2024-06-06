@@ -1079,7 +1079,7 @@ moves_loop:  // When in check, search starts here
                     depth += ((!PvNode) && (depth < 18));
 
                     if (extension == 3)
-                        extension += value > (bestValue + 35 + 2 * newDepth);  // (~1 Elo)
+                        extension += value < bestValue + newDepth;  // (~1 Elo)
                 }
 
                 // Multi-cut pruning
