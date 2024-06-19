@@ -310,6 +310,8 @@ class Worker {
     // Used by NNUE
     Eval::NNUE::AccumulatorCaches refreshTable;
 
+    Eval::NNUE::StandardFeatureTransformerWeightCache<Eval::NNUE::TransformedFeatureDimensionsBig> ftWeightCache;
+
     friend class Stockfish::ThreadPool;
     friend class SearchManager;
 };

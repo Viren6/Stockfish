@@ -55,7 +55,8 @@ bool Eval::use_smallnet(const Position& pos) {
 Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
                      const Position&                pos,
                      Eval::NNUE::AccumulatorCaches& caches,
-                     int                            optimism) {
+                     int                            optimism,
+                     Eval::NNUE::StandardFeatureTransformerWeightCache<Eval::NNUE::TransformedFeatureDimensionsBig>* ft_cache) {
 
     assert(!pos.checkers());
 
@@ -63,8 +64,8 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     bool smallNet   = use_smallnet(pos);
     int  v;
 
-    auto [psqt, positional] = smallNet ? networks.small.evaluate(pos, &caches.small)
-                                       : networks.big.evaluate(pos, &caches.big);
+    auto [psqt, positional] = smallNet ? networks.small.evaluate(pos, &caches.small, nullptr)
+                                       : networks.big.evaluate(pos, &caches.big, ft_cache);
 
     Value nnue           = (125 * psqt + 131 * positional) / 128;
     int   nnueComplexity = std::abs(psqt - positional);
@@ -72,7 +73,7 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     // Re-evaluate the position when higher eval accuracy is worth the time spent
     if (smallNet && (nnue * simpleEval < 0 || std::abs(nnue) < 227))
     {
-        std::tie(psqt, positional) = networks.big.evaluate(pos, &caches.big);
+        std::tie(psqt, positional) = networks.big.evaluate(pos, &caches.big, ft_cache);
         nnue                       = (125 * psqt + 131 * positional) / 128;
         nnueComplexity             = std::abs(psqt - positional);
         smallNet                   = false;
@@ -111,12 +112,12 @@ std::string Eval::trace(Position& pos, const Eval::NNUE::Networks& networks) {
 
     ss << std::showpoint << std::showpos << std::fixed << std::setprecision(2) << std::setw(15);
 
-    auto [psqt, positional] = networks.big.evaluate(pos, &caches->big);
+    auto [psqt, positional] = networks.big.evaluate(pos, &caches->big, nullptr);
     Value v                 = psqt + positional;
     v                       = pos.side_to_move() == WHITE ? v : -v;
     ss << "NNUE evaluation        " << 0.01 * UCIEngine::to_cp(v, pos) << " (white side)\n";
 
-    v = evaluate(networks, pos, *caches, VALUE_ZERO);
+    v = evaluate(networks, pos, *caches, VALUE_ZERO, nullptr);
     v = pos.side_to_move() == WHITE ? v : -v;
     ss << "Final evaluation       " << 0.01 * UCIEngine::to_cp(v, pos) << " (white side)";
     ss << " [with scaled NNUE, ...]";

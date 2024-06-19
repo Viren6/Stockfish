@@ -45,11 +45,12 @@ constexpr std::string_view PieceToChar(" PNBRQK  pnbrqk");
 
 void hint_common_parent_position(const Position&    pos,
                                  const Networks&    networks,
-                                 AccumulatorCaches& caches) {
+                                 AccumulatorCaches& caches,
+                                 StandardFeatureTransformerWeightCache<TransformedFeatureDimensionsBig>* ft_cache) {
     if (Eval::use_smallnet(pos))
-        networks.small.hint_common_access(pos, &caches.small);
+        networks.small.hint_common_access(pos, &caches.small, nullptr);
     else
-        networks.big.hint_common_access(pos, &caches.big);
+        networks.big.hint_common_access(pos, &caches.big, ft_cache);
 }
 
 namespace {
@@ -132,7 +133,7 @@ trace(Position& pos, const Eval::NNUE::Networks& networks, Eval::NNUE::Accumulat
 
     // We estimate the value of each piece by doing a differential evaluation from
     // the current base eval, simulating the removal of the piece from its square.
-    auto [psqt, positional] = networks.big.evaluate(pos, &caches.big);
+    auto [psqt, positional] = networks.big.evaluate(pos, &caches.big, nullptr);
     Value base              = psqt + positional;
     base                    = pos.side_to_move() == WHITE ? base : -base;
 
@@ -150,7 +151,7 @@ trace(Position& pos, const Eval::NNUE::Networks& networks, Eval::NNUE::Accumulat
                 pos.remove_piece(sq);
                 st->accumulatorBig.computed[WHITE] = st->accumulatorBig.computed[BLACK] = false;
 
-                std::tie(psqt, positional) = networks.big.evaluate(pos, &caches.big);
+                std::tie(psqt, positional) = networks.big.evaluate(pos, &caches.big, nullptr);
                 Value eval                 = psqt + positional;
                 eval                       = pos.side_to_move() == WHITE ? eval : -eval;
                 v                          = base - eval;
