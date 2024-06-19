@@ -516,6 +516,7 @@ void Search::Worker::clear() {
         reductions[i] = int((19.26 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
 
     refreshTable.clear(networks[numaAccessToken]);
+    ftWeightCache = {};
 }
 
 
