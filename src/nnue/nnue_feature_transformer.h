@@ -186,6 +186,154 @@ static constexpr int BestRegisterCount() {
     #endif
 #endif
 
+inline uint32_t simple_hash(uint32_t x, uint32_t y) {
+    return x + 0x9e3779b9 + (y<<6) + (y>>2);
+}
+
+enum struct FeatureRowOperation
+{
+    Add,
+    Sub
+};
+
+class FeatureTransformerKey2
+{
+public:
+    static_assert(uint64_t(FeatureSet::Dimensions * FeatureSet::Dimensions) < (uint64_t)std::numeric_limits<uint32_t>::max());
+
+    FeatureTransformerKey2() :
+        r(FeatureSet::Dimensions),
+        a(FeatureSet::Dimensions)
+    {
+    }
+
+    FeatureTransformerKey2(IndexType r_, IndexType a_) :
+        r(r_),
+        a(a_)
+    {
+    }
+
+    friend bool operator==(const FeatureTransformerKey2& lhs, const FeatureTransformerKey2& rhs) noexcept
+    {
+        return lhs.r == rhs.r && lhs.a == rhs.a;
+    }
+
+    friend bool operator!=(const FeatureTransformerKey2& lhs, const FeatureTransformerKey2& rhs) noexcept
+    {
+        return !(lhs == rhs);
+    }
+
+    template <IndexType Capacity>
+    size_t get_index() const
+    {
+        return simple_hash(a, r) % Capacity;
+    }
+
+    std::pair<FeatureTransformerKey2, FeatureRowOperation> normalized() const
+    {
+        if (r < a)
+            return std::make_pair(*this, FeatureRowOperation::Add);
+        else
+            return std::make_pair(FeatureTransformerKey2(a, r), FeatureRowOperation::Sub);
+    }
+
+    IndexType get_added() const
+    {
+        return a;
+    }
+
+    IndexType get_removed() const
+    {
+        return r;
+    }
+
+private:
+    IndexType r;
+    IndexType a;
+};
+
+template <IndexType Capacity, IndexType TransformedFeatureDimensions>
+class FeatureTransformerWeightCache
+{
+    static constexpr int32_t MISS_PENALTY = 2;
+    static constexpr int32_t HIT_GAIN = 3;
+    static constexpr int32_t MATERIALIZE_THRESHOLD = 2 * HIT_GAIN;
+
+    static_assert((Capacity & (Capacity - 1)) == 0, "Capacity must be a power of 2.");
+
+public:
+
+    FeatureTransformerWeightCache() {}
+
+    // Returns nullptr on unsuccessful probe
+    template <typename FT>
+    std::pair<const WeightType*, FeatureRowOperation> probe(const FT& ft, FeatureTransformerKey2 key)
+    {
+        const auto& [norm_key, op] = key.normalized();
+        const size_t idx = norm_key.get_index<Capacity>();
+        auto& entry = mappings[idx];
+        
+        //dbg_hit_on(entry.key == norm_key, 0);
+        //dbg_hit_on(entry.key == norm_key && entry.materialized, 1);
+        //dbg_hit_on(entry.key == norm_key && !entry.materialized && entry.count + HIT_GAIN >= MATERIALIZE_THRESHOLD, 2);
+        //dbg_hit_on(entry.key != norm_key && entry.count <= 1, 3);
+
+        if (entry.key == norm_key)
+        {
+            entry.count += HIT_GAIN;
+            
+            if (entry.materialized)
+                return std::make_pair(&(weights[idx * TransformedFeatureDimensions]), op);
+            else if (entry.count >= MATERIALIZE_THRESHOLD)
+            {
+                WeightType* w = &(weights[idx * TransformedFeatureDimensions]);
+                ft.set_feature_weights(w, norm_key);
+
+                entry.materialized = true;
+
+                return std::make_pair(w, op);
+            }
+        }
+        else
+        {
+            if (entry.count <= 1)
+            {
+                entry.key = norm_key;
+                entry.count = HIT_GAIN;
+                entry.materialized = false;
+            }
+            else
+            {
+                entry.count -= MISS_PENALTY;
+            }
+        }
+
+        return std::make_pair(nullptr, FeatureRowOperation::Add);
+    }
+
+private:
+    struct MappingEntry
+    {
+        MappingEntry() :
+            key{},
+            count{0},
+            materialized(false)
+        {
+        }
+
+        FeatureTransformerKey2 key;
+        int32_t count;
+        bool materialized;
+    };
+    static_assert(sizeof(MappingEntry) == 16);
+    
+    alignas(CacheLineSize) MappingEntry mappings[Capacity];
+    alignas(CacheLineSize) WeightType weights[TransformedFeatureDimensions * Capacity];
+};
+
+static constexpr IndexType FeatureTransformerWeightCacheSize = 128;
+template <IndexType TransformerFeatureDimensions>
+using StandardFeatureTransformerWeightCache = FeatureTransformerWeightCache<FeatureTransformerWeightCacheSize, TransformerFeatureDimensions>;
 
 // Input feature converter
 template<IndexType                                 TransformedFeatureDimensions,
@@ -322,9 +470,10 @@ class FeatureTransformer {
     std::int32_t transform(const Position&                           pos,
                            AccumulatorCaches::Cache<HalfDimensions>* cache,
                            OutputType*                               output,
-                           int                                       bucket) const {
-        update_accumulator<WHITE>(pos, cache);
-        update_accumulator<BLACK>(pos, cache);
+                           int                                       bucket,
+                            StandardFeatureTransformerWeightCache<HalfDimensions>* ft_cache) const {
+        update_accumulator<WHITE>(pos, cache, ft_cache);
+        update_accumulator<BLACK>(pos, cache, ft_cache);
 
         const Color perspectives[2]  = {pos.side_to_move(), ~pos.side_to_move()};
         const auto& psqtAccumulation = (pos.state()->*accPtr).psqtAccumulation;
@@ -399,9 +548,23 @@ class FeatureTransformer {
     }  // end of function transform()
 
     void hint_common_access(const Position&                           pos,
-                            AccumulatorCaches::Cache<HalfDimensions>* cache) const {
-        hint_common_access_for_perspective<WHITE>(pos, cache);
-        hint_common_access_for_perspective<BLACK>(pos, cache);
+                            AccumulatorCaches::Cache<HalfDimensions>* cache,
+                            StandardFeatureTransformerWeightCache<HalfDimensions>* ft_cache) const {
+        hint_common_access_for_perspective<WHITE>(pos, cache, ft_cache);
+        hint_common_access_for_perspective<BLACK>(pos, cache, ft_cache);
+    }
+
+    void set_feature_weights(WeightType* w, FeatureTransformerKey2 key) const {
+        auto accOut = reinterpret_cast<vec_t*>(w);
+
+        const IndexType offsetR0 = HalfDimensions * key.get_removed();
+        auto            columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
+        const IndexType offsetA  = HalfDimensions * key.get_added();
+        auto            columnA  = reinterpret_cast<const vec_t*>(&weights[offsetA]);
+
+        for (IndexType k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t);
+                ++k)
+            accOut[k] = vec_sub_16(columnA[k], columnR0[k]);
     }
 
    private:
@@ -433,7 +596,8 @@ class FeatureTransformer {
     template<Color Perspective, size_t N>
     void update_accumulator_incremental(const Position& pos,
                                         StateInfo*      computed_st,
-                                        StateInfo*      states_to_update[N]) const {
+                                        StateInfo*      states_to_update[N],
+                                        StandardFeatureTransformerWeightCache<HalfDimensions>* ft_cache) const {
         static_assert(N > 0);
         assert([&]() {
             for (size_t i = 0; i < N; ++i)
@@ -477,7 +641,63 @@ class FeatureTransformer {
         // Now update the accumulators listed in states_to_update[], where the last element is a sentinel.
 #ifdef VECTOR
 
-        if (N == 1 && (removed[0].size() == 1 || removed[0].size() == 2) && added[0].size() == 1)
+        if (N == 1 && removed[0].size() == 1 && added[0].size() == 1)
+        {
+            auto accIn =
+            reinterpret_cast<const vec_t*>(&(st->*accPtr).accumulation[Perspective][0]);
+            auto accOut = reinterpret_cast<vec_t*>(
+            &(states_to_update[0]->*accPtr).accumulation[Perspective][0]);
+
+            const WeightType* cached_w = nullptr;
+            FeatureRowOperation op;
+            if (ft_cache != nullptr)
+                std::tie(cached_w, op) = ft_cache->probe(*this, FeatureTransformerKey2(removed[0][0], added[0][0]));
+            
+            if (cached_w != nullptr)
+            {
+                auto columnA  = reinterpret_cast<const vec_t*>(cached_w);
+                if (op == FeatureRowOperation::Add)
+                {
+                    for (IndexType k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t);
+                            ++k)
+                        accOut[k] = vec_add_16(accIn[k], columnA[k]);
+                }
+                else
+                {
+                    assert(op == FeatureRowOperation::Sub);
+                    for (IndexType k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t);
+                            ++k)
+                        accOut[k] = vec_sub_16(accIn[k], columnA[k]);
+                }
+            }
+            else
+            {
+                const IndexType offsetR0 = HalfDimensions * removed[0][0];
+                auto            columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
+                const IndexType offsetA  = HalfDimensions * added[0][0];
+                auto            columnA  = reinterpret_cast<const vec_t*>(&weights[offsetA]);
+
+                for (IndexType k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t);
+                        ++k)
+                    accOut[k] = vec_add_16(vec_sub_16(accIn[k], columnR0[k]), columnA[k]);
+            }
+
+            auto accPsqtIn =
+              reinterpret_cast<const psqt_vec_t*>(&(st->*accPtr).psqtAccumulation[Perspective][0]);
+            auto accPsqtOut = reinterpret_cast<psqt_vec_t*>(
+              &(states_to_update[0]->*accPtr).psqtAccumulation[Perspective][0]);
+
+            const IndexType offsetPsqtR0 = PSQTBuckets * removed[0][0];
+            auto columnPsqtR0 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtR0]);
+            const IndexType offsetPsqtA = PSQTBuckets * added[0][0];
+            auto columnPsqtA = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtA]);
+
+            for (std::size_t k = 0; k < PSQTBuckets * sizeof(std::int32_t) / sizeof(psqt_vec_t);
+                    ++k)
+                accPsqtOut[k] = vec_add_psqt_32(vec_sub_psqt_32(accPsqtIn[k], columnPsqtR0[k]),
+                                                columnPsqtA[k]);
+        }
+        else if (N == 1 && removed[0].size() == 2 && added[0].size() == 1)
         {
             assert(states_to_update[0]);
 
@@ -491,22 +711,13 @@ class FeatureTransformer {
             const IndexType offsetA  = HalfDimensions * added[0][0];
             auto            columnA  = reinterpret_cast<const vec_t*>(&weights[offsetA]);
 
-            if (removed[0].size() == 1)
-            {
-                for (IndexType k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t);
-                     ++k)
-                    accOut[k] = vec_add_16(vec_sub_16(accIn[k], columnR0[k]), columnA[k]);
-            }
-            else
-            {
-                const IndexType offsetR1 = HalfDimensions * removed[0][1];
-                auto            columnR1 = reinterpret_cast<const vec_t*>(&weights[offsetR1]);
+            const IndexType offsetR1 = HalfDimensions * removed[0][1];
+            auto            columnR1 = reinterpret_cast<const vec_t*>(&weights[offsetR1]);
 
-                for (IndexType k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t);
-                     ++k)
-                    accOut[k] = vec_sub_16(vec_add_16(accIn[k], columnA[k]),
-                                           vec_add_16(columnR0[k], columnR1[k]));
-            }
+            for (IndexType k = 0; k < HalfDimensions * sizeof(std::int16_t) / sizeof(vec_t);
+                    ++k)
+                accOut[k] = vec_sub_16(vec_add_16(accIn[k], columnA[k]),
+                                        vec_add_16(columnR0[k], columnR1[k]));
 
             auto accPsqtIn =
               reinterpret_cast<const psqt_vec_t*>(&(st->*accPtr).psqtAccumulation[Perspective][0]);
@@ -518,24 +729,14 @@ class FeatureTransformer {
             const IndexType offsetPsqtA = PSQTBuckets * added[0][0];
             auto columnPsqtA = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtA]);
 
-            if (removed[0].size() == 1)
-            {
-                for (std::size_t k = 0; k < PSQTBuckets * sizeof(std::int32_t) / sizeof(psqt_vec_t);
-                     ++k)
-                    accPsqtOut[k] = vec_add_psqt_32(vec_sub_psqt_32(accPsqtIn[k], columnPsqtR0[k]),
-                                                    columnPsqtA[k]);
-            }
-            else
-            {
-                const IndexType offsetPsqtR1 = PSQTBuckets * removed[0][1];
-                auto columnPsqtR1 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtR1]);
+            const IndexType offsetPsqtR1 = PSQTBuckets * removed[0][1];
+            auto columnPsqtR1 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtR1]);
 
-                for (std::size_t k = 0; k < PSQTBuckets * sizeof(std::int32_t) / sizeof(psqt_vec_t);
-                     ++k)
-                    accPsqtOut[k] =
-                      vec_sub_psqt_32(vec_add_psqt_32(accPsqtIn[k], columnPsqtA[k]),
-                                      vec_add_psqt_32(columnPsqtR0[k], columnPsqtR1[k]));
-            }
+            for (std::size_t k = 0; k < PSQTBuckets * sizeof(std::int32_t) / sizeof(psqt_vec_t);
+                    ++k)
+                accPsqtOut[k] =
+                    vec_sub_psqt_32(vec_add_psqt_32(accPsqtIn[k], columnPsqtA[k]),
+                                    vec_add_psqt_32(columnPsqtR0[k], columnPsqtR1[k]));
         }
         else
         {
@@ -812,7 +1013,8 @@ class FeatureTransformer {
 
     template<Color Perspective>
     void hint_common_access_for_perspective(const Position&                           pos,
-                                            AccumulatorCaches::Cache<HalfDimensions>* cache) const {
+                                            AccumulatorCaches::Cache<HalfDimensions>* cache,
+                                        StandardFeatureTransformerWeightCache<HalfDimensions>* ft_cache) const {
 
         // Works like update_accumulator, but performs less work.
         // Updates ONLY the accumulator for pos.
@@ -829,7 +1031,7 @@ class FeatureTransformer {
         {
             // Only update current position accumulator to minimize work.
             StateInfo* states_to_update[1] = {pos.state()};
-            update_accumulator_incremental<Perspective, 1>(pos, oldest_st, states_to_update);
+            update_accumulator_incremental<Perspective, 1>(pos, oldest_st, states_to_update, ft_cache);
         }
         else
             update_accumulator_refresh_cache<Perspective>(pos, cache);
@@ -837,7 +1039,8 @@ class FeatureTransformer {
 
     template<Color Perspective>
     void update_accumulator(const Position&                           pos,
-                            AccumulatorCaches::Cache<HalfDimensions>* cache) const {
+                            AccumulatorCaches::Cache<HalfDimensions>* cache,
+                            StandardFeatureTransformerWeightCache<HalfDimensions>* ft_cache) const {
 
         auto [oldest_st, next] = try_find_computed_accumulator<Perspective>(pos);
 
@@ -855,13 +1058,13 @@ class FeatureTransformer {
             {
                 StateInfo* states_to_update[1] = {next};
 
-                update_accumulator_incremental<Perspective, 1>(pos, oldest_st, states_to_update);
+                update_accumulator_incremental<Perspective, 1>(pos, oldest_st, states_to_update, ft_cache);
             }
             else
             {
                 StateInfo* states_to_update[2] = {next, pos.state()};
 
-                update_accumulator_incremental<Perspective, 2>(pos, oldest_st, states_to_update);
+                update_accumulator_incremental<Perspective, 2>(pos, oldest_st, states_to_update, ft_cache);
             }
         }
         else

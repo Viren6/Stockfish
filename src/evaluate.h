@@ -23,6 +23,8 @@
 
 #include "types.h"
 
+#include "nnue/nnue_feature_transformer.h"
+
 namespace Stockfish {
 
 class Position;
@@ -48,7 +50,8 @@ bool  use_smallnet(const Position& pos);
 Value evaluate(const NNUE::Networks&          networks,
                const Position&                pos,
                Eval::NNUE::AccumulatorCaches& caches,
-               int                            optimism);
+               int                            optimism,
+               Eval::NNUE::StandardFeatureTransformerWeightCache<Eval::NNUE::TransformedFeatureDimensionsBig>* ft_cache);
 }  // namespace Eval
 
 }  // namespace Stockfish

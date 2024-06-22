@@ -24,6 +24,7 @@
 
 #include "../types.h"
 #include "nnue_architecture.h"
+#include "nnue_feature_transformer.h"
 
 namespace Stockfish {
 
@@ -56,7 +57,8 @@ struct AccumulatorCaches;
 std::string trace(Position& pos, const Networks& networks, AccumulatorCaches& caches);
 void        hint_common_parent_position(const Position&    pos,
                                         const Networks&    networks,
-                                        AccumulatorCaches& caches);
+                                        AccumulatorCaches& caches,
+                                        StandardFeatureTransformerWeightCache<TransformedFeatureDimensionsBig>* ft_cache);
 
 }  // namespace Stockfish::Eval::NNUE
 }  // namespace Stockfish

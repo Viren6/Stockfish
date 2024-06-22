@@ -207,7 +207,8 @@ bool Network<Arch, Transformer>::save(const std::optional<std::string>& filename
 template<typename Arch, typename Transformer>
 NetworkOutput
 Network<Arch, Transformer>::evaluate(const Position&                         pos,
-                                     AccumulatorCaches::Cache<FTDimensions>* cache) const {
+                                     AccumulatorCaches::Cache<FTDimensions>* cache,
+                                     StandardFeatureTransformerWeightCache<FTDimensions>* ft_cache) const {
     // We manually align the arrays on the stack because with gcc < 9.3
     // overaligning stack variables with alignas() doesn't work correctly.
 
@@ -227,7 +228,7 @@ Network<Arch, Transformer>::evaluate(const Position&                         pos
     ASSERT_ALIGNED(transformedFeatures, alignment);
 
     const int  bucket     = (pos.count<ALL_PIECES>() - 1) / 4;
-    const auto psqt       = featureTransformer->transform(pos, cache, transformedFeatures, bucket);
+    const auto psqt       = featureTransformer->transform(pos, cache, transformedFeatures, bucket, ft_cache);
     const auto positional = network[bucket].propagate(transformedFeatures);
     return {static_cast<Value>(psqt / OutputScale), static_cast<Value>(positional / OutputScale)};
 }
@@ -268,8 +269,10 @@ void Network<Arch, Transformer>::verify(std::string evalfilePath) const {
 
 template<typename Arch, typename Transformer>
 void Network<Arch, Transformer>::hint_common_access(
-  const Position& pos, AccumulatorCaches::Cache<FTDimensions>* cache) const {
-    featureTransformer->hint_common_access(pos, cache);
+  const Position& pos, 
+  AccumulatorCaches::Cache<FTDimensions>* cache,
+  StandardFeatureTransformerWeightCache<FTDimensions>* ft_cache) const {
+    featureTransformer->hint_common_access(pos, cache, ft_cache);
 }
 
 template<typename Arch, typename Transformer>
@@ -298,7 +301,7 @@ Network<Arch, Transformer>::trace_evaluate(const Position&                      
     for (IndexType bucket = 0; bucket < LayerStacks; ++bucket)
     {
         const auto materialist =
-          featureTransformer->transform(pos, cache, transformedFeatures, bucket);
+          featureTransformer->transform(pos, cache, transformedFeatures, bucket, nullptr);
         const auto positional = network[bucket].propagate(transformedFeatures);
 
         t.psqt[bucket]       = static_cast<Value>(materialist / OutputScale);
