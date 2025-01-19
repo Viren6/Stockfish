@@ -955,10 +955,8 @@ moves_loop:  // When in check, search starts here
                 Value singularBeta  = ttData.value;
                 Depth singularDepth = newDepth / 2;
                 
-                ss->excludedMove    = move;
                 ttData.value =
                   search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
-                ss->excludedMove = Move::none();
             }
             continue;
         }
