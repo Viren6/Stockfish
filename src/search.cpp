@@ -943,7 +943,25 @@ moves_loop:  // When in check, search starts here
         assert(move.is_ok());
 
         if (move == excludedMove)
+        {
+            int corrValAdj = std::abs(correctionValue) / 262144;
+            if (!rootNode && move == ttData.move
+                && depth >= 5 - (thisThread->completedDepth > 33) + ss->ttPv
+                && is_valid(ttData.value) && !is_decisive(ttData.value)
+                && (ttData.bound & BOUND_LOWER) && ttData.depth >= depth - 3 && !PvNode
+                && !ttCapture && corrValAdj > 60)
+            {
+                newDepth            = depth - 1;
+                Value singularBeta  = ttData.value;
+                Depth singularDepth = newDepth / 2;
+                
+                ss->excludedMove    = move;
+                ttData.value =
+                  search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
+                ss->excludedMove = Move::none();
+            }
             continue;
+        }
 
         // Check for legality
         if (!pos.legal(move))
