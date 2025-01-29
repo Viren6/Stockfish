@@ -1086,6 +1086,9 @@ moves_loop:  // When in check, search starts here
                               + (value < singularBeta - tripleMargin)
                               + (value < singularBeta - quadMargin);
 
+                    if (extension == 4)
+                        ss->ttPv = true;
+
                     depth += ((!PvNode) && (depth < 15));
                 }
 
