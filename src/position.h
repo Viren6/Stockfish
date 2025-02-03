@@ -92,6 +92,7 @@ class Position {
     Position&   set(const std::string& fenStr, bool isChess960, StateInfo* si);
     Position&   set(const std::string& code, Color c, StateInfo* si);
     std::string fen() const;
+    std::string get_fen() const;
 
     // Position representation
     Bitboard pieces(PieceType pt = ALL_PIECES) const;

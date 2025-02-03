@@ -1,4 +1,4 @@
-/*
+﻿/*
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2025 The Stockfish developers (see AUTHORS file)
 
@@ -29,6 +29,7 @@
 #include <iostream>
 #include <sstream>
 #include <string_view>
+#include <string>
 #include <utility>
 
 #include "bitboard.h"
@@ -95,6 +96,92 @@ std::ostream& operator<<(std::ostream& os, const Position& pos) {
     }
 
     return os;
+}
+
+std::string Position::get_fen() const {
+    std::ostringstream oss;
+
+    // Loop over ranks 8 down to 1.
+    // Note: in our enums, RANK_1 == 0 and RANK_8 == 7.
+    for (int rank = 7; rank >= 0; rank--)
+    {
+        int emptyCount = 0;
+        // Loop over files A to H (FILE_A==0 .. FILE_H==7)
+        for (int file = 0; file < 8; file++)
+        {
+            // Use make_square() to get the square index.
+            Square sq = make_square(static_cast<File>(file), static_cast<Rank>(rank));
+            Piece  p  = board[sq];  // board[] holds the piece at this square.
+            if (p == NO_PIECE)
+            { ++emptyCount; }
+            else
+            {
+                if (emptyCount)
+                {
+                    oss << emptyCount;
+                    emptyCount = 0;
+                }
+                char c;
+                // Reverse the conversion done in set(). Use the same order as in the FEN.
+                switch (p)
+                {
+                case W_PAWN :
+                    c = 'P';
+                    break;
+                case W_KNIGHT :
+                    c = 'N';
+                    break;
+                case W_BISHOP :
+                    c = 'B';
+                    break;
+                case W_ROOK :
+                    c = 'R';
+                    break;
+                case W_QUEEN :
+                    c = 'Q';
+                    break;
+                case W_KING :
+                    c = 'K';
+                    break;
+                case B_PAWN :
+                    c = 'p';
+                    break;
+                case B_KNIGHT :
+                    c = 'n';
+                    break;
+                case B_BISHOP :
+                    c = 'b';
+                    break;
+                case B_ROOK :
+                    c = 'r';
+                    break;
+                case B_QUEEN :
+                    c = 'q';
+                    break;
+                case B_KING :
+                    c = 'k';
+                    break;
+                default :
+                    c = '?';
+                    break;  // Should not happen.
+                }
+                oss << c;
+            }
+        }
+        if (emptyCount)
+            oss << emptyCount;
+        if (rank > 0)
+            oss << '/';
+    }
+
+    // Append side to move.
+    // The variable 'sideToMove' is assumed to hold the active color.
+    oss << ' ' << (sideToMove == WHITE ? 'w' : 'b');
+
+    // Append the fixed remainder (castling, en passant, halfmove and fullmove).
+    oss << " - - 0 1";
+
+    return oss.str();
 }
 
 
