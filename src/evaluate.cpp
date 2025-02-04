@@ -35,6 +35,10 @@
 #include <chrono>
 #include <fstream>
 
+#ifdef __unix__
+    #include <fcntl.h>  // For fcntl() on non-Windows systems
+#endif
+
 #include "nnue/network.h"
 #include "nnue/nnue_misc.h"
 #include "position.h"
@@ -49,18 +53,19 @@
 namespace Stockfish {
 
 // Timeout (in milliseconds) and maximum retry count for external communication
-static const int TIMEOUT_MS  = 200;
-static const int MAX_RETRIES = 3;
+static const int TIMEOUT_MS           = 200;
+static const int MAX_RETRIES          = 3;
+static const int MAX_RESTART_ATTEMPTS = 3;  // maximum times to restart monty.exe
 
 // --------------------------------------------------------------------------
 // External Communication with monty.exe using a dedicated I/O thread
 // --------------------------------------------------------------------------
 
-// This helper class encapsulates the communication with the external
-// process (monty.exe). It spawns the process (using CreateProcess on Windows
-// or popen on non-Windows), starts a dedicated I/O thread that continuously
-// reads complete lines from the process’s output, and provides methods to
-// send commands and retrieve output lines with a timeout.
+// This helper class encapsulates the communication with the external process
+// (monty.exe). It spawns the process (using CreateProcess on Windows or popen
+// on non?Windows), starts a dedicated I/O thread that continuously reads complete
+// lines from the process’s output, and provides methods to send commands and
+// retrieve output lines with a timeout.
 class ExternalComm {
    public:
     ExternalComm();
@@ -68,6 +73,9 @@ class ExternalComm {
 
     // Initializes the external process and starts the I/O thread.
     bool initialize();
+
+    // Attempts to restart the external process.
+    bool restart();
 
     // Sends a command string to the external process.
     bool sendCommand(const std::string& cmd);
@@ -94,7 +102,7 @@ class ExternalComm {
     // Helper to launch a bidirectional process.
     bool createBidirectionalProcess(const char* cmd, BidirectionalProcess& bp);
 #else
-    // Non-Windows: we use popen
+    // Non-Windows: we use popen.
     FILE* extPipe;
 #endif
 
@@ -106,7 +114,7 @@ class ExternalComm {
 ExternalComm::ExternalComm() :
     stopThread(false) {
 #ifdef _WIN32
-    // Nothing extra here.
+    // Nothing extra to do.
 #else
     extPipe = nullptr;
 #endif
@@ -215,9 +223,64 @@ bool ExternalComm::initialize() {
         return false;
     }
 #endif
+    // Clear any old output.
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        while (!lineQueue.empty())
+            lineQueue.pop();
+    }
+    stopThread = false;
     // Start the dedicated I/O thread.
     ioThread = std::thread(&ExternalComm::ioThreadFunc, this);
     return true;
+}
+
+bool ExternalComm::restart() {
+    std::cerr << "Restarting monty.exe...\n";
+#ifdef _WIN32
+    // Cancel any pending I/O on the output handle.
+    CancelIoEx(extProc.hChildStd_OUT_Rd, NULL);
+#else
+    if (extPipe)
+    {
+        int fd    = fileno(extPipe);
+        int flags = fcntl(fd, F_GETFL, 0);
+        // Set non-blocking mode so that a blocking fgets returns.
+        fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    }
+#endif
+    stopThread = true;
+    if (ioThread.joinable())
+        ioThread.join();
+#ifdef _WIN32
+    // Terminate the existing process.
+    TerminateProcess(extProc.pi.hProcess, 1);
+    CloseHandle(extProc.hChildStd_IN_Wr);
+    CloseHandle(extProc.hChildStd_OUT_Rd);
+#else
+    if (extPipe)
+        pclose(extPipe);
+#endif
+    // Clear the output queue.
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        while (!lineQueue.empty())
+            lineQueue.pop();
+    }
+    // Reinitialize the process.
+    stopThread  = false;
+    bool initOk = initialize();
+#ifndef _WIN32
+    // Restore blocking mode on non-Windows.
+    if (initOk && extPipe)
+    {
+        int fd    = fileno(extPipe);
+        int flags = fcntl(fd, F_GETFL, 0);
+        // Clear the non-blocking flag.
+        fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
+    }
+#endif
+    return initOk;
 }
 
 bool ExternalComm::sendCommand(const std::string& cmd) {
@@ -350,87 +413,123 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     int material = 535 * pos.count<PAWN>() + pos.non_pawn_material();
     int v        = (nnue * (77777 + material) + optimism * (7777 + material)) / 77777;
 
-    // Damp evaluation if the fifty?move rule applies.
+    // Damp evaluation if the fifty-move rule applies.
     v -= v * pos.rule50_count() / 212;
 
     // Clamp evaluation to avoid interfering with tablebase ranges.
     v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
 
     // ----- External Application Communication & CSV Logging -----
-    std::string fenStr  = pos.get_fen();
-    int         cpValue = 0;
+    std::string fenStr = pos.get_fen();
+    // Set cpValue to 40000 initially (for debugging only)
+    int  cpValue         = 40000;
+    int  restartAttempts = 0;
+    bool validOutput     = false;
 
-    // Initialize the external communication (if not already done).
     if (!externalCommInitialized)
     {
         if (!externalComm.initialize())
         {
             std::cerr << "Failed to initialize external communication with monty.exe\n";
-            // Depending on your needs, you might exit here or continue without external eval.
+            exit(1);
         }
         externalCommInitialized = true;
     }
 
-    // Send commands to monty.exe.
-    externalComm.sendCommand("position fen " + fenStr + "\n");
-    externalComm.sendCommand("eval\n");
-
-    // Attempt to read the first line (expected to contain "cp: ...").
-    std::string line;
-    int         retry   = 0;
-    bool        gotLine = false;
-    while (retry < MAX_RETRIES && !gotLine)
+    // Loop: try to obtain a valid first output line.
+    while (!validOutput && restartAttempts < MAX_RESTART_ATTEMPTS)
     {
-        if (externalComm.getLine(line, TIMEOUT_MS))
-        {
-            if (!line.empty() && line.find('\n') != std::string::npos)
-            {
-                gotLine = true;
-                break;
-            }
-        }
-        retry++;
-        std::cerr << "Retrying read of first output line (attempt " << retry << ")\n";
+        // Send commands to monty.exe.
+        externalComm.sendCommand("position fen " + fenStr + "\n");
         externalComm.sendCommand("eval\n");
-    }
-    if (!gotLine)
-    {
-        std::cerr << "Failed to receive first line of output after retries\n";
-    }
-    else
-    {
-        std::istringstream iss(line);
-        std::string        token;
-        while (iss >> token)
+
+        std::string line;
+        int         retry   = 0;
+        bool        gotLine = false;
+        while (retry < MAX_RETRIES && !gotLine)
         {
-            if (token == "cp:")
+            if (externalComm.getLine(line, TIMEOUT_MS))
             {
-                iss >> cpValue;
-                break;
+                if (!line.empty() && line.find('\n') != std::string::npos)
+                {
+                    gotLine = true;
+                    break;
+                }
             }
+            retry++;
+            std::cerr << "Retrying read of first output line (attempt " << retry << ")\n";
+            externalComm.sendCommand("eval\n");
         }
+        if (!gotLine)
+        {
+            std::cerr
+              << "Failed to receive first line of output after retries; restarting monty.exe\n";
+            if (!externalComm.restart())
+            {
+                std::cerr << "Failed to restart monty.exe\n";
+                exit(1);
+            }
+            restartAttempts++;
+            continue;  // Try again after restart.
+        }
+        else
+        {
+            // Parse the cp value.
+            std::istringstream iss(line);
+            std::string        token;
+            while (iss >> token)
+            {
+                if (token == "cp:")
+                {
+                    iss >> cpValue;
+                    break;
+                }
+            }
+            // If cpValue remains the initial value (40000), parsing failed.
+            if (cpValue == 40000)
+            {
+                std::cerr
+                  << "Parsed cp value is still 40000 (invalid output); restarting monty.exe\n";
+                if (!externalComm.restart())
+                {
+                    std::cerr << "Failed to restart monty.exe\n";
+                    exit(1);
+                }
+                restartAttempts++;
+                continue;
+            }
+            validOutput = true;
+        }
+    }
+
+    if (!validOutput)
+    {
+        std::cerr
+          << "Unable to obtain valid external output from monty.exe after restarts; aborting.\n";
+        exit(1);
     }
 
     // Read (and ignore) the second output line.
-    retry   = 0;
-    gotLine = false;
-    while (retry < MAX_RETRIES && !gotLine)
     {
-        if (externalComm.getLine(line, TIMEOUT_MS))
+        int         retry   = 0;
+        bool        gotLine = false;
+        std::string dummy;
+        while (retry < MAX_RETRIES && !gotLine)
         {
-            if (!line.empty() && line.find('\n') != std::string::npos)
+            if (externalComm.getLine(dummy, TIMEOUT_MS))
             {
-                gotLine = true;
-                break;
+                if (!dummy.empty() && dummy.find('\n') != std::string::npos)
+                {
+                    gotLine = true;
+                    break;
+                }
             }
+            retry++;
+            std::cerr << "Retrying read of second output line (attempt " << retry << ")\n";
+            externalComm.sendCommand("eval\n");
         }
-        retry++;
-        std::cerr << "Retrying read of second output line (attempt " << retry << ")\n";
-        externalComm.sendCommand("eval\n");
-    }
-    if (!gotLine)
-    {
-        std::cerr << "Failed to receive second line of output after retries\n";
+        if (!gotLine)
+            std::cerr << "Failed to receive second line of output after retries\n";
     }
 
     // Append the evaluations to a CSV file.
