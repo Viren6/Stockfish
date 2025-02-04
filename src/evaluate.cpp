@@ -19,6 +19,7 @@
 #include "evaluate.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <cassert>
 #include <cmath>
 #include <cstdlib>
@@ -33,6 +34,7 @@
 #include "position.h"
 #include "types.h"
 #include "uci.h"
+#include <fstream>
 #include "nnue/nnue_accumulator.h"
 
 namespace Stockfish {
@@ -50,8 +52,92 @@ bool Eval::use_smallnet(const Position& pos) {
     return std::abs(simpleEval) > 962;
 }
 
-// Evaluate is the evaluator for the outer world. It returns a static evaluation
-// of the position from the point of view of the side to move.
+// On Windows, we use a helper struct to hold our bidirectional process information.
+#ifdef _WIN32
+struct BidirectionalProcess {
+    PROCESS_INFORMATION pi;
+    HANDLE              hChildStd_IN_Wr;
+    HANDLE              hChildStd_OUT_Rd;
+};
+
+// Helper function to create a bidirectional process.
+// Returns true on success.
+static bool createBidirectionalProcess(const char* cmd, BidirectionalProcess& bp) {
+    SECURITY_ATTRIBUTES saAttr;
+    saAttr.nLength              = sizeof(SECURITY_ATTRIBUTES);
+    saAttr.bInheritHandle       = TRUE;
+    saAttr.lpSecurityDescriptor = NULL;
+
+    // Create pipe for STDOUT.
+    HANDLE hChildStd_OUT_Rd = NULL;
+    HANDLE hChildStd_OUT_Wr = NULL;
+    if (!CreatePipe(&hChildStd_OUT_Rd, &hChildStd_OUT_Wr, &saAttr, 0))
+    {
+        std::cerr << "Stdout pipe creation failed\n";
+        return false;
+    }
+    if (!SetHandleInformation(hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0))
+    {
+        std::cerr << "Stdout SetHandleInformation failed\n";
+        return false;
+    }
+
+    // Create pipe for STDIN.
+    HANDLE hChildStd_IN_Rd = NULL;
+    HANDLE hChildStd_IN_Wr = NULL;
+    if (!CreatePipe(&hChildStd_IN_Rd, &hChildStd_IN_Wr, &saAttr, 0))
+    {
+        std::cerr << "Stdin pipe creation failed\n";
+        return false;
+    }
+    if (!SetHandleInformation(hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0))
+    {
+        std::cerr << "Stdin SetHandleInformation failed\n";
+        return false;
+    }
+
+    // Set up STARTUPINFO structure.
+    STARTUPINFOA siStartInfo;
+    ZeroMemory(&siStartInfo, sizeof(STARTUPINFOA));
+    siStartInfo.cb         = sizeof(STARTUPINFOA);
+    siStartInfo.hStdError  = hChildStd_OUT_Wr;
+    siStartInfo.hStdOutput = hChildStd_OUT_Wr;
+    siStartInfo.hStdInput  = hChildStd_IN_Rd;
+    siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+    // Create the process.
+    PROCESS_INFORMATION piProcInfo;
+    ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
+    BOOL success = CreateProcessA(NULL,
+                                  const_cast<LPSTR>(cmd),  // command line
+                                  NULL,                    // process security attributes
+                                  NULL,                    // primary thread security attributes
+                                  TRUE,                    // handles are inherited
+                                  0,                       // creation flags
+                                  NULL,                    // use parent's environment
+                                  NULL,                    // use parent's current directory
+                                  &siStartInfo,            // STARTUPINFO pointer
+                                  &piProcInfo              // receives PROCESS_INFORMATION
+    );
+
+    // Close handles that are not needed by the parent.
+    CloseHandle(hChildStd_OUT_Wr);
+    CloseHandle(hChildStd_IN_Rd);
+
+    if (!success)
+    {
+        std::cerr << "CreateProcess failed\n";
+        return false;
+    }
+
+    bp.pi               = piProcInfo;
+    bp.hChildStd_IN_Wr  = hChildStd_IN_Wr;
+    bp.hChildStd_OUT_Rd = hChildStd_OUT_Rd;
+    return true;
+}
+#endif  // _WIN32
+
+// Modified evaluation function.
 Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
                      const Position&                pos,
                      Eval::NNUE::AccumulatorCaches& caches,
@@ -87,7 +173,132 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     // Guarantee evaluation does not hit the tablebase range
     v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
 
-    std::cout << pos.get_fen();
+    // ----- External Application Communication & CSV Logging -----
+    //
+    // Build the FEN string.
+    std::string fenStr = pos.get_fen();
+
+    int cpValue = 0;
+
+#ifdef _WIN32
+    // On Windows, use our bidirectional process via CreateProcess.
+    static BidirectionalProcess extProc;
+    static bool                 extProcInitialized = false;
+    if (!extProcInitialized)
+    {
+        if (!createBidirectionalProcess("Monty-windows-x86-64-v2-dev-20250119-7c7996e8.exe",
+                                        extProc))
+        {
+            std::cerr << "Failed to launch external application\n";
+            exit(1);
+        }
+        extProcInitialized = true;
+    }
+
+    // Write command to process's stdin.
+    std::string cmd1         = "position fen " + fenStr + "\n";
+    std::string cmd2         = "eval\n";
+    DWORD       bytesWritten = 0;
+    if (!WriteFile(extProc.hChildStd_IN_Wr, cmd1.c_str(), (DWORD) cmd1.size(), &bytesWritten, NULL))
+    {
+        std::cerr << "WriteFile failed\n";
+    }
+    if (!WriteFile(extProc.hChildStd_IN_Wr, cmd2.c_str(), (DWORD) cmd2.size(), &bytesWritten, NULL))
+    {
+        std::cerr << "WriteFile failed\n";
+    }
+    // Optionally flush input by waiting a little (or using proper synchronization)
+
+    // Read two lines from the process's stdout.
+    // We'll read until we encounter a newline.
+    char        buffer[256] = {0};
+    DWORD       bytesRead   = 0;
+    std::string line1;
+    // Read first line.
+    do
+    {
+        if (!ReadFile(extProc.hChildStd_OUT_Rd, buffer, sizeof(buffer) - 1, &bytesRead, NULL))
+        {
+            std::cerr << "ReadFile failed\n";
+            break;
+        }
+        buffer[bytesRead] = '\0';
+        line1 += buffer;
+    } while (line1.find('\n') == std::string::npos && bytesRead > 0);
+
+    {
+        std::istringstream iss(line1);
+        std::string        token;
+        while (iss >> token)
+        {
+            if (token == "cp:")
+            {
+                iss >> cpValue;
+                break;
+            }
+        }
+    }
+
+    // Read and ignore second line.
+    std::string dummy;
+    do
+    {
+        if (!ReadFile(extProc.hChildStd_OUT_Rd, buffer, sizeof(buffer) - 1, &bytesRead, NULL))
+        {
+            break;
+        }
+        buffer[bytesRead] = '\0';
+        dummy += buffer;
+    } while (dummy.find('\n') == std::string::npos && bytesRead > 0);
+
+#else
+    // Non-Windows: use popen with "r+" mode.
+    static FILE* extPipe = nullptr;
+    if (!extPipe)
+    {
+        extPipe = popen("Monty-windows-x86-64-v2-dev-20250119-7c7996e8.exe", "r+");
+        if (!extPipe)
+        {
+            perror("popen failed");
+            exit(1);
+        }
+    }
+
+    fprintf(extPipe, "position fen %s\n", fenStr.c_str());
+    fflush(extPipe);
+    fprintf(extPipe, "eval\n");
+    fflush(extPipe);
+
+    char buffer[256];
+    if (fgets(buffer, sizeof(buffer), extPipe))
+    {
+        std::string line(buffer);
+        auto        pos_cp = line.find("cp:");
+        if (pos_cp != std::string::npos)
+        {
+            std::istringstream iss(line.substr(pos_cp + 3));
+            iss >> cpValue;
+        }
+    }
+    // Read and ignore second line.
+    fgets(buffer, sizeof(buffer), extPipe);
+#endif
+
+    // Open (or create) a CSV file for appending.
+    static std::ofstream csvFile("eval_log.csv", std::ios::app);
+    if (csvFile.is_open())
+    {
+        csvFile << v << "," << cpValue << "\n";
+        csvFile.flush();
+    }
+    else
+    {
+        std::cerr << "Error opening CSV file for logging\n";
+    }
+    // ----- End External Communication & CSV Logging -----
+
+    // Optionally output the FEN to stdout.
+    //std::cout << fenStr;
 
     return v;
 }
