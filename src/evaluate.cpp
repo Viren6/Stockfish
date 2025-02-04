@@ -34,6 +34,7 @@
 #include <queue>
 #include <chrono>
 #include <fstream>
+#include <charconv>  // for std::from_chars
 
 #ifdef __unix__
     #include <fcntl.h>  // For fcntl() on non-Windows systems (if needed)
@@ -259,7 +260,7 @@ bool ExternalComm::getLineSync(std::string& line) {
 }
 
 //
-// Modified I/O thread function that splits incoming data on newline characters.
+// I/O thread function that splits incoming data on newline characters.
 //
 void ExternalComm::ioThreadFunc() {
     std::string partial;  // accumulate any leftover partial data
@@ -294,7 +295,7 @@ void ExternalComm::ioThreadFunc() {
         data = partial + data;
         partial.clear();
 
-        // Split the received data on newline characters.
+        // Split the data on newline characters.
         size_t start = 0;
         while (true)
         {
@@ -328,13 +329,14 @@ static bool         externalCommInitialized = false;
 // Stockfish Evaluation Functions
 //
 
-// Returns a material-only evaluation from the perspective of color c.
+// Returns a purely materialistic evaluation of the position from the point
+// of view of the given color.
 int Eval::simple_eval(const Position& pos, Color c) {
     return PawnValue * (pos.count<PAWN>(c) - pos.count<PAWN>(~c))
          + (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
 }
 
-// Chooses between the small and big NNUE network based on a simple evaluation.
+// Chooses between the small or big NNUE network based on a simple material eval.
 bool Eval::use_smallnet(const Position& pos) {
     int simpleEval = simple_eval(pos, pos.side_to_move());
     return std::abs(simpleEval) > 962;
@@ -342,8 +344,9 @@ bool Eval::use_smallnet(const Position& pos) {
 
 // The modified evaluation function.
 // It combines NNUE evaluation with external evaluation data from monty.exe,
-// and logs both values to a CSV file. This version blocks deterministically
-// until a valid external cp value (different from 40000) is obtained.
+// and logs both values to a CSV file.
+// This version blocks deterministically until a valid external cp value is received.
+// Now, monty.exe outputs only the cp value (e.g. "123\n"), so we parse the entire line as an integer.
 Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
                      const Position&                pos,
                      Eval::NNUE::AccumulatorCaches& caches,
@@ -388,6 +391,7 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     }
 
     // Loop until a valid cp value is obtained.
+    // Since monty.exe outputs only a number, we parse the entire line as an integer.
     while (cpValue == 40000)
     {
         externalComm.sendCommand("position fen " + fenStr + "\n");
@@ -395,30 +399,22 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
 
         std::string line;
         externalComm.getLineSync(line);
-        std::istringstream iss(line);
-        std::string        token;
-        while (iss >> token)
+
+        int  parsedValue = 40000;
+        auto result      = std::from_chars(line.data(), line.data() + line.size(), parsedValue);
+        if (result.ec == std::errc() && result.ptr != line.data())
         {
-            if (token == "cp:")
-            {
-                iss >> cpValue;
-                break;
-            }
+            cpValue = parsedValue;
         }
-        if (cpValue == 40000)
+        else
         {
-            std::cerr << "Invalid cp value received, waiting for correct result...\n";
+            std::cerr << "Failed to parse cp value from line: " << line << "\n";
+            cpValue = 40000;
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
     }
 
-    // Read and ignore the second output line.
-    {
-        std::string dummy;
-        externalComm.getLineSync(dummy);
-    }
-
-    // Append the evaluation and cp value to a CSV log file.
+    // Append the evaluations to a CSV file.
     //static std::ofstream csvFile("eval_log.csv", std::ios::app);
     //if (csvFile.is_open())
     //{
