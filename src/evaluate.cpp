@@ -256,7 +256,7 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     static FILE* extPipe = nullptr;
     if (!extPipe)
     {
-        extPipe = popen("Monty-windows-x86-64-v2-dev-20250119-7c7996e8.exe", "r+");
+        extPipe = popen("./monty", "r+");
         if (!extPipe)
         {
             perror("popen failed");
