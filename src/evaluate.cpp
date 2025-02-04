@@ -28,41 +28,104 @@
 #include <memory>
 #include <sstream>
 #include <tuple>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <queue>
+#include <chrono>
+#include <fstream>
 
 #include "nnue/network.h"
 #include "nnue/nnue_misc.h"
 #include "position.h"
 #include "types.h"
 #include "uci.h"
-#include <fstream>
 #include "nnue/nnue_accumulator.h"
+
+#ifdef _WIN32
+    #include <windows.h>
+#endif
 
 namespace Stockfish {
 
-// Returns a static, purely materialistic evaluation of the position from
-// the point of view of the given color. It can be divided by PawnValue to get
-// an approximation of the material advantage on the board in terms of pawns.
-int Eval::simple_eval(const Position& pos, Color c) {
-    return PawnValue * (pos.count<PAWN>(c) - pos.count<PAWN>(~c))
-         + (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
-}
+// Timeout (in milliseconds) and maximum retry count for external communication
+static const int TIMEOUT_MS  = 200;
+static const int MAX_RETRIES = 3;
 
-bool Eval::use_smallnet(const Position& pos) {
-    int simpleEval = simple_eval(pos, pos.side_to_move());
-    return std::abs(simpleEval) > 962;
-}
+// --------------------------------------------------------------------------
+// External Communication with monty.exe using a dedicated I/O thread
+// --------------------------------------------------------------------------
 
-// On Windows, we use a helper struct to hold our bidirectional process information.
+// This helper class encapsulates the communication with the external
+// process (monty.exe). It spawns the process (using CreateProcess on Windows
+// or popen on non-Windows), starts a dedicated I/O thread that continuously
+// reads complete lines from the process’s output, and provides methods to
+// send commands and retrieve output lines with a timeout.
+class ExternalComm {
+   public:
+    ExternalComm();
+    ~ExternalComm();
+
+    // Initializes the external process and starts the I/O thread.
+    bool initialize();
+
+    // Sends a command string to the external process.
+    bool sendCommand(const std::string& cmd);
+
+    // Attempts to retrieve a complete output line within timeout_ms milliseconds.
+    // Returns true if a line was retrieved (stored in 'line'), false otherwise.
+    bool getLine(std::string& line, int timeout_ms);
+
+   private:
+    std::mutex              mtx;
+    std::condition_variable cond;
+    std::queue<std::string> lineQueue;
+    bool                    stopThread;
+    std::thread             ioThread;
+
 #ifdef _WIN32
-struct BidirectionalProcess {
-    PROCESS_INFORMATION pi;
-    HANDLE              hChildStd_IN_Wr;
-    HANDLE              hChildStd_OUT_Rd;
+    // Windows-specific members
+    struct BidirectionalProcess {
+        PROCESS_INFORMATION pi;
+        HANDLE              hChildStd_IN_Wr;
+        HANDLE              hChildStd_OUT_Rd;
+    } extProc;
+
+    // Helper to launch a bidirectional process.
+    bool createBidirectionalProcess(const char* cmd, BidirectionalProcess& bp);
+#else
+    // Non-Windows: we use popen
+    FILE* extPipe;
+#endif
+
+    // The dedicated I/O thread function: continuously reads output lines
+    // from the external process and pushes complete lines into the queue.
+    void ioThreadFunc();
 };
 
-// Helper function to create a bidirectional process.
-// Returns true on success.
-static bool createBidirectionalProcess(const char* cmd, BidirectionalProcess& bp) {
+ExternalComm::ExternalComm() :
+    stopThread(false) {
+#ifdef _WIN32
+    // Nothing extra here.
+#else
+    extPipe = nullptr;
+#endif
+}
+
+ExternalComm::~ExternalComm() {
+    stopThread = true;
+    if (ioThread.joinable())
+        ioThread.join();
+#ifdef _WIN32
+        // Optionally: close handles and wait on the process.
+#else
+    if (extPipe)
+        pclose(extPipe);
+#endif
+}
+
+#ifdef _WIN32
+bool ExternalComm::createBidirectionalProcess(const char* cmd, BidirectionalProcess& bp) {
     SECURITY_ATTRIBUTES saAttr;
     saAttr.nLength              = sizeof(SECURITY_ATTRIBUTES);
     saAttr.bInheritHandle       = TRUE;
@@ -105,7 +168,6 @@ static bool createBidirectionalProcess(const char* cmd, BidirectionalProcess& bp
     siStartInfo.hStdInput  = hChildStd_IN_Rd;
     siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
-    // Create the process.
     PROCESS_INFORMATION piProcInfo;
     ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
     BOOL success = CreateProcessA(NULL,
@@ -129,29 +191,150 @@ static bool createBidirectionalProcess(const char* cmd, BidirectionalProcess& bp
         std::cerr << "CreateProcess failed\n";
         return false;
     }
-
     bp.pi               = piProcInfo;
     bp.hChildStd_IN_Wr  = hChildStd_IN_Wr;
     bp.hChildStd_OUT_Rd = hChildStd_OUT_Rd;
     return true;
 }
-#endif  // _WIN32
+#endif
 
-// Modified evaluation function.
+bool ExternalComm::initialize() {
+#ifdef _WIN32
+    // Launch monty.exe on Windows.
+    if (!createBidirectionalProcess("monty.exe", extProc))
+    {
+        std::cerr << "Failed to launch monty.exe\n";
+        return false;
+    }
+#else
+    // On non-Windows systems, launch monty.exe using popen.
+    extPipe = popen("./monty.exe", "r+");
+    if (!extPipe)
+    {
+        perror("popen failed");
+        return false;
+    }
+#endif
+    // Start the dedicated I/O thread.
+    ioThread = std::thread(&ExternalComm::ioThreadFunc, this);
+    return true;
+}
+
+bool ExternalComm::sendCommand(const std::string& cmd) {
+#ifdef _WIN32
+    DWORD bytesWritten = 0;
+    if (!WriteFile(extProc.hChildStd_IN_Wr, cmd.c_str(), (DWORD) cmd.size(), &bytesWritten, NULL))
+    {
+        std::cerr << "WriteFile failed for command: " << cmd;
+        return false;
+    }
+#else
+    if (fprintf(extPipe, "%s", cmd.c_str()) < 0)
+    {
+        std::cerr << "fprintf failed for command: " << cmd;
+        return false;
+    }
+    fflush(extPipe);
+#endif
+    return true;
+}
+
+bool ExternalComm::getLine(std::string& line, int timeout_ms) {
+    std::unique_lock<std::mutex> lock(mtx);
+    if (cond.wait_for(lock, std::chrono::milliseconds(timeout_ms),
+                      [&]() { return !lineQueue.empty(); }))
+    {
+        line = lineQueue.front();
+        lineQueue.pop();
+        return true;
+    }
+    return false;
+}
+
+void ExternalComm::ioThreadFunc() {
+    while (!stopThread)
+    {
+        std::string line;
+#ifdef _WIN32
+        char  buffer[256] = {0};
+        DWORD bytesRead   = 0;
+        // Read until a newline is encountered.
+        while (!stopThread)
+        {
+            if (!ReadFile(extProc.hChildStd_OUT_Rd, buffer, sizeof(buffer) - 1, &bytesRead, NULL))
+            {
+                std::cerr << "ReadFile failed in ioThreadFunc\n";
+                break;
+            }
+            if (bytesRead > 0)
+            {
+                buffer[bytesRead] = '\0';
+                line += buffer;
+                if (line.find('\n') != std::string::npos)
+                    break;
+            }
+            else
+            {
+                // No data read; wait a short while.
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+        }
+#else
+        char buffer[256];
+        // fgets will block until a line is available.
+        if (fgets(buffer, sizeof(buffer), extPipe))
+            line = buffer;
+        else
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
+#endif
+        if (!line.empty())
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            lineQueue.push(line);
+            cond.notify_one();
+        }
+    }
+}
+
+// Global instance for external communication.
+static ExternalComm externalComm;
+static bool         externalCommInitialized = false;
+
+// --------------------------------------------------------------------------
+// Stockfish Evaluation Functions
+// --------------------------------------------------------------------------
+
+// Returns a purely materialistic evaluation of the position from the point
+// of view of the given color.
+int Eval::simple_eval(const Position& pos, Color c) {
+    return PawnValue * (pos.count<PAWN>(c) - pos.count<PAWN>(~c))
+         + (pos.non_pawn_material(c) - pos.non_pawn_material(~c));
+}
+
+// Chooses between the small or big NNUE network based on a simple material eval.
+bool Eval::use_smallnet(const Position& pos) {
+    int simpleEval = simple_eval(pos, pos.side_to_move());
+    return std::abs(simpleEval) > 962;
+}
+
+// The modified evaluation function.
+// It combines NNUE evaluation with external evaluation data from monty.exe,
+// then logs both values to a CSV file.
 Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
                      const Position&                pos,
                      Eval::NNUE::AccumulatorCaches& caches,
                      int                            optimism) {
-
     assert(!pos.checkers());
 
     bool smallNet           = use_smallnet(pos);
     auto [psqt, positional] = smallNet ? networks.small.evaluate(pos, &caches.small)
                                        : networks.big.evaluate(pos, &caches.big);
+    Value nnue              = (125 * psqt + 131 * positional) / 128;
 
-    Value nnue = (125 * psqt + 131 * positional) / 128;
-
-    // Re-evaluate the position when higher eval accuracy is worth the time spent
+    // Re-evaluate for higher accuracy if needed.
     if (smallNet && (std::abs(nnue) < 236))
     {
         std::tie(psqt, positional) = networks.big.evaluate(pos, &caches.big);
@@ -159,7 +342,7 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
         smallNet                   = false;
     }
 
-    // Blend optimism and eval with nnue complexity
+    // Blend optimism and eval with NNUE complexity.
     int nnueComplexity = std::abs(psqt - positional);
     optimism += optimism * nnueComplexity / 468;
     nnue -= nnue * nnueComplexity / (smallNet ? 20233 : 17879);
@@ -167,67 +350,56 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     int material = 535 * pos.count<PAWN>() + pos.non_pawn_material();
     int v        = (nnue * (77777 + material) + optimism * (7777 + material)) / 77777;
 
-    // Damp down the evaluation linearly when shuffling
+    // Damp evaluation if the fifty?move rule applies.
     v -= v * pos.rule50_count() / 212;
 
-    // Guarantee evaluation does not hit the tablebase range
+    // Clamp evaluation to avoid interfering with tablebase ranges.
     v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
 
     // ----- External Application Communication & CSV Logging -----
-    //
-    // Build the FEN string.
-    std::string fenStr = pos.get_fen();
+    std::string fenStr  = pos.get_fen();
+    int         cpValue = 0;
 
-    int cpValue = 0;
-
-#ifdef _WIN32
-    // On Windows, use our bidirectional process via CreateProcess.
-    static BidirectionalProcess extProc;
-    static bool                 extProcInitialized = false;
-    if (!extProcInitialized)
+    // Initialize the external communication (if not already done).
+    if (!externalCommInitialized)
     {
-        if (!createBidirectionalProcess("Monty-windows-x86-64-v2-dev-20250119-7c7996e8.exe",
-                                        extProc))
+        if (!externalComm.initialize())
         {
-            std::cerr << "Failed to launch external application\n";
-            exit(1);
+            std::cerr << "Failed to initialize external communication with monty.exe\n";
+            // Depending on your needs, you might exit here or continue without external eval.
         }
-        extProcInitialized = true;
+        externalCommInitialized = true;
     }
 
-    // Write command to process's stdin.
-    std::string cmd1         = "position fen " + fenStr + "\n";
-    std::string cmd2         = "eval\n";
-    DWORD       bytesWritten = 0;
-    if (!WriteFile(extProc.hChildStd_IN_Wr, cmd1.c_str(), (DWORD) cmd1.size(), &bytesWritten, NULL))
-    {
-        std::cerr << "WriteFile failed\n";
-    }
-    if (!WriteFile(extProc.hChildStd_IN_Wr, cmd2.c_str(), (DWORD) cmd2.size(), &bytesWritten, NULL))
-    {
-        std::cerr << "WriteFile failed\n";
-    }
-    // Optionally flush input by waiting a little (or using proper synchronization)
+    // Send commands to monty.exe.
+    externalComm.sendCommand("position fen " + fenStr + "\n");
+    externalComm.sendCommand("eval\n");
 
-    // Read two lines from the process's stdout.
-    // We'll read until we encounter a newline.
-    char        buffer[256] = {0};
-    DWORD       bytesRead   = 0;
-    std::string line1;
-    // Read first line.
-    do
+    // Attempt to read the first line (expected to contain "cp: ...").
+    std::string line;
+    int         retry   = 0;
+    bool        gotLine = false;
+    while (retry < MAX_RETRIES && !gotLine)
     {
-        if (!ReadFile(extProc.hChildStd_OUT_Rd, buffer, sizeof(buffer) - 1, &bytesRead, NULL))
+        if (externalComm.getLine(line, TIMEOUT_MS))
         {
-            std::cerr << "ReadFile failed\n";
-            break;
+            if (!line.empty() && line.find('\n') != std::string::npos)
+            {
+                gotLine = true;
+                break;
+            }
         }
-        buffer[bytesRead] = '\0';
-        line1 += buffer;
-    } while (line1.find('\n') == std::string::npos && bytesRead > 0);
-
+        retry++;
+        std::cerr << "Retrying read of first output line (attempt " << retry << ")\n";
+        externalComm.sendCommand("eval\n");
+    }
+    if (!gotLine)
     {
-        std::istringstream iss(line1);
+        std::cerr << "Failed to receive first line of output after retries\n";
+    }
+    else
+    {
+        std::istringstream iss(line);
         std::string        token;
         while (iss >> token)
         {
@@ -239,52 +411,29 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
         }
     }
 
-    // Read and ignore second line.
-    std::string dummy;
-    do
+    // Read (and ignore) the second output line.
+    retry   = 0;
+    gotLine = false;
+    while (retry < MAX_RETRIES && !gotLine)
     {
-        if (!ReadFile(extProc.hChildStd_OUT_Rd, buffer, sizeof(buffer) - 1, &bytesRead, NULL))
+        if (externalComm.getLine(line, TIMEOUT_MS))
         {
-            break;
+            if (!line.empty() && line.find('\n') != std::string::npos)
+            {
+                gotLine = true;
+                break;
+            }
         }
-        buffer[bytesRead] = '\0';
-        dummy += buffer;
-    } while (dummy.find('\n') == std::string::npos && bytesRead > 0);
-
-#else
-    // Non-Windows: use popen with "r+" mode.
-    static FILE* extPipe = nullptr;
-    if (!extPipe)
+        retry++;
+        std::cerr << "Retrying read of second output line (attempt " << retry << ")\n";
+        externalComm.sendCommand("eval\n");
+    }
+    if (!gotLine)
     {
-        extPipe = popen("./monty", "r+");
-        if (!extPipe)
-        {
-            perror("popen failed");
-            exit(1);
-        }
+        std::cerr << "Failed to receive second line of output after retries\n";
     }
 
-    fprintf(extPipe, "position fen %s\n", fenStr.c_str());
-    fflush(extPipe);
-    fprintf(extPipe, "eval\n");
-    fflush(extPipe);
-
-    char buffer[256];
-    if (fgets(buffer, sizeof(buffer), extPipe))
-    {
-        std::string line(buffer);
-        auto        pos_cp = line.find("cp:");
-        if (pos_cp != std::string::npos)
-        {
-            std::istringstream iss(line.substr(pos_cp + 3));
-            iss >> cpValue;
-        }
-    }
-    // Read and ignore second line.
-    fgets(buffer, sizeof(buffer), extPipe);
-#endif
-
-    // Open (or create) a CSV file for appending.
+    // Append the evaluations to a CSV file.
     static std::ofstream csvFile("eval_log.csv", std::ios::app);
     if (csvFile.is_open())
     {
@@ -297,40 +446,29 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     }
     // ----- End External Communication & CSV Logging -----
 
-    // Optionally output the FEN to stdout.
-    //std::cout << fenStr;
-
     return v;
 }
 
-// Like evaluate(), but instead of returning a value, it returns
-// a string (suitable for outputting to stdout) that contains the detailed
-// descriptions and values of each evaluation term. Useful for debugging.
-// Trace scores are from white's point of view
+// Like evaluate(), but returns a detailed string suitable for debugging.
+// The trace output is from white's point of view.
 std::string Eval::trace(Position& pos, const Eval::NNUE::Networks& networks) {
-
     if (pos.checkers())
         return "Final evaluation: none (in check)";
 
-    auto caches = std::make_unique<Eval::NNUE::AccumulatorCaches>(networks);
-
+    auto              caches = std::make_unique<Eval::NNUE::AccumulatorCaches>(networks);
     std::stringstream ss;
     ss << std::showpoint << std::noshowpos << std::fixed << std::setprecision(2);
     ss << '\n' << NNUE::trace(pos, networks, *caches) << '\n';
-
     ss << std::showpoint << std::showpos << std::fixed << std::setprecision(2) << std::setw(15);
-
     auto [psqt, positional] = networks.big.evaluate(pos, &caches->big);
     Value v                 = psqt + positional;
     v                       = pos.side_to_move() == WHITE ? v : -v;
     ss << "NNUE evaluation        " << 0.01 * UCIEngine::to_cp(v, pos) << " (white side)\n";
-
     v = evaluate(networks, pos, *caches, VALUE_ZERO);
     v = pos.side_to_move() == WHITE ? v : -v;
     ss << "Final evaluation       " << 0.01 * UCIEngine::to_cp(v, pos) << " (white side)";
     ss << " [with scaled NNUE, ...]";
     ss << "\n";
-
     return ss.str();
 }
 
