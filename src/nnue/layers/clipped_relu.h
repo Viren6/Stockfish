@@ -59,7 +59,7 @@ class ClippedReLU {
     bool write_parameters(std::ostream&) const { return true; }
 
     // Forward propagation
-    void propagate(const InputType* input, OutputType* output) const {
+    void propagate(const InputType* SF_RESTRICT input, OutputType* SF_RESTRICT output) const {
 
 #if defined(USE_AVX2)
         if constexpr (InputDimensions % SimdWidth == 0)

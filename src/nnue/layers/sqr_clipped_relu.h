@@ -59,7 +59,7 @@ class SqrClippedReLU {
     bool write_parameters(std::ostream&) const { return true; }
 
     // Forward propagation
-    void propagate(const InputType* input, OutputType* output) const {
+    void propagate(const InputType* SF_RESTRICT input, OutputType* SF_RESTRICT output) const {
 
 #if defined(USE_SSE2)
         constexpr IndexType NumChunks = InputDimensions / 16;

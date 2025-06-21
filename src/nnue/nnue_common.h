@@ -48,6 +48,12 @@
 
 namespace Stockfish::Eval::NNUE {
 
+#if defined(__GNUC__) || defined(__clang__)
+#define SF_RESTRICT __restrict__
+#else
+#define SF_RESTRICT
+#endif
+
 using BiasType       = std::int16_t;
 using WeightType     = std::int16_t;
 using PSQTWeightType = std::int32_t;

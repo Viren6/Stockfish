@@ -182,7 +182,7 @@ class AffineTransform {
         return !stream.fail();
     }
     // Forward propagation
-    void propagate(const InputType* input, OutputType* output) const {
+    void propagate(const InputType* SF_RESTRICT input, OutputType* SF_RESTRICT output) const {
 
 #ifdef ENABLE_SEQ_OPT
 
