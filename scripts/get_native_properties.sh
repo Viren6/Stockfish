@@ -31,7 +31,7 @@ set_arch_loongarch64() {
   if check_flags 'lasx'; then
     true_arch='loongarch64-lasx'
   elif check_flags 'lsx'; then
-    true_arch='lonngarch64-lsx'
+    true_arch='loongarch64-lsx'
   else
     true_arch='loongarch64'
   fi
