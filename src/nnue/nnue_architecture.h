@@ -120,10 +120,19 @@ struct NetworkArchitecture {
 #endif
 
         fc_0.propagate(transformedFeatures, buffer.fc_0_out);
-        ac_sqr_0.propagate(buffer.fc_0_out, buffer.ac_sqr_0_out);
-        ac_0.propagate(buffer.fc_0_out, buffer.ac_0_out);
-        std::memcpy(buffer.ac_sqr_0_out + FC_0_OUTPUTS, buffer.ac_0_out,
-                    FC_0_OUTPUTS * sizeof(typename decltype(ac_0)::OutputType));
+
+        for (IndexType i = 0; i < FC_0_OUTPUTS; ++i)
+        {
+            const std::int32_t v = buffer.fc_0_out[i];
+
+            buffer.ac_sqr_0_out[i] = static_cast<typename decltype(ac_sqr_0)::OutputType>(
+              std::min(127ll, (static_cast<long long>(v) * v) >> (2 * WeightScaleBits + 7)));
+
+            buffer.ac_sqr_0_out[FC_0_OUTPUTS + i] =
+              static_cast<typename decltype(ac_0)::OutputType>(
+                std::clamp(v >> WeightScaleBits, 0, 127));
+        }
+
         fc_1.propagate(buffer.ac_sqr_0_out, buffer.fc_1_out);
         ac_1.propagate(buffer.fc_1_out, buffer.ac_1_out);
         fc_2.propagate(buffer.ac_1_out, buffer.fc_2_out);
