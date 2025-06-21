@@ -215,7 +215,7 @@ Network<Arch, Transformer>::evaluate(const Position&                         pos
 
     constexpr uint64_t alignment = CacheLineSize;
 
-    alignas(alignment)
+    alignas(alignment) static thread_local
       TransformedFeatureType transformedFeatures[FeatureTransformer<FTDimensions>::BufferSize];
 
     ASSERT_ALIGNED(transformedFeatures, alignment);
