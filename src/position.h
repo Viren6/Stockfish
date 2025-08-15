@@ -139,6 +139,8 @@ class Position {
     void       undo_null_move();
 
     // Static Exchange Evaluation
+    int  see_score(const Move& m) const;
+    bool see(const Move& m, int threshold) const;
     bool see_ge(Move m, int threshold = 0) const;
 
     // Accessing hash keys

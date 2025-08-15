@@ -1092,110 +1092,489 @@ void Position::undo_null_move() {
 }
 
 
-// Tests if the SEE (Static Exchange Evaluation)
-// value of move is greater or equal to the given threshold. We'll use an
-// algorithm similar to alpha-beta pruning with a null window.
-bool Position::see_ge(Move m, int threshold) const {
+// Static exchange evaluation helpers --------------------------------------------------
 
-    assert(m.is_ok());
+namespace {
 
-    // Only deal with normal moves, assume others pass a simple SEE
-    if (m.type_of() != NORMAL)
-        return VALUE_ZERO >= threshold;
+constexpr int SEE_VALS[PIECE_TYPE_NB] = {0, PawnValue, KnightValue, BishopValue,
+                                         RookValue, QueenValue, 20000, 0};
 
-    Square from = m.from_sq(), to = m.to_sq();
+constexpr Bitboard PenultimateRank[COLOR_NB] = {Rank7BB, Rank2BB};
 
-    int swap = PieceValue[piece_on(to)] - threshold;
-    if (swap < 0)
+inline Square pop_lsb_u64(Bitboard& b) { return pop_lsb(b); }
+
+} // namespace
+
+// Binary-search SEE score
+int Position::see_score(const Move& m) const {
+    int low = -20000, high = 20000;
+    while (low < high) {
+        int mid = (low + high + 1) / 2;
+        if (see(m, mid))
+            low = mid;
+        else
+            high = mid - 1;
+    }
+    return low;
+}
+
+// Boolean SEE with threshold
+bool Position::see(const Move& m, int threshold) const {
+    const Square from = m.from_sq();
+    const Square to   = m.to_sq();
+    Color side        = side_to_move();
+
+    const PieceType moved_pt    = type_of(piece_on(from));
+    const PieceType captured_pt = m.type_of() == EN_PASSANT ? PAWN : type_of(piece_on(to));
+
+    const Bitboard from_bb = square_bb(from);
+    const Square ksq = square<KING>(side);
+    Bitboard pinned = blockers_for_king(side) & pieces(side);
+    if ((pinned & from_bb) && !(line_bb(ksq, to) & from_bb))
         return false;
 
-    swap = PieceValue[piece_on(from)] - swap;
-    if (swap <= 0)
-        return true;
+    int score = SEE_VALS[captured_pt] - threshold;
 
-    assert(color_of(piece_on(from)) == sideToMove);
-    Bitboard occupied  = pieces() ^ from ^ to;  // xoring to is important for pinned piece logic
-    Color    stm       = sideToMove;
-    Bitboard attackers = attackers_to(to, occupied);
-    Bitboard stmAttackers, bb;
-    int      res = 1;
+    if (m.type_of() == PROMOTION) {
+        const PieceType promo_pt = m.promotion_type();
+        score += SEE_VALS[promo_pt] - SEE_VALS[PAWN];
+        if (score < 0)
+            return false;
+        score -= SEE_VALS[promo_pt];
+        if (score >= 0)
+            return true;
+    } else {
+        if (score < 0)
+            return false;
+        score -= SEE_VALS[moved_pt];
+        if (score >= 0) {
+            const Bitboard to_bb = square_bb(to);
+            const Square cap_sq = m.type_of() == EN_PASSANT ? Square(to - pawn_push(side)) : to;
+            const Bitboard cap_bb = square_bb(cap_sq);
 
-    while (true)
-    {
-        stm = ~stm;
-        attackers &= occupied;
+            Bitboard occ_after = pieces();
+            occ_after ^= from_bb;
+            occ_after ^= cap_bb;
+            occ_after |= to_bb;
+            const Bitboard occ_att = occ_after ^ to_bb;
 
-        // If stm has no more attackers then give up: stm loses
-        if (!(stmAttackers = attackers & pieces(stm)))
-            break;
+            Bitboard pieceBB[PIECE_TYPE_NB];
+            Bitboard colorBB[COLOR_NB];
+            for (int i = 0; i < PIECE_TYPE_NB; ++i)
+                pieceBB[i] = pieces(PieceType(i));
+            colorBB[WHITE] = pieces(WHITE);
+            colorBB[BLACK] = pieces(BLACK);
 
-        // Don't allow pinned pieces to attack as long as there are
-        // pinners on their original square.
-        if (pinners(~stm) & occupied)
-        {
-            stmAttackers &= ~blockers_for_king(stm);
+            pieceBB[moved_pt] ^= from_bb;
+            colorBB[side] ^= from_bb;
 
-            if (!stmAttackers)
-                break;
+            if (captured_pt != NO_PIECE_TYPE) {
+                pieceBB[captured_pt] ^= cap_bb;
+                colorBB[~side] ^= cap_bb;
+            }
+            pieceBB[moved_pt] |= to_bb;
+            colorBB[side] |= to_bb;
+
+            const Color opp = ~side;
+            const Bitboard queens  = pieceBB[QUEEN];
+            const Bitboard rooks   = pieceBB[ROOK] | queens;
+            const Bitboard bishops = pieceBB[BISHOP] | queens;
+            const Bitboard pawns_w = pieceBB[PAWN] & colorBB[WHITE];
+            const Bitboard pawns_b = pieceBB[PAWN] & colorBB[BLACK];
+
+            Bitboard opp_attackers =
+                (attacks_bb<KING>(to) & pieceBB[KING]) |
+                (attacks_bb<KNIGHT>(to) & pieceBB[KNIGHT]) |
+                (attacks_bb<BISHOP>(to, occ_att) & bishops) |
+                (attacks_bb<ROOK>(to, occ_att) & rooks) |
+                (attacks_bb<PAWN>(to, WHITE) & pawns_b) |
+                (attacks_bb<PAWN>(to, BLACK) & pawns_w);
+
+            opp_attackers &= colorBB[opp];
+
+            if (!opp_attackers)
+                return true;
+
+            Bitboard promo_attackers = pieceBB[PAWN] & colorBB[opp] & PenultimateRank[opp];
+
+            if (!(attacks_bb<PAWN>(to, side) & promo_attackers))
+                return true;
+
+            const int promo_penalty = SEE_VALS[QUEEN] - SEE_VALS[PAWN];
+            if (score >= promo_penalty)
+                return true;
+            // Fall through to full SEE
         }
-
-        res ^= 1;
-
-        // Locate and remove the next least valuable attacker, and add to
-        // the bitboard 'attackers' any X-ray attackers behind it.
-        if ((bb = stmAttackers & pieces(PAWN)))
-        {
-            if ((swap = PawnValue - swap) < res)
-                break;
-            occupied ^= least_significant_square_bb(bb);
-
-            attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
-        }
-
-        else if ((bb = stmAttackers & pieces(KNIGHT)))
-        {
-            if ((swap = KnightValue - swap) < res)
-                break;
-            occupied ^= least_significant_square_bb(bb);
-        }
-
-        else if ((bb = stmAttackers & pieces(BISHOP)))
-        {
-            if ((swap = BishopValue - swap) < res)
-                break;
-            occupied ^= least_significant_square_bb(bb);
-
-            attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
-        }
-
-        else if ((bb = stmAttackers & pieces(ROOK)))
-        {
-            if ((swap = RookValue - swap) < res)
-                break;
-            occupied ^= least_significant_square_bb(bb);
-
-            attackers |= attacks_bb<ROOK>(to, occupied) & pieces(ROOK, QUEEN);
-        }
-
-        else if ((bb = stmAttackers & pieces(QUEEN)))
-        {
-            swap = QueenValue - swap;
-            //  implies that the previous recapture was done by a higher rated piece than a Queen (King is excluded)
-            assert(swap >= res);
-            occupied ^= least_significant_square_bb(bb);
-
-            attackers |= (attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN))
-                       | (attacks_bb<ROOK>(to, occupied) & pieces(ROOK, QUEEN));
-        }
-
-        else  // KING
-              // If we "capture" with the king but the opponent still has attackers,
-              // reverse the result.
-            return (attackers & ~pieces(stm)) ? res ^ 1 : res;
     }
 
-    return bool(res);
+    Bitboard occ = pieces();
+    const Bitboard to_bb = square_bb(to);
+    occ &= ~from_bb;
+    occ &= ~to_bb;
+    if (m.type_of() == EN_PASSANT)
+        occ &= ~square_bb(Square(to - pawn_push(side)));
+
+    int delta = int(to) - int(from);
+    bool is_dbl = m.type_of() == NORMAL && moved_pt == PAWN && (delta == 16 || delta == -16);
+
+    if (is_dbl) {
+        Square ep_sq = Square(to - pawn_push(side));
+        Color opp = ~side;
+        Bitboard ep_attackers = attacks_bb<PAWN>(ep_sq, side) & pieces(PAWN) & pieces(opp);
+
+        if (ep_attackers) {
+            Bitboard occ_after = pieces();
+            occ_after ^= (from_bb | to_bb);
+
+            Bitboard pieceBB2[PIECE_TYPE_NB];
+            Bitboard colorBB2[COLOR_NB];
+            for (int i = 0; i < PIECE_TYPE_NB; ++i)
+                pieceBB2[i] = pieces(PieceType(i));
+            colorBB2[WHITE] = pieces(WHITE);
+            colorBB2[BLACK] = pieces(BLACK);
+
+            pieceBB2[PAWN] ^= (from_bb | to_bb);
+            colorBB2[side] ^= (from_bb | to_bb);
+
+            auto recompute_pins = [&](const Bitboard pieceBB[PIECE_TYPE_NB],
+                                      const Bitboard colorBB[COLOR_NB], Bitboard O,
+                                      Color s, Square ksq_) {
+                Bitboard opps = colorBB[~s];
+                Bitboard rq = pieceBB[ROOK] | pieceBB[QUEEN];
+                Bitboard bq = pieceBB[BISHOP] | pieceBB[QUEEN];
+                Bitboard snipers = ((attacks_bb<ROOK>(ksq_) & rq) |
+                                    (attacks_bb<BISHOP>(ksq_) & bq)) & opps;
+                Bitboard occupancy = O ^ snipers;
+                Bitboard pinned_bb = 0;
+                while (snipers) {
+                    Square sq = pop_lsb(snipers);
+                    Bitboard b = between_bb(ksq_, sq) & occupancy;
+                    if (b && !more_than_one(b) && (b & colorBB[s]))
+                        pinned_bb |= b;
+                }
+                return pinned_bb;
+            };
+
+            Bitboard pinned_opp = recompute_pins(pieceBB2, colorBB2, occ_after, opp, square<KING>(opp));
+
+            ep_attackers &= ~pinned_opp | (line_bb(square<KING>(opp), ep_sq) & pinned_opp);
+
+            if (ep_attackers) {
+                bool legal = false;
+                Bitboard attackers = ep_attackers;
+                while (attackers) {
+                    Square src = pop_lsb(attackers);
+                    Bitboard from_bit = square_bb(src);
+
+                    Bitboard occ_cap = occ_after ^ from_bit ^ to_bb;
+                    occ_cap |= square_bb(ep_sq);
+
+                    Bitboard pieceBB3[PIECE_TYPE_NB];
+                    Bitboard colorBB3[COLOR_NB];
+                    for (int i = 0; i < PIECE_TYPE_NB; ++i)
+                        pieceBB3[i] = pieceBB2[i];
+                    colorBB3[WHITE] = colorBB2[WHITE];
+                    colorBB3[BLACK] = colorBB2[BLACK];
+
+                    pieceBB3[PAWN] ^= (from_bit | to_bb | square_bb(ep_sq));
+                    colorBB3[opp] ^= from_bit;
+                    colorBB3[opp] |= square_bb(ep_sq);
+                    colorBB3[side] &= ~to_bb;
+
+                    Square king_sq_opp = square<KING>(opp);
+                    Bitboard queens = pieceBB3[QUEEN];
+                    Bitboard rooks = pieceBB3[ROOK] | queens;
+                    Bitboard bishops = pieceBB3[BISHOP] | queens;
+
+                    Bitboard checkers =
+                        (attacks_bb<KING>(king_sq_opp) & pieceBB3[KING]) |
+                        (attacks_bb<KNIGHT>(king_sq_opp) & pieceBB3[KNIGHT]) |
+                        (attacks_bb<BISHOP>(king_sq_opp, occ_cap) & bishops) |
+                        (attacks_bb<ROOK>(king_sq_opp, occ_cap) & rooks) |
+                        (attacks_bb<PAWN>(king_sq_opp, opp) & pieceBB3[PAWN]);
+
+                    checkers &= colorBB3[side];
+
+                    if (!checkers) { legal = true; break; }
+                }
+                if (legal)
+                    return threshold <= -SEE_VALS[PAWN];
+            }
+        }
+    }
+
+    Bitboard pieceBB4[PIECE_TYPE_NB];
+    Bitboard colorBB4[COLOR_NB];
+    for (int i = 0; i < PIECE_TYPE_NB; ++i)
+        pieceBB4[i] = pieces(PieceType(i));
+    colorBB4[WHITE] = pieces(WHITE);
+    colorBB4[BLACK] = pieces(BLACK);
+
+    pieceBB4[moved_pt] &= ~from_bb;
+    colorBB4[side] &= ~from_bb;
+
+    if (captured_pt != NO_PIECE_TYPE) {
+        Square cap_sq = m.type_of() == EN_PASSANT ? Square(to - pawn_push(side)) : to;
+        Bitboard cap_bb = square_bb(cap_sq);
+        pieceBB4[captured_pt] &= ~cap_bb;
+        colorBB4[~side] &= ~cap_bb;
+    }
+
+    {
+        Bitboard pieceBB5[PIECE_TYPE_NB];
+        Bitboard colorBB5[COLOR_NB];
+        for (int i = 0; i < PIECE_TYPE_NB; ++i)
+            pieceBB5[i] = pieceBB4[i];
+        colorBB5[WHITE] = colorBB4[WHITE];
+        colorBB5[BLACK] = colorBB4[BLACK];
+
+        Bitboard occ_after = occ | to_bb;
+        pieceBB5[moved_pt] |= to_bb;
+        colorBB5[side] |= to_bb;
+
+        Color opp = ~side;
+        Square ksq_opp = square<KING>(opp);
+        Bitboard queens_after = pieceBB5[QUEEN];
+        Bitboard rooks_after = pieceBB5[ROOK] | queens_after;
+        Bitboard bishops_after = pieceBB5[BISHOP] | queens_after;
+
+        Bitboard checkers =
+            (attacks_bb<KING>(ksq_opp) & pieceBB5[KING]) |
+            (attacks_bb<KNIGHT>(ksq_opp) & pieceBB5[KNIGHT]) |
+            (attacks_bb<BISHOP>(ksq_opp, occ_after) & bishops_after) |
+            (attacks_bb<ROOK>(ksq_opp, occ_after) & rooks_after) |
+            (attacks_bb<PAWN>(ksq_opp, opp) & pieceBB5[PAWN]);
+
+        checkers &= colorBB5[side];
+
+        bool opp_in_check = checkers != 0;
+        bool double_check = (checkers & (checkers - 1)) != 0;
+        bool checker_on_to = checkers & to_bb;
+
+        Bitboard attackers = [&]() {
+            Bitboard queens = pieceBB4[QUEEN];
+            Bitboard rooks = pieceBB4[ROOK] | queens;
+            Bitboard bishops = pieceBB4[BISHOP] | queens;
+            Bitboard knights = pieceBB4[KNIGHT];
+            Bitboard kings = pieceBB4[KING];
+            Bitboard pawns_w = pieceBB4[PAWN] & colorBB4[WHITE];
+            Bitboard pawns_b = pieceBB4[PAWN] & colorBB4[BLACK];
+
+            return (attacks_bb<KING>(to) & kings) |
+                   (attacks_bb<KNIGHT>(to) & knights) |
+                   (attacks_bb<BISHOP>(to, occ) & bishops) |
+                   (attacks_bb<ROOK>(to, occ) & rooks) |
+                   (attacks_bb<PAWN>(to, WHITE) & pawns_b) |
+                   (attacks_bb<PAWN>(to, BLACK) & pawns_w);
+        }();
+
+        if (opp_in_check && (double_check || !checker_on_to))
+            attackers &= attacks_bb<KING>(to);
+
+        auto recompute_pins2 = [&](const Bitboard pieceBB[PIECE_TYPE_NB],
+                                   const Bitboard colorBB[COLOR_NB], Bitboard O,
+                                   Color s, Square ksq_) {
+            Bitboard opps = colorBB[~s];
+            Bitboard rq = pieceBB[ROOK] | pieceBB[QUEEN];
+            Bitboard bq = pieceBB[BISHOP] | pieceBB[QUEEN];
+            Bitboard snipers = ((attacks_bb<ROOK>(ksq_) & rq) |
+                                (attacks_bb<BISHOP>(ksq_) & bq)) & opps;
+            Bitboard occupancy = O ^ snipers;
+            Bitboard pinned_bb = 0;
+            while (snipers) {
+                Square sq = pop_lsb(snipers);
+                Bitboard b = between_bb(ksq_, sq) & occupancy;
+                if (b && !more_than_one(b) && (b & colorBB[s]))
+                    pinned_bb |= b;
+            }
+            return pinned_bb;
+        };
+
+        Bitboard pinned_w = recompute_pins2(pieceBB4, colorBB4, occ, WHITE, square<KING>(WHITE));
+        Bitboard pinned_b = recompute_pins2(pieceBB4, colorBB4, occ, BLACK, square<KING>(BLACK));
+
+        auto remove_least = [&](Bitboard pieceBB[PIECE_TYPE_NB], Bitboard colorBB[COLOR_NB],
+                                Bitboard mask, Bitboard& O, Square opp_king,
+                                Bitboard opp_pinned, Square to_sq,
+                                PieceType& out_pt, Bitboard& out_from_bb) -> bool {
+            static const PieceType ORDER[6] = {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING};
+
+            PieceType global_pt = NO_PIECE_TYPE;
+            Bitboard global_bit = 0;
+
+            for (PieceType pt : ORDER) {
+                Bitboard bb = pieceBB[pt] & mask;
+                if (!bb)
+                    continue;
+
+                Bitboard fallback_no_xray = 0;
+
+                while (bb) {
+                    Bitboard bit = bb & -bb;
+                    bb ^= bit;
+                    Square sq = lsb(bit);
+
+                    bool releases_pin = line_bb(opp_king, sq) & opp_pinned;
+
+                    Bitboard occ_after_2 = O ^ bit;
+                    Color side_here = (colorBB[WHITE] & bit) ? WHITE : BLACK;
+                    Color opp_here = ~side_here;
+
+                    Bitboard bishops = (pieceBB[BISHOP] | pieceBB[QUEEN]) & colorBB[opp_here];
+                    Bitboard rooks   = (pieceBB[ROOK]   | pieceBB[QUEEN]) & colorBB[opp_here];
+                    Bitboard pawns   = pieceBB[PAWN] & colorBB[opp_here];
+
+                    bool pawn_attack = attacks_bb<PAWN>(to_sq, side_here) & pawns;
+
+                    bool existing_xray = pawn_attack ||
+                        (attacks_bb<BISHOP>(to_sq, O) & bishops) ||
+                        (attacks_bb<ROOK>(to_sq, O) & rooks);
+
+                    bool opens_xray = !existing_xray &&
+                        ((attacks_bb<BISHOP>(to_sq, occ_after_2) & bishops) ||
+                         (attacks_bb<ROOK>(to_sq, occ_after_2) & rooks));
+
+                    bool promo_pawn = (pt == PAWN) && (bit & PenultimateRank[side_here]);
+
+                    if ((!releases_pin || promo_pawn) && (!opens_xray || promo_pawn)) {
+                        pieceBB[pt] ^= bit;
+                        colorBB[side_here] ^= bit;
+                        O ^= bit;
+                        out_pt = pt;
+                        out_from_bb = bit;
+                        return true;
+                    }
+
+                    if ((!opens_xray || promo_pawn) && !fallback_no_xray)
+                        fallback_no_xray = bit;
+
+                    if (global_pt == NO_PIECE_TYPE) {
+                        global_pt = pt;
+                        global_bit = bit;
+                    }
+                }
+
+                if (fallback_no_xray) {
+                    pieceBB[pt] ^= fallback_no_xray;
+                    Color side_here = (colorBB[WHITE] & fallback_no_xray) ? WHITE : BLACK;
+                    colorBB[side_here] ^= fallback_no_xray;
+                    O ^= fallback_no_xray;
+                    out_pt = pt;
+                    out_from_bb = fallback_no_xray;
+                    return true;
+                }
+            }
+
+            if (global_pt != NO_PIECE_TYPE) {
+                pieceBB[global_pt] ^= global_bit;
+                Color side_here = (colorBB[WHITE] & global_bit) ? WHITE : BLACK;
+                colorBB[side_here] ^= global_bit;
+                O ^= global_bit;
+                out_pt = global_pt;
+                out_from_bb = global_bit;
+                return true;
+            }
+
+            return false;
+        };
+
+        Color stm = ~side;
+        while ((attackers & colorBB4[stm]) != 0) {
+            Bitboard all_pinned = pinned_w | pinned_b;
+            Bitboard white_allowed = pinned_w & line_bb(square<KING>(WHITE), to);
+            Bitboard black_allowed = pinned_b & line_bb(square<KING>(BLACK), to);
+            Bitboard allowed = (~all_pinned) | white_allowed | black_allowed;
+
+            Bitboard our_attackers = attackers & colorBB4[stm] & allowed;
+            Bitboard opp_pinned = (stm == WHITE) ? pinned_b : pinned_w;
+            Square opp_king_sq = square<KING>(~stm);
+
+            PieceType attacker_pt = NO_PIECE_TYPE;
+            Bitboard from_bit = 0;
+            if (!remove_least(pieceBB4, colorBB4, our_attackers, occ, opp_king_sq,
+                               opp_pinned, to, attacker_pt, from_bit))
+                break;
+
+            {
+                Bitboard pieceBB6[PIECE_TYPE_NB];
+                Bitboard colorBB6[COLOR_NB];
+                for (int i = 0; i < PIECE_TYPE_NB; ++i)
+                    pieceBB6[i] = pieceBB4[i];
+                colorBB6[WHITE] = colorBB4[WHITE];
+                colorBB6[BLACK] = colorBB4[BLACK];
+
+                Bitboard occ_after2 = occ | to_bb;
+                pieceBB6[attacker_pt] |= to_bb;
+                colorBB6[stm] |= to_bb;
+
+                Square ksq_self = (attacker_pt == KING) ? to : square<KING>(stm);
+
+                Bitboard queens = pieceBB6[QUEEN];
+                Bitboard rooks = pieceBB6[ROOK] | queens;
+                Bitboard bishops = pieceBB6[BISHOP] | queens;
+                Bitboard pawns_w2 = pieceBB6[PAWN] & colorBB6[WHITE];
+                Bitboard pawns_b2 = pieceBB6[PAWN] & colorBB6[BLACK];
+
+                Bitboard pawn_attacks = (stm == WHITE) ?
+                    (attacks_bb<PAWN>(ksq_self, WHITE) & pawns_b2) :
+                    (attacks_bb<PAWN>(ksq_self, BLACK) & pawns_w2);
+
+                Bitboard checkers2 =
+                    (attacks_bb<KING>(ksq_self) & pieceBB6[KING]) |
+                    (attacks_bb<KNIGHT>(ksq_self) & pieceBB6[KNIGHT]) |
+                    (attacks_bb<BISHOP>(ksq_self, occ_after2) & bishops) |
+                    (attacks_bb<ROOK>(ksq_self, occ_after2) & rooks) |
+                    pawn_attacks;
+
+                checkers2 &= colorBB6[~stm];
+
+                if (checkers2) {
+                    pieceBB4[attacker_pt] |= from_bit;
+                    colorBB4[stm] |= from_bit;
+                    occ |= from_bit;
+                    attackers &= ~from_bit;
+                    continue;
+                }
+            }
+
+            int capture_val = SEE_VALS[attacker_pt];
+
+            if (attacker_pt == PAWN && ((stm == WHITE && to >= SQ_A8) || (stm == BLACK && to <= SQ_H1)))
+                attacker_pt = QUEEN;
+
+            Bitboard queens = pieceBB4[QUEEN];
+            Bitboard rooks = pieceBB4[ROOK] | queens;
+            Bitboard bishops = pieceBB4[BISHOP] | queens;
+
+            if (attacker_pt == PAWN || attacker_pt == BISHOP || attacker_pt == QUEEN)
+                attackers |= attacks_bb<BISHOP>(to, occ) & bishops;
+
+            if (attacker_pt == ROOK || attacker_pt == QUEEN)
+                attackers |= attacks_bb<ROOK>(to, occ) & rooks;
+
+            attackers &= occ;
+
+            if (attacker_pt == KING && (attackers & colorBB4[~stm]))
+                break;
+
+            score = -score - 1 - capture_val;
+            stm = ~stm;
+
+            pinned_w = recompute_pins2(pieceBB4, colorBB4, occ, WHITE, square<KING>(WHITE));
+            pinned_b = recompute_pins2(pieceBB4, colorBB4, occ, BLACK, square<KING>(BLACK));
+
+            Bitboard promo_attackers2 = attackers & colorBB4[stm] & pieceBB4[PAWN] & PenultimateRank[stm];
+
+            if (score >= 0 && promo_attackers2 == 0)
+                break;
+        }
+
+        return stm != side;
+    }
 }
+
+// Backward compatible wrapper
+bool Position::see_ge(Move m, int threshold) const { return see(m, threshold); }
 
 // Tests whether the position is drawn by 50-move rule
 // or by repetition. It does not detect stalemates.
