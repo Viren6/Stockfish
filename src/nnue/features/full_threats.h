@@ -98,7 +98,8 @@ class FullThreats {
 
     // Get a list of indices for recently changed features
     template<Color Perspective>
-    static void append_changed_indices(Square           ksq,
+    static void append_changed_indices(Square           ksq [[maybe_unused]],
+                                       int              orientation,
                                        const DiffType&  diff,
                                        IndexList&       removed,
                                        IndexList&       added,

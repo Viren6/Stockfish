@@ -248,14 +248,13 @@ FullThreats::make_index<BLACK>(Piece attkr, Square from, Square to, Piece attkd,
 
 // Get a list of indices for recently changed features
 template<Color Perspective>
-void FullThreats::append_changed_indices(Square           ksq,
+void FullThreats::append_changed_indices(Square           ksq [[maybe_unused]],
+                                         int              orientation,
                                          const DiffType&  diff,
                                          IndexList&       removed,
                                          IndexList&       added,
                                          FusedUpdateData* fusedData,
                                          bool             first) {
-    const int orientation = OrientTBL[Perspective][ksq];
-
     for (std::size_t idx = 0; idx < diff.list.size(); ++idx)
     {
         const DirtyThreat& dirty = diff.list[idx];
@@ -306,12 +305,14 @@ void FullThreats::append_changed_indices(Square           ksq,
 
 // Explicit template instantiations
 template void FullThreats::append_changed_indices<WHITE>(Square           ksq,
+                                                         int              orientation,
                                                          const DiffType&  diff,
                                                          IndexList&       removed,
                                                          IndexList&       added,
                                                          FusedUpdateData* fd,
                                                          bool             first);
 template void FullThreats::append_changed_indices<BLACK>(Square           ksq,
+                                                         int              orientation,
                                                          const DiffType&  diff,
                                                          IndexList&       removed,
                                                          IndexList&       added,

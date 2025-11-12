@@ -49,6 +49,7 @@ void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
 template<Color Perspective, IndexType TransformedFeatureDimensions>
 void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
                        const Square                                            ksq,
+                       int                                                     orientation,
                        AccumulatorState<ThreatFeatureSet>&                     middle_state,
                        AccumulatorState<ThreatFeatureSet>&                     target_state,
                        const AccumulatorState<ThreatFeatureSet>&               computed,
@@ -61,6 +62,7 @@ template<Color Perspective,
 void update_accumulator_incremental(
   const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
   const Square                                            ksq,
+  int                                                     orientation,
   AccumulatorState<FeatureSet>&                           target_state,
   const AccumulatorState<FeatureSet>&                     computed);
 
@@ -205,6 +207,12 @@ void AccumulatorStack::forward_update_incremental(
     assert((accumulators<FeatureSet>()[begin].template acc<Dimensions>()).computed[Perspective]);
 
     const Square ksq = pos.square<KING>(Perspective);
+    const int    orientation = [&]() {
+        if constexpr (std::is_same_v<FeatureSet, ThreatFeatureSet>)
+            return ThreatFeatureSet::OrientTBL[Perspective][ksq];
+        else
+            return 0;
+    }();
 
     for (std::size_t next = begin + 1; next < size; next++)
     {
@@ -220,9 +228,9 @@ void AccumulatorStack::forward_update_incremental(
                 if (dp2.remove_sq != SQ_NONE
                     && (accumulators[next].diff.threateningSqs & square_bb(dp2.remove_sq)))
                 {
-                    double_inc_update<Perspective>(featureTransformer, ksq, accumulators[next],
-                                                   accumulators[next + 1], accumulators[next - 1],
-                                                   dp2);
+                    double_inc_update<Perspective>(featureTransformer, ksq, orientation,
+                                                   accumulators[next], accumulators[next + 1],
+                                                   accumulators[next - 1], dp2);
                     next++;
                     continue;
                 }
@@ -234,8 +242,9 @@ void AccumulatorStack::forward_update_incremental(
                 {
                     const Square captureSq = dp1.to;
                     dp1.to = dp2.remove_sq = SQ_NONE;
-                    double_inc_update<Perspective>(featureTransformer, ksq, accumulators[next],
-                                                   accumulators[next + 1], accumulators[next - 1]);
+                    double_inc_update<Perspective>(featureTransformer, ksq,
+                                                   accumulators[next], accumulators[next + 1],
+                                                   accumulators[next - 1]);
                     dp1.to = dp2.remove_sq = captureSq;
                     next++;
                     continue;
@@ -243,7 +252,7 @@ void AccumulatorStack::forward_update_incremental(
             }
         }
 
-        update_accumulator_incremental<Perspective, true>(featureTransformer, ksq,
+        update_accumulator_incremental<Perspective, true>(featureTransformer, ksq, orientation,
                                                           mut_accumulators<FeatureSet>()[next],
                                                           accumulators<FeatureSet>()[next - 1]);
     }
@@ -262,9 +271,15 @@ void AccumulatorStack::backward_update_incremental(
     assert((latest<FeatureSet>().template acc<Dimensions>()).computed[Perspective]);
 
     const Square ksq = pos.square<KING>(Perspective);
+    const int    orientation = [&]() {
+        if constexpr (std::is_same_v<FeatureSet, ThreatFeatureSet>)
+            return ThreatFeatureSet::OrientTBL[Perspective][ksq];
+        else
+            return 0;
+    }();
 
     for (std::int64_t next = std::int64_t(size) - 2; next >= std::int64_t(end); next--)
-        update_accumulator_incremental<Perspective, false>(featureTransformer, ksq,
+        update_accumulator_incremental<Perspective, false>(featureTransformer, ksq, orientation,
                                                            mut_accumulators<FeatureSet>()[next],
                                                            accumulators<FeatureSet>()[next + 1]);
 
@@ -520,6 +535,7 @@ void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
 template<Color Perspective, IndexType TransformedFeatureDimensions>
 void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
                        const Square                                            ksq,
+                       int                                                     orientation,
                        AccumulatorState<ThreatFeatureSet>&                     middle_state,
                        AccumulatorState<ThreatFeatureSet>&                     target_state,
                        const AccumulatorState<ThreatFeatureSet>&               computed,
@@ -534,10 +550,10 @@ void double_inc_update(const FeatureTransformer<TransformedFeatureDimensions>& f
     fusedData.dp2removed = dp2.remove_sq;
 
     ThreatFeatureSet::IndexList removed, added;
-    ThreatFeatureSet::append_changed_indices<Perspective>(ksq, middle_state.diff, removed, added,
-                                                          &fusedData, true);
-    ThreatFeatureSet::append_changed_indices<Perspective>(ksq, target_state.diff, removed, added,
-                                                          &fusedData, false);
+    ThreatFeatureSet::append_changed_indices<Perspective>(ksq, orientation, middle_state.diff,
+                                                          removed, added, &fusedData, true);
+    ThreatFeatureSet::append_changed_indices<Perspective>(ksq, orientation, target_state.diff,
+                                                          removed, added, &fusedData, false);
 
     auto updateContext =
       make_accumulator_update_context<Perspective>(featureTransformer, computed, target_state);
@@ -554,6 +570,7 @@ template<Color Perspective,
 void update_accumulator_incremental(
   const FeatureTransformer<TransformedFeatureDimensions>& featureTransformer,
   const Square                                            ksq,
+  int                                                     orientation,
   AccumulatorState<FeatureSet>&                           target_state,
   const AccumulatorState<FeatureSet>&                     computed) {
 
@@ -568,11 +585,24 @@ void update_accumulator_incremental(
     // is 2, since we are incrementally updating one move at a time.
     typename FeatureSet::IndexList removed, added;
     if constexpr (Forward)
-        FeatureSet::template append_changed_indices<Perspective>(ksq, target_state.diff, removed,
-                                                                 added);
+    {
+        if constexpr (std::is_same_v<FeatureSet, ThreatFeatureSet>)
+            FeatureSet::template append_changed_indices<Perspective>(ksq, orientation,
+                                                                     target_state.diff, removed,
+                                                                     added);
+        else
+            FeatureSet::template append_changed_indices<Perspective>(ksq, target_state.diff,
+                                                                     removed, added);
+    }
     else
-        FeatureSet::template append_changed_indices<Perspective>(ksq, computed.diff, added,
-                                                                 removed);
+    {
+        if constexpr (std::is_same_v<FeatureSet, ThreatFeatureSet>)
+            FeatureSet::template append_changed_indices<Perspective>(ksq, orientation,
+                                                                     computed.diff, added, removed);
+        else
+            FeatureSet::template append_changed_indices<Perspective>(ksq, computed.diff, added,
+                                                                     removed);
+    }
 
     if (!added.size() && !removed.size())
     {
